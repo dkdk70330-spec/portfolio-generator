@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AI 채팅 캐릭터 제작자 포트폴리오 프로토타입" />
+  <title>별개의 서재 | AI 캐릭터 포트폴리오</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#characters">캐릭터 목록으로 건너뛰기</a>
+
+  <header class="hero" id="top">
+    <nav class="topbar" aria-label="주요 메뉴">
+      <a class="brand" href="#top" aria-label="홈으로 이동">
+        <span class="brand-mark">✦</span>
+        <span id="siteTitle">별개의 서재</span>
+      </a>
+      <div class="topbar-actions">
+        <button class="icon-button" id="themeToggle" type="button" aria-label="밝은 테마로 변경">☀</button>
+        <a class="ghost-button" href="#characters">전체 캐릭터</a>
+      </div>
+    </nav>
+
+    <div class="hero-inner">
+      <section class="creator-summary" aria-labelledby="creatorName">
+        <div class="creator-avatar">
+          <img id="creatorAvatar" src="" alt="" hidden />
+          <span id="creatorAvatarFallback" aria-hidden="true">별</span>
+        </div>
+
+        <div class="creator-copy">
+          <div class="creator-title-line">
+            <div>
+              <h1 id="creatorName">별가루 공방</h1>
+              <p class="creator-handle" id="creatorHandle">@stardust_archive</p>
+            </div>
+            <div class="creator-links" id="creatorLinks" aria-label="제작자 외부 링크"></div>
+          </div>
+          <p class="creator-manifesto" id="siteDescription">다정한 파국과 오래 남는 관계를 수집하는 AI 캐릭터 아카이브</p>
+          <div class="creator-bio" id="creatorBio"></div>
+          <div class="hero-stats" aria-label="아카이브 요약">
+            <div><strong id="characterCount">10</strong><span>캐릭터</span></div>
+            <div><strong id="platformCount">4</strong><span>플랫폼</span></div>
+            <div><strong id="genreCount">6</strong><span>장르</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="featured-shelf" id="featuredSection" aria-labelledby="featuredTitle">
+        <div class="shelf-heading">
+          <div>
+            <p class="eyebrow">FEATURED CHARACTERS</p>
+            <h2 id="featuredTitle">대표 캐릭터</h2>
+          </div>
+          <div class="shelf-heading-actions">
+            <p>처음 둘러보기 좋은 세 명</p>
+            <a href="#characters">전체 보기 <span aria-hidden="true">↓</span></a>
+          </div>
+        </div>
+        <div class="featured-grid" id="featuredGrid"></div>
+      </section>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="world-section" id="worlds" aria-labelledby="worldArchiveTitle">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">SHARED WORLDS</p>
+          <h2 id="worldArchiveTitle">세계관 아카이브</h2>
+        </div>
+        <p>서로의 이야기가 이어지는 세계를 먼저 둘러보세요.</p>
+      </div>
+      <div class="world-grid" id="worldGrid"></div>
+      <div class="archive-toggle-wrap" id="worldToggleWrap" hidden>
+        <button class="archive-toggle" id="worldToggle" type="button" aria-controls="worldGrid" aria-expanded="false">
+          <span>세계관 더보기</span>
+          <b aria-hidden="true">⌄</b>
+        </button>
+      </div>
+    </section>
+
+    <section class="archive-section" id="characters" aria-labelledby="archiveTitle">
+      <div class="section-heading archive-heading">
+        <div>
+          <p class="eyebrow">FULL ARCHIVE</p>
+          <h2 id="archiveTitle">캐릭터 아카이브</h2>
+        </div>
+        <p id="resultSummary" aria-live="polite"></p>
+      </div>
+
+      <div class="controls" aria-label="캐릭터 검색 및 필터">
+        <label class="search-box">
+          <span class="sr-only">캐릭터 검색</span>
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="이름, 소개, 태그, 세계관으로 검색" autocomplete="off" />
+        </label>
+
+        <div class="filter-row">
+          <div class="filter-group" aria-labelledby="genreFilterLabel">
+            <span class="filter-label" id="genreFilterLabel">장르</span>
+            <div class="chip-list" id="genreFilters"></div>
+          </div>
+          <div class="filter-group" aria-labelledby="platformFilterLabel">
+            <span class="filter-label" id="platformFilterLabel">플랫폼</span>
+            <div class="chip-list" id="platformFilters"></div>
+          </div>
+          <div class="filter-group filter-group--world" aria-labelledby="worldFilterLabel">
+            <span class="filter-label" id="worldFilterLabel">세계관</span>
+            <div class="chip-list" id="worldFilters"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="character-grid" id="characterGrid"></div>
+      <div class="archive-toggle-wrap" id="characterToggleWrap" hidden>
+        <button class="archive-toggle" id="characterToggle" type="button" aria-controls="characterGrid" aria-expanded="false">
+          <span>캐릭터 더보기</span>
+          <b aria-hidden="true">⌄</b>
+        </button>
+      </div>
+      <div class="empty-state" id="emptyState" hidden>
+        <span>◇</span>
+        <h3>조건에 맞는 캐릭터가 없어요.</h3>
+        <p>검색어나 필터를 조금 느슨하게 풀어보세요.</p>
+        <button class="solid-button" id="resetFilters" type="button">필터 초기화</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 별가루 공방. Prototype portfolio kit.</p>
+    <a href="#top">맨 위로 ↑</a>
+  </footer>
+
+  <dialog class="filter-picker" id="filterPicker" aria-labelledby="filterPickerTitle">
+    <div class="filter-picker-shell">
+      <header class="filter-picker-header">
+        <div>
+          <p class="eyebrow">FILTER</p>
+          <h2 id="filterPickerTitle">필터 선택</h2>
+          <p class="filter-picker-hint">여러 항목을 동시에 선택할 수 있습니다.</p>
+        </div>
+        <button class="filter-picker-close" id="filterPickerClose" type="button" aria-label="필터 선택 닫기">×</button>
+      </header>
+
+      <label class="filter-picker-search">
+        <span aria-hidden="true">⌕</span>
+        <input id="filterPickerSearch" type="search" placeholder="목록에서 검색" autocomplete="off" />
+      </label>
+
+      <div class="filter-picker-options" id="filterPickerOptions"></div>
+      <p class="filter-picker-empty" id="filterPickerEmpty" hidden>일치하는 항목이 없습니다.</p>
+    </div>
+  </dialog>
+
+  <dialog class="character-modal" id="characterModal" aria-labelledby="modalTitle">
+    <div class="modal-shell">
+      <button class="modal-close" id="modalClose" type="button" aria-label="캐릭터 상세 닫기">×</button>
+      <div class="modal-gallery">
+        <header class="modal-identity">
+          <h2 id="modalTitle"></h2>
+          <p class="modal-summary" id="modalSummary"></p>
+        </header>
+        <img id="modalMainImage" src="" alt="" />
+        <div class="gallery-thumbnails" id="galleryThumbnails" hidden></div>
+
+        <section class="platform-panel platform-rail-wrap" aria-label="캐릭터 플랫폼 링크">
+          <div class="platform-links character-platform-rail" id="modalPlatforms"></div>
+        </section>
+      </div>
+      <article class="modal-content">
+        <div class="modal-kicker" id="modalKicker"></div>
+        <div class="tag-list" id="modalTags"></div>
+        <div class="modal-description" id="modalDescription"></div>
+
+        <section class="character-world-panel" id="characterWorldPanel" hidden aria-labelledby="characterWorldName">
+          <button class="world-jump-button" id="openWorldButton" type="button">
+            <span class="world-jump-copy">
+              <small>SHARED WORLD</small>
+              <strong id="characterWorldName"></strong>
+              <span id="characterWorldSummary"></span>
+            </span>
+            <span class="world-jump-action">세계 구경하기 <b aria-hidden="true">↗</b></span>
+          </button>
+        </section>
+
+
+        <section class="character-content-section" id="characterContentSection" aria-label="캐릭터 추가 콘텐츠">
+          <div class="content-list" id="modalContents"></div>
+        </section>
+      </article>
+    </div>
+  </dialog>
+
+  <dialog class="world-modal" id="worldModal" aria-labelledby="worldModalTitle">
+    <div class="world-modal-shell">
+      <button class="modal-close" id="worldModalClose" type="button" aria-label="세계관 상세 닫기">×</button>
+      <div class="world-cover-panel">
+        <img id="worldModalImage" src="" alt="" />
+      </div>
+      <article class="world-modal-content">
+        <p class="modal-kicker">WORLD ARCHIVE</p>
+        <h2 id="worldModalTitle"></h2>
+        <p class="world-modal-summary" id="worldModalSummary"></p>
+        <div class="tag-list" id="worldModalTags"></div>
+        <div class="world-modal-description" id="worldModalDescription"></div>
+        <div class="world-section-list" id="worldModalSections"></div>
+
+        <section class="world-character-section" aria-labelledby="worldCharacterHeading">
+          <div class="panel-heading">
+            <p class="eyebrow">CHARACTERS IN THIS WORLD</p>
+            <h3 id="worldCharacterHeading">이 세계의 캐릭터</h3>
+          </div>
+          <div class="world-character-list" id="worldCharacterList"></div>
+        </section>
+      </article>
+    </div>
+  </dialog>
+
+  <script src="./assets/data.js"></script>
+  <script src="./assets/app.js"></script>
+</body>
+</html>

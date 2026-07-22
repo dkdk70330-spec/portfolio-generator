@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 캐릭터 포트폴리오 생성기</title>
+  <link rel="stylesheet" href="./generator.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">PORTFOLIO GENERATOR</p>
+      <h1>제작자 프로필 편집기</h1>
+      <p>사이트와 제작자 정보를 입력하면 오른쪽 미리보기에 즉시 반영됩니다.</p>
+    </div>
+
+    <button id="resetProjectButton" class="secondary-button" type="button">
+      입력 초기화
+    </button>
+  </header>
+
+  <main class="generator-layout">
+    <section class="editor-panel" aria-labelledby="editorTitle">
+      <h2 id="editorTitle">편집</h2>
+
+      <form id="profileForm" novalidate>
+        <fieldset>
+          <legend>사이트 정보</legend>
+
+          <label>
+            <span>사이트 제목</span>
+            <input
+              id="siteTitleInput"
+              type="text"
+              maxlength="60"
+              placeholder="예: 별개의 서재"
+            >
+          </label>
+
+          <label>
+            <span>사이트 소개</span>
+            <textarea
+              id="siteDescriptionInput"
+              rows="3"
+              maxlength="180"
+              placeholder="이 포트폴리오를 소개하는 짧은 문장"
+            ></textarea>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>제작자 프로필</legend>
+
+          <div class="avatar-editor">
+            <div class="avatar-preview" aria-hidden="true">
+              <img id="avatarEditorPreview" alt="" hidden>
+              <span id="avatarEditorFallback">✦</span>
+            </div>
+
+            <div>
+              <label class="file-label" for="avatarInput">
+                프로필 PNG 선택
+              </label>
+              <input
+                id="avatarInput"
+                class="file-input"
+                type="file"
+                accept="image/png"
+              >
+              <p class="field-help">
+                현재 단계에서는 브라우저 미리보기에만 사용됩니다.
+              </p>
+              <button id="removeAvatarButton" class="text-button" type="button" hidden>
+                이미지 제거
+              </button>
+            </div>
+          </div>
+
+          <label>
+            <span>제작자 이름</span>
+            <input
+              id="creatorNameInput"
+              type="text"
+              maxlength="50"
+              placeholder="예: 별가루 공방"
+            >
+          </label>
+
+          <label>
+            <span>아이디</span>
+            <input
+              id="creatorHandleInput"
+              type="text"
+              maxlength="50"
+              placeholder="예: @stardust_archive"
+            >
+          </label>
+
+          <label>
+            <span>프로필 대체 글자</span>
+            <input
+              id="creatorFallbackInput"
+              type="text"
+              maxlength="2"
+              placeholder="예: 별"
+            >
+          </label>
+
+          <label>
+            <span>소개</span>
+            <textarea
+              id="creatorBioInput"
+              rows="6"
+              maxlength="800"
+              placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
+            ></textarea>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>소셜 링크</legend>
+
+          <div class="social-entry">
+            <label>
+              <span>서비스</span>
+              <select id="socialServiceSelect"></select>
+            </label>
+
+            <label>
+              <span>주소</span>
+              <input
+                id="socialUrlInput"
+                type="url"
+                inputmode="url"
+                placeholder="https://..."
+              >
+            </label>
+
+            <button id="addSocialLinkButton" class="primary-button" type="button">
+              링크 추가
+            </button>
+          </div>
+
+          <p id="socialError" class="form-error" role="alert" hidden></p>
+
+          <div id="socialLinkList" class="social-link-list">
+            <p class="empty-message">등록된 링크가 없습니다.</p>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+
+    <section class="preview-panel" aria-labelledby="previewTitle">
+      <div class="preview-toolbar">
+        <div>
+          <p class="eyebrow">LIVE PREVIEW</p>
+          <h2 id="previewTitle">미리보기</h2>
+        </div>
+        <span id="saveStatus" class="save-status">입력 대기 중</span>
+      </div>
+
+      <article class="portfolio-preview">
+        <header class="preview-brand">
+          <span class="preview-brand-mark" aria-hidden="true">✦</span>
+          <strong id="previewSiteTitle">사이트 제목</strong>
+        </header>
+
+        <div class="preview-profile">
+          <div class="preview-avatar">
+            <img id="previewAvatarImage" alt="" hidden>
+            <span id="previewAvatarFallback">✦</span>
+          </div>
+
+          <div class="preview-profile-copy">
+            <p id="previewSiteDescription" class="preview-manifesto"></p>
+            <h3 id="previewCreatorName">제작자 이름</h3>
+            <p id="previewCreatorHandle" class="preview-handle"></p>
+            <div id="previewCreatorBio" class="preview-bio"></div>
+            <div id="previewCreatorLinks" class="preview-social-links"></div>
+          </div>
+        </div>
+      </article>
+
+      <details class="data-preview">
+        <summary>현재 프로젝트 데이터 보기</summary>
+        <pre id="projectJsonPreview"></pre>
+      </details>
+    </section>
+  </main>
+
+  <script src="../shared/admin-catalog.js"></script>
+  <script src="../shared/empty-project.js"></script>
+  <script src="./generator.js" defer></script>
+</body>
+</html>
