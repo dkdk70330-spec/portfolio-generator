@@ -7,10 +7,11 @@
       title: "",
       description: "",
       textColor: "#f4f1ea",
-      themeColor: "#d8ff62"
+      themeColor: "#a897ff"
     },
     creator: {
       avatar: "",
+      background: "",
       fallbackText: "",
       name: "",
       handle: "",
@@ -41,7 +42,7 @@
   const PREVIEW_WIDTH_MAX = 760;
   const PREVIEW_WIDTH_DEFAULT = 620;
   const DEFAULT_TEXT_COLOR = "#f4f1ea";
-  const DEFAULT_THEME_COLOR = "#d8ff62";
+  const DEFAULT_THEME_COLOR = "#a897ff";
   const FULL_BACKUP_FORMAT = "portfolio-generator-full-backup";
   const FULL_BACKUP_VERSION = 1;
   const ADMIN_ASSET_BASE = "../template/images/";
@@ -74,6 +75,9 @@
   let creatorAvatarBlob = null;
   let creatorAvatarPreviewUrl = "";
   let avatarRestoreMissing = false;
+  let creatorBackgroundBlob = null;
+  let creatorBackgroundPreviewUrl = "";
+  let creatorBackgroundRestoreMissing = false;
   let selectedWorldId = "";
   let worldPreviewExpanded = false;
   let selectedCharacterId = "";
@@ -123,6 +127,11 @@
     avatarEditorFallback: document.querySelector("#avatarEditorFallback"),
     avatarStorageStatus: document.querySelector("#avatarStorageStatus"),
     removeAvatarButton: document.querySelector("#removeAvatarButton"),
+    profileBackgroundInput: document.querySelector("#profileBackgroundInput"),
+    profileBackgroundEditorPreview: document.querySelector("#profileBackgroundEditorPreview"),
+    profileBackgroundEditorFallback: document.querySelector("#profileBackgroundEditorFallback"),
+    profileBackgroundStorageStatus: document.querySelector("#profileBackgroundStorageStatus"),
+    removeProfileBackgroundButton: document.querySelector("#removeProfileBackgroundButton"),
 
     socialServiceSelect: document.querySelector("#socialServiceSelect"),
     socialUrlInput: document.querySelector("#socialUrlInput"),
@@ -179,6 +188,7 @@
     previewCreatorLinks: document.querySelector("#previewCreatorLinks"),
     previewAvatarImage: document.querySelector("#previewAvatarImage"),
     previewAvatarFallback: document.querySelector("#previewAvatarFallback"),
+    previewProfileBackgroundImage: document.querySelector("#previewProfileBackgroundImage"),
     previewCharacterCount: document.querySelector("#previewCharacterCount"),
     previewWorldCount: document.querySelector("#previewWorldCount"),
     previewGenreCount: document.querySelector("#previewGenreCount"),
@@ -250,6 +260,55 @@
 
   function isPlainObject(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function normalizeCreatorBackground(value) {
+    if (value === undefined || value === null || value === "") return "";
+    if (typeof value === "string") return value;
+    if (!isPlainObject(value)) {
+      throw new Error("creator.background 항목의 형식이 올바르지 않습니다.");
+    }
+
+    const id = normalizeString(value.id, "creator.background.id").trim();
+    const name = normalizeString(
+      value.name || "profile-background.png",
+      "creator.background.name"
+    ).trim();
+    const type = normalizeString(
+      value.type || "image/png",
+      "creator.background.type"
+    ).trim();
+    const size = Number(value.size || 0);
+    const width = Number(value.width || 0);
+    const height = Number(value.height || 0);
+    const updatedAt = normalizeString(
+      value.updatedAt || "",
+      "creator.background.updatedAt"
+    ).trim();
+
+    if (!id) throw new Error("creator.background.id가 비어 있습니다.");
+    if (type !== "image/png") {
+      throw new Error("creator.background는 PNG 이미지여야 합니다.");
+    }
+    if (!Number.isFinite(size) || size < 0) {
+      throw new Error("creator.background.size가 올바르지 않습니다.");
+    }
+    if (!Number.isFinite(width) || width < 0) {
+      throw new Error("creator.background.width가 올바르지 않습니다.");
+    }
+    if (!Number.isFinite(height) || height < 0) {
+      throw new Error("creator.background.height가 올바르지 않습니다.");
+    }
+
+    return {
+      id,
+      name: name || "profile-background.png",
+      type: "image/png",
+      size: Math.round(size),
+      width: Math.round(width),
+      height: Math.round(height),
+      updatedAt
+    };
   }
 
   function createEmptyProject() {
@@ -713,6 +772,7 @@
         ...(base.creator || {}),
         ...cloneJson(rawCreator),
         avatar: normalizeAvatar(rawCreator.avatar),
+        background: normalizeCreatorBackground(rawCreator.background),
         fallbackText: normalizeString(
           rawCreator.fallbackText,
           "creator.fallbackText"
@@ -747,6 +807,13 @@
     return Array.isArray(value) ? value.join("\n\n") : "";
   }
 
+  function creatorBackgroundUrl() {
+    if (creatorBackgroundPreviewUrl) return creatorBackgroundPreviewUrl;
+    return typeof project.creator.background === "string"
+      ? legacyImageUrl(project.creator.background)
+      : "";
+  }
+
   function serviceIconUrl(service) {
     if (!service?.icon) return "";
     return `${ADMIN_ASSET_BASE}${service.icon}`;
@@ -776,6 +843,12 @@
   function getAvatarMetadata() {
     return isPlainObject(project.creator.avatar)
       ? project.creator.avatar
+      : null;
+  }
+
+  function getCreatorBackgroundMetadata() {
+    return isPlainObject(project.creator.background)
+      ? project.creator.background
       : null;
   }
 
@@ -953,6 +1026,32 @@
     }
 
     elements.avatarStorageStatus.textContent =
+      "PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다. 최대 10MB.";
+  }
+
+  function updateCreatorBackgroundStorageStatus() {
+    const metadata = getCreatorBackgroundMetadata();
+    if (creatorBackgroundRestoreMissing) {
+      elements.profileBackgroundStorageStatus.textContent =
+        "저장된 배경 PNG를 찾을 수 없습니다. PNG를 다시 선택해 주세요.";
+      return;
+    }
+    if (creatorBackgroundBlob && metadata) {
+      elements.profileBackgroundStorageStatus.textContent =
+        `브라우저에 저장됨: ${metadata.name} · ${formatBytes(metadata.size)}`;
+      return;
+    }
+    if (metadata) {
+      elements.profileBackgroundStorageStatus.textContent =
+        "저장된 배경 PNG를 확인하는 중입니다.";
+      return;
+    }
+    if (typeof project.creator.background === "string" && project.creator.background) {
+      elements.profileBackgroundStorageStatus.textContent =
+        "기존 배경 이미지 경로를 사용 중입니다. 새 PNG로 교체할 수 있습니다.";
+      return;
+    }
+    elements.profileBackgroundStorageStatus.textContent =
       "PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다. 최대 10MB.";
   }
 
@@ -1409,7 +1508,6 @@
           <span class="character-editor-list-thumb" aria-hidden="true">${thumb}</span>
           <span class="character-editor-list-copy">
             <strong>${escapeHtml(characterDisplayName(character, index))}</strong>
-            <small>${escapeHtml(character.subtitle || "부제를 입력해 주세요")}</small>
           </span>
           ${character.featured ? '<b class="character-editor-featured-mark" title="추천 캐릭터">★</b>' : ""}
         </button>
@@ -2534,7 +2632,6 @@
           <span class="world-editor-list-thumb" aria-hidden="true">${thumb}</span>
           <span class="world-editor-list-copy">
             <strong>${escapeHtml(world.name || `새 세계관 ${index + 1}`)}</strong>
-            <small>${escapeHtml(world.subtitle || "부제를 입력해 주세요")}</small>
           </span>
         </button>
       `;
@@ -3212,6 +3309,24 @@
     updateAvatarStorageStatus();
   }
 
+  function renderCreatorBackgroundPreview() {
+    const url = creatorBackgroundUrl();
+    elements.profileBackgroundEditorPreview.hidden = !url;
+    elements.profileBackgroundEditorFallback.hidden = Boolean(url);
+    elements.previewProfileBackgroundImage.hidden = !url;
+    elements.removeProfileBackgroundButton.hidden = !(
+      url || getCreatorBackgroundMetadata() || project.creator.background
+    );
+    if (url) {
+      elements.profileBackgroundEditorPreview.src = url;
+      elements.previewProfileBackgroundImage.src = url;
+    } else {
+      elements.profileBackgroundEditorPreview.removeAttribute("src");
+      elements.previewProfileBackgroundImage.removeAttribute("src");
+    }
+    updateCreatorBackgroundStorageStatus();
+  }
+
   function applyPreviewTheme() {
     const textColor = normalizeHexColor(
       project.site.textColor,
@@ -3221,7 +3336,6 @@
       project.site.themeColor,
       DEFAULT_THEME_COLOR
     );
-    const themeInk = contrastTextColor(themeColor);
     const targets = [
       elements.previewCanvas,
       elements.worldPreviewModal,
@@ -3232,8 +3346,36 @@
     targets.forEach((target) => {
       if (!target) return;
       target.style.setProperty("--text", textColor);
-      target.style.setProperty("--accent", themeColor);
-      target.style.setProperty("--accent-ink", themeInk);
+      target.style.setProperty("--theme", themeColor);
+      target.style.setProperty("--violet", themeColor);
+      target.style.setProperty(
+        "--bg",
+        `color-mix(in srgb, ${themeColor} 8%, #0b0b0f)`
+      );
+      target.style.setProperty(
+        "--surface",
+        `color-mix(in srgb, ${themeColor} 10%, #121219)`
+      );
+      target.style.setProperty(
+        "--surface-2",
+        `color-mix(in srgb, ${themeColor} 14%, #191923)`
+      );
+      target.style.setProperty(
+        "--surface-3",
+        `color-mix(in srgb, ${themeColor} 19%, #20202c)`
+      );
+      target.style.setProperty(
+        "--line",
+        `color-mix(in srgb, ${themeColor} 24%, rgba(255,255,255,.08))`
+      );
+      target.style.setProperty(
+        "--line-strong",
+        `color-mix(in srgb, ${themeColor} 42%, rgba(255,255,255,.14))`
+      );
+      target.style.setProperty(
+        "--shadow",
+        `0 24px 80px color-mix(in srgb, ${themeColor} 18%, rgba(0,0,0,.62))`
+      );
     });
   }
 
@@ -3337,6 +3479,7 @@
       project.creator.links.length === 0;
 
     renderAvatarPreview();
+    renderCreatorBackgroundPreview();
     renderWorldPreview();
     renderCharacterPreview();
 
@@ -3362,6 +3505,15 @@
       project.creator.fallbackText || "";
     elements.creatorBioInput.value =
       bioArrayToText(project.creator.bio);
+  }
+
+  function releaseCreatorBackgroundObjectUrl() {
+    if (creatorBackgroundPreviewUrl) {
+      URL.revokeObjectURL(creatorBackgroundPreviewUrl);
+    }
+    creatorBackgroundBlob = null;
+    creatorBackgroundPreviewUrl = "";
+    elements.profileBackgroundInput.value = "";
   }
 
   function releaseAvatarObjectUrl() {
@@ -3451,6 +3603,120 @@
     } finally {
       URL.revokeObjectURL(sourceUrl);
     }
+  }
+
+  async function restoreCreatorBackgroundFromDatabase() {
+    releaseCreatorBackgroundObjectUrl();
+    creatorBackgroundRestoreMissing = false;
+    const metadata = getCreatorBackgroundMetadata();
+
+    if (!metadata?.id) {
+      renderCreatorBackgroundPreview();
+      return false;
+    }
+
+    try {
+      const record = await getImageRecord(metadata.id);
+      if (!record?.blob || record.blob.type !== "image/png") {
+        creatorBackgroundRestoreMissing = true;
+        renderCreatorBackgroundPreview();
+        return false;
+      }
+      creatorBackgroundBlob = record.blob;
+      creatorBackgroundPreviewUrl = URL.createObjectURL(record.blob);
+      renderCreatorBackgroundPreview();
+      return true;
+    } catch (error) {
+      console.error(error);
+      creatorBackgroundRestoreMissing = true;
+      renderCreatorBackgroundPreview();
+      return false;
+    }
+  }
+
+  async function storeCreatorBackgroundFile(file) {
+    if (!file) return;
+    elements.profileBackgroundInput.disabled = true;
+    setSaveStatus("프로필 배경 PNG 저장 중…");
+
+    try {
+      const previousMetadata = getCreatorBackgroundMetadata();
+      const sanitized = await sanitizePng(file, "프로필 배경 PNG");
+      const id = createImageId();
+      const updatedAt = new Date().toISOString();
+      const record = {
+        id,
+        role: "creator-background",
+        ownerId: "creator",
+        name: file.name || "profile-background.png",
+        type: "image/png",
+        size: sanitized.blob.size,
+        width: sanitized.width,
+        height: sanitized.height,
+        updatedAt,
+        blob: sanitized.blob
+      };
+      await putImageRecord(record);
+      project.creator.background = {
+        id,
+        name: record.name,
+        type: record.type,
+        size: record.size,
+        width: record.width,
+        height: record.height,
+        updatedAt
+      };
+
+      releaseCreatorBackgroundObjectUrl();
+      creatorBackgroundBlob = sanitized.blob;
+      creatorBackgroundPreviewUrl = URL.createObjectURL(sanitized.blob);
+      creatorBackgroundRestoreMissing = false;
+
+      if (previousMetadata?.id && previousMetadata.id !== id) {
+        try {
+          await deleteImageRecord(previousMetadata.id);
+        } catch (cleanupError) {
+          console.error(cleanupError);
+        }
+      }
+
+      renderPreview();
+      saveProjectToStorage();
+      setSaveStatus("프로필 배경 PNG가 브라우저에 저장됨");
+    } catch (error) {
+      elements.profileBackgroundInput.value = "";
+      console.error(error);
+      window.alert(error.message || "프로필 배경 이미지를 처리하지 못했습니다.");
+      setSaveStatus("프로필 배경 PNG 저장 실패");
+    } finally {
+      elements.profileBackgroundInput.disabled = false;
+    }
+  }
+
+  async function handleCreatorBackgroundSelection() {
+    const file = elements.profileBackgroundInput.files?.[0] || null;
+    elements.profileBackgroundInput.value = "";
+    await storeCreatorBackgroundFile(file);
+  }
+
+  async function removeCreatorBackground() {
+    const metadata = getCreatorBackgroundMetadata();
+    releaseCreatorBackgroundObjectUrl();
+    creatorBackgroundRestoreMissing = false;
+    project.creator.background = "";
+    renderPreview();
+    saveProjectToStorage();
+
+    if (metadata?.id) {
+      try {
+        await deleteImageRecord(metadata.id);
+      } catch (error) {
+        console.error(error);
+        setSaveStatus("배경 연결은 제거됐지만 저장 파일 정리에 실패함");
+        return;
+      }
+    }
+    setSaveStatus("프로필 배경 PNG가 제거됨");
   }
 
   async function restoreAvatarFromDatabase() {
@@ -3605,6 +3871,10 @@
       await storeAvatarFile(candidates[0]);
       return;
     }
+    if (target === "profile-background") {
+      await storeCreatorBackgroundFile(candidates[0]);
+      return;
+    }
     if (target === "world") {
       if (!getSelectedWorld()) {
         window.alert("먼저 세계관을 선택해 주세요.");
@@ -3671,9 +3941,11 @@
   async function replaceCurrentProject(nextProject, restoreImages = true) {
     project = normalizeProject(nextProject);
     releaseAvatarObjectUrl();
+    releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
     avatarRestoreMissing = false;
+    creatorBackgroundRestoreMissing = false;
     selectedWorldId = project.worlds[0]?.id || "";
     selectedCharacterId = project.characters[0]?.id || "";
     worldPreviewExpanded = false;
@@ -3686,6 +3958,7 @@
 
     if (!restoreImages) return false;
     const avatarRestored = await restoreAvatarFromDatabase();
+    await restoreCreatorBackgroundFromDatabase();
     await restoreWorldImagesFromDatabase();
     await restoreCharacterImagesFromDatabase();
     return avatarRestored;
@@ -3906,6 +4179,14 @@
     const items = [];
     const avatar = getAvatarMetadata();
     if (avatar) items.push({ ...avatar, role: "creator-avatar", ownerId: "creator" });
+    const creatorBackground = getCreatorBackgroundMetadata();
+    if (creatorBackground) {
+      items.push({
+        ...creatorBackground,
+        role: "creator-background",
+        ownerId: "creator"
+      });
+    }
 
     project.worlds.forEach((world) => {
       const image = getWorldImageMetadata(world);
@@ -4031,9 +4312,15 @@
     const missingWorldCount = missingWorldImageIds.size;
     const missingCharacterCount = missingCharacterImageIds.size;
 
-    if ((getAvatarMetadata() && !restoredAvatar) || missingWorldCount > 0 || missingCharacterCount > 0) {
+    if (
+      (getAvatarMetadata() && !restoredAvatar) ||
+      creatorBackgroundRestoreMissing ||
+      missingWorldCount > 0 ||
+      missingCharacterCount > 0
+    ) {
       const missingImages = [];
       if (getAvatarMetadata() && !restoredAvatar) missingImages.push("프로필 PNG");
+      if (creatorBackgroundRestoreMissing) missingImages.push("프로필 배경 PNG");
       if (missingWorldCount > 0) missingImages.push(`세계관 PNG ${missingWorldCount}개`);
       if (missingCharacterCount > 0) missingImages.push(`캐릭터 PNG ${missingCharacterCount}개`);
       setSaveStatus(`텍스트 프로젝트 불러옴 · ${missingImages.join(" · ")}를 다시 선택해 주세요`);
@@ -4095,6 +4382,7 @@
     await replaceAllImageRecords(restoredRecords);
     clearStoredProject();
     releaseAvatarObjectUrl();
+    releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
     await replaceCurrentProject(nextProject, true);
@@ -4130,9 +4418,11 @@
 
     clearStoredProject();
     releaseAvatarObjectUrl();
+    releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
     avatarRestoreMissing = false;
+    creatorBackgroundRestoreMissing = false;
 
     try {
       await clearImageRecords();
@@ -4419,7 +4709,10 @@
   });
 
   elements.profileForm.addEventListener("input", (event) => {
-    if (event.target === elements.avatarInput) return;
+    if (
+      event.target === elements.avatarInput ||
+      event.target === elements.profileBackgroundInput
+    ) return;
     syncProjectFromFields();
   });
 
@@ -4448,6 +4741,16 @@
   elements.removeAvatarButton.addEventListener(
     "click",
     removeAvatar
+  );
+
+  elements.profileBackgroundInput.addEventListener(
+    "change",
+    handleCreatorBackgroundSelection
+  );
+
+  elements.removeProfileBackgroundButton.addEventListener(
+    "click",
+    removeCreatorBackground
   );
 
   elements.downloadTextBackupButton.addEventListener(
@@ -4480,6 +4783,7 @@
     }
 
     releaseAvatarObjectUrl();
+    releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
   });
@@ -4501,6 +4805,10 @@
     const restoredAvatar = avatarMetadata
       ? await restoreAvatarFromDatabase()
       : false;
+    const creatorBackgroundMetadata = getCreatorBackgroundMetadata();
+    const restoredCreatorBackground = creatorBackgroundMetadata
+      ? await restoreCreatorBackgroundFromDatabase()
+      : false;
     const missingWorldCount = await restoreWorldImagesFromDatabase();
     const missingCharacterCount = await restoreCharacterImagesFromDatabase();
 
@@ -4512,9 +4820,17 @@
       return;
     }
 
-    if ((avatarMetadata && !restoredAvatar) || missingWorldCount > 0 || missingCharacterCount > 0) {
+    if (
+      (avatarMetadata && !restoredAvatar) ||
+      (creatorBackgroundMetadata && !restoredCreatorBackground) ||
+      missingWorldCount > 0 ||
+      missingCharacterCount > 0
+    ) {
       const messages = [];
       if (avatarMetadata && !restoredAvatar) messages.push("프로필 PNG");
+      if (creatorBackgroundMetadata && !restoredCreatorBackground) {
+        messages.push("프로필 배경 PNG");
+      }
       if (missingWorldCount > 0) messages.push(`세계관 PNG ${missingWorldCount}개`);
       if (missingCharacterCount > 0) messages.push(`캐릭터 PNG ${missingCharacterCount}개`);
       setSaveStatus(
@@ -4525,7 +4841,10 @@
 
     if (restoredAutosave && project.worlds.length > 0) {
       setSaveStatus("자동저장된 세계관 데이터를 복구함");
-    } else if (restoredAutosave && restoredAvatar) {
+    } else if (
+      restoredAutosave &&
+      (restoredAvatar || restoredCreatorBackground)
+    ) {
       setSaveStatus("이전 자동 저장과 PNG를 복구함");
     } else if (restoredAutosave) {
       setSaveStatus("이전 자동 저장을 복구함");

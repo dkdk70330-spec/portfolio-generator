@@ -82,10 +82,10 @@
               </span>
             </label>
             <label class="site-color-control">
-              <span>테마 색</span>
+              <span>레이아웃 테마 색</span>
               <span class="site-color-input-row">
-                <input id="siteThemeColorInput" type="color" value="#d8ff62">
-                <output id="siteThemeColorValue" for="siteThemeColorInput">#d8ff62</output>
+                <input id="siteThemeColorInput" type="color" value="#a897ff">
+                <output id="siteThemeColorValue" for="siteThemeColorInput">#a897ff</output>
               </span>
             </label>
           </div>
@@ -122,6 +122,50 @@
               </p>
               <button id="removeAvatarButton" class="text-button" type="button" hidden>
                 이미지 제거
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="profile-background-editor image-drop-zone"
+            data-image-drop-target="profile-background"
+            tabindex="0"
+            role="group"
+            aria-label="프로필 배경 이미지 업로드 영역"
+          >
+            <div class="profile-background-editor-preview" aria-hidden="true">
+              <img id="profileBackgroundEditorPreview" alt="" hidden>
+              <span id="profileBackgroundEditorFallback">PROFILE BACKGROUND</span>
+            </div>
+            <div>
+              <label class="file-label" for="profileBackgroundInput">
+                프로필 배경 PNG 선택
+              </label>
+              <input
+                id="profileBackgroundInput"
+                class="file-input"
+                type="file"
+                accept="image/png"
+              >
+              <p class="image-input-hint">
+                파일 선택 · 끌어놓기 · 이미지 영역 선택 후 Ctrl+V
+              </p>
+              <p
+                id="profileBackgroundStorageStatus"
+                class="field-help"
+                role="status"
+                aria-live="polite"
+              >
+                PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다.
+                최대 10MB.
+              </p>
+              <button
+                id="removeProfileBackgroundButton"
+                class="text-button"
+                type="button"
+                hidden
+              >
+                배경 이미지 제거
               </button>
             </div>
           </div>
@@ -500,6 +544,10 @@
         </header>
 
         <div class="preview-profile">
+          <div class="preview-profile-background" aria-hidden="true">
+            <img id="previewProfileBackgroundImage" alt="" hidden>
+          </div>
+
           <div class="preview-avatar" aria-hidden="true">
             <img id="previewAvatarImage" alt="" hidden>
             <span id="previewAvatarFallback">✦</span>
