@@ -157,7 +157,9 @@ const elements = {
   netlifyGuideClose:
     document.querySelector("#netlifyGuideClose"),
 
-  backupMenu: document.querySelector("#backupMenu"),    downloadTextBackupButton: document.querySelector("#downloadTextBackupButton"),
+  backupMenu: document.querySelector("#backupMenu"),
+    downloadTextBackupButton: document.querySelector("#downloadTextBackupButton"),
+    downloadEditorBackupButton: document.querySelector("#downloadEditorBackupButton"),
     downloadFullBackupButton: document.querySelector("#downloadFullBackupButton"),
     importProjectInput: document.querySelector("#importProjectInput"),
     resetProjectButton: document.querySelector("#resetProjectButton"),
@@ -6756,6 +6758,191 @@ elements.characterPreviewModalTags.innerHTML = [
     }
   }
 
+
+  async function resolveEditorBackupImageBlob(image, records) {
+    const storedBlob = records.get(image.id)?.blob || null;
+    let preferredBlob = null;
+    let previewUrl = "";
+    let legacyUrl = "";
+
+    if (image.role === "creator-avatar") {
+      preferredBlob = creatorAvatarBlob;
+      previewUrl = creatorAvatarPreviewUrl;
+      if (typeof project.creator.avatar === "string") {
+        legacyUrl = legacyImageUrl(project.creator.avatar);
+      }
+    } else if (image.role === "creator-background") {
+      preferredBlob = creatorBackgroundBlob;
+      previewUrl = creatorBackgroundPreviewUrl;
+      if (typeof project.creator.background === "string") {
+        legacyUrl = legacyImageUrl(project.creator.background);
+      }
+    } else if (image.role === "world-cover") {
+      const world = project.worlds.find(
+        (item) => item.id === image.ownerId
+      );
+      preferredBlob = worldImageBlobs.get(image.ownerId) || null;
+      previewUrl = worldImagePreviewUrls.get(image.ownerId) || "";
+      if (world && typeof world.image === "string") {
+        legacyUrl = legacyImageUrl(world.image);
+      }
+    } else if (image.role === "character-image") {
+      preferredBlob = characterImageBlobs.get(image.id) || null;
+      previewUrl = characterImagePreviewUrls.get(image.id) || "";
+    }
+
+    const blob = await resolveDeployBlob({
+      preferredBlob,
+      storedBlob,
+      previewUrl,
+      legacyUrl,
+      label: image.name || "PNG"
+    });
+
+    if (!blob) return null;
+    await validatePngFile(blob, image.name || "백업 PNG");
+    return blob.type === "image/png"
+      ? blob
+      : new Blob([await blob.arrayBuffer()], { type: "image/png" });
+  }
+
+  async function resolveEditorBackupAudioBlob(audio, records) {
+    const blob = await resolveDeployBlob({
+      preferredBlob: musicBlobs.get(audio.id) || null,
+      storedBlob: records.get(audio.id)?.blob || null,
+      previewUrl: musicPreviewUrls.get(audio.id) || "",
+      label: audio.name || "MP3"
+    });
+
+    if (!blob) return null;
+    await validateMp3File(blob, audio.name || "백업 MP3");
+    return ["audio/mpeg", "audio/mp3"].includes(blob.type)
+      ? blob
+      : new Blob([await blob.arrayBuffer()], { type: MP3_MIME_TYPE });
+  }
+
+  async function downloadEditorBackup() {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = 0;
+    elements.downloadEditorBackupButton.disabled = true;
+    setSaveStatus("편집용 전체 백업 ZIP 생성 중…");
+
+    try {
+      const normalizedProject = normalizeProject(project);
+      const imageMetadata = projectImageMetadata();
+      const audioMetadata = projectAudioMetadata();
+      let storedRecords = [];
+
+      try {
+        storedRecords = await getAllImageRecords();
+      } catch (error) {
+        console.warn(
+          "브라우저 저장소 전체 목록을 읽지 못해 현재 편집 파일을 우선 사용합니다.",
+          error
+        );
+      }
+
+      const records = new Map(
+        storedRecords.map((record) => [record.id, record])
+      );
+      const entries = [
+        {
+          name: "project.json",
+          data: new Blob(
+            [JSON.stringify(normalizedProject, null, 2)],
+            { type: "application/json;charset=utf-8" }
+          )
+        }
+      ];
+      const manifestImages = [];
+      const manifestAudio = [];
+      const missing = [];
+
+      for (const image of imageMetadata) {
+        const blob = await resolveEditorBackupImageBlob(image, records);
+        if (!blob) {
+          missing.push(image.name || image.id);
+          continue;
+        }
+        const path = `images/${image.id}.png`;
+        entries.push({ name: path, data: blob });
+        manifestImages.push({
+          id: image.id,
+          path,
+          role: image.role,
+          ownerId: image.ownerId,
+          name: image.name,
+          type: "image/png",
+          size: blob.size,
+          width: Number(image.width) || 0,
+          height: Number(image.height) || 0,
+          updatedAt: image.updatedAt || ""
+        });
+      }
+
+      for (const audio of audioMetadata) {
+        const blob = await resolveEditorBackupAudioBlob(audio, records);
+        if (!blob) {
+          missing.push(audio.name || audio.id);
+          continue;
+        }
+        const path = `audio/${audio.id}.mp3`;
+        entries.push({ name: path, data: blob });
+        manifestAudio.push({
+          id: audio.id,
+          path,
+          role: audio.role,
+          ownerId: audio.ownerId,
+          trackId: audio.trackId,
+          name: audio.name,
+          type: MP3_MIME_TYPE,
+          size: blob.size,
+          duration: Number(audio.duration) || 0,
+          updatedAt: audio.updatedAt || ""
+        });
+      }
+
+      if (missing.length > 0) {
+        throw new Error(
+          `편집용 백업에 넣을 수 없는 파일이 있습니다: ${missing.join(", ")}`
+        );
+      }
+
+      const manifest = {
+        format: FULL_BACKUP_FORMAT,
+        version: FULL_BACKUP_VERSION,
+        projectVersion: normalizedProject.version,
+        createdAt: new Date().toISOString(),
+        images: manifestImages,
+        audio: manifestAudio
+      };
+
+      entries.push({
+        name: "backup-manifest.json",
+        data: new Blob(
+          [JSON.stringify(manifest, null, 2)],
+          { type: "application/json;charset=utf-8" }
+        )
+      });
+
+      const zip = await createStoredZip(entries);
+      downloadBlob(zip, `${buildBackupBaseName()}-editor-backup.zip`);
+      saveProjectToStorage();
+      setSaveStatus(
+        `편집용 전체 백업 저장됨 · PNG ${manifestImages.length}개 · MP3 ${manifestAudio.length}개`
+      );
+      elements.backupMenu.open = false;
+    } catch (error) {
+      console.error(error);
+      window.alert(
+        error.message || "편집용 전체 백업 ZIP을 저장하지 못했습니다."
+      );
+      setSaveStatus("편집용 전체 백업 ZIP 생성 실패");
+    } finally {
+      elements.downloadEditorBackupButton.disabled = false;
+    }
+  }
+
   async function downloadFullBackup() {
     window.clearTimeout(autosaveTimer);
     autosaveTimer = 0;
@@ -7400,6 +7587,11 @@ elements.netlifyGuideDialog.addEventListener(
   elements.downloadTextBackupButton.addEventListener(
     "click",
     downloadTextBackup
+  );
+
+  elements.downloadEditorBackupButton.addEventListener(
+    "click",
+    downloadEditorBackup
   );
 
   elements.downloadFullBackupButton.addEventListener(
