@@ -68,9 +68,49 @@
   const platformCatalog = new Map(
     platformOptions.map((platform) => [platform.id, platform])
   );
-  const genreOptions = Array.isArray(adminCatalog.genres)
-    ? adminCatalog.genres.filter((genre) => typeof genre === "string" && genre.trim())
-    : [];
+const genreOptions = Array.isArray(adminCatalog.genres)
+  ? adminCatalog.genres
+      .filter(
+        (genre) =>
+          genre &&
+          typeof genre === "object" &&
+          !Array.isArray(genre) &&
+          typeof genre.id === "string" &&
+          genre.id.trim() &&
+          typeof genre.name === "string" &&
+          genre.name.trim()
+      )
+      .map((genre) => ({
+        id: genre.id.trim(),
+        name: genre.name.trim()
+      }))
+  : [];
+
+const genreCatalog = new Map(
+  genreOptions.map((genre) => [genre.id, genre])
+);
+
+function genreLabel(id) {
+  return genreCatalog.get(id)?.name || id;
+}
+
+function normalizeGenreId(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) return "";
+
+  // 이미 ID로 저장된 데이터
+  if (genreCatalog.has(normalized)) {
+    return normalized;
+  }
+
+  // 기존 프로젝트의 "판타지" 같은 이름 데이터를 ID로 변환
+  const legacyGenre = genreOptions.find(
+    (genre) => genre.name === normalized
+  );
+
+  return legacyGenre?.id || normalized;
+}
 
   let project = createEmptyProject();
   let creatorAvatarBlob = null;
@@ -708,9 +748,20 @@
       description: rawDescription.map((paragraph, paragraphIndex) =>
         normalizeString(paragraph, `characters[${index}].description[${paragraphIndex}]`).trim()
       ).filter(Boolean),
-      genres: rawGenres.map((genre, genreIndex) =>
-        normalizeString(genre, `characters[${index}].genres[${genreIndex}]`).trim()
-      ).filter(Boolean),
+      genres: [
+  ...new Set(
+    rawGenres
+      .map((genre, genreIndex) =>
+        normalizeGenreId(
+          normalizeString(
+            genre,
+            `characters[${index}].genres[${genreIndex}]`
+          ).trim()
+        )
+      )
+      .filter(Boolean)
+  )
+],
       tags: rawTags.map((tag, tagIndex) =>
         normalizeString(tag, `characters[${index}].tags[${tagIndex}]`).trim()
       ).filter(Boolean),
@@ -2224,33 +2275,45 @@
     ].join("");
   }
 
-  function renderCharacterGenres() {
-    const character = getSelectedCharacter();
-    if (!character) return;
+function renderCharacterGenres() {
+  const character = getSelectedCharacter();
+  if (!character) return;
 
-    const allGenres = [...new Set([
-      ...genreOptions,
-      ...(character.genres || [])
-    ])];
+  const unknownGenres = (character.genres || [])
+    .filter((genreId) => !genreCatalog.has(genreId))
+    .map((genreId) => ({
+      id: genreId,
+      name: genreId
+    }));
 
-    if (allGenres.length === 0) {
-      elements.characterGenreList.innerHTML =
-        '<p class="empty-message">관리자 장르가 등록되어 있지 않습니다.</p>';
-      return;
-    }
+  const allGenres = [
+    ...genreOptions,
+    ...unknownGenres
+  ];
 
-    elements.characterGenreList.innerHTML = allGenres.map((genre) => `
-      <label class="character-option-item">
-        <input
-          type="checkbox"
-          data-character-genre="${escapeHtml(genre)}"
-          ${(character.genres || []).includes(genre) ? "checked" : ""}
-        >
-        <span>${escapeHtml(genre)}</span>
-      </label>
-    `).join("");
+  if (allGenres.length === 0) {
+    elements.characterGenreList.innerHTML =
+      '<p class="empty-message">관리자 장르가 등록되어 있지 않습니다.</p>';
+    return;
   }
 
+  elements.characterGenreList.innerHTML = allGenres
+    .map(
+      (genre) => `
+        <label class="character-option-item">
+          <input
+            type="checkbox"
+            data-character-genre="${escapeHtml(genre.id)}"
+            ${(character.genres || []).includes(genre.id)
+              ? "checked"
+              : ""}
+          >
+          <span>${escapeHtml(genre.name)}</span>
+        </label>
+      `
+    )
+    .join("");
+}
   function characterPlatformOptions(character) {
     const selectedIds = (character.platforms || []).map((item) => item.id);
     const unknown = selectedIds
@@ -2425,8 +2488,13 @@
     const image = imageUrl
       ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(character.name || "캐릭터")} 대표 이미지" loading="lazy">`
       : '<span class="character-preview-card-image-fallback">CHARACTER</span>';
-    const genres = (character.genres || []).slice(0, 2)
-      .map((genre) => `<span>${escapeHtml(genre)}</span>`).join("");
+const genres = (character.genres || [])
+  .slice(0, 2)
+  .map(
+    (genreId) =>
+      `<span>${escapeHtml(genreLabel(genreId))}</span>`
+  )
+  .join("");
 
     return `
       <article class="character-preview-card ${featured ? "is-featured" : ""}" data-preview-character-card="${escapeHtml(character.id)}">
@@ -2521,11 +2589,11 @@
           value: "전체",
           count: project.characters.length
         },
-        ...genreUsage.map(([name, count]) => ({
-          label: name,
-          value: name,
-          count
-        }))
+...genreUsage.map(([id, count]) => ({
+  label: genreLabel(id),
+  value: id,
+  count
+}))
       ];
     }
 
@@ -2797,7 +2865,7 @@
         character.name,
         character.subtitle,
         ...(character.description || []),
-        ...(character.genres || []),
+        ...(character.genres || []).map(genreLabel),
         ...(character.tags || []),
         ...(character.platforms || []).map((link) => {
           const platform = platformCatalog.get(link.id);
@@ -2991,11 +3059,17 @@
         `).join("")
       : "";
 
-    elements.characterPreviewKicker.textContent = (character.genres || []).join(" · ") || "CHARACTER";
-    elements.characterPreviewModalTags.innerHTML = [
-      ...(character.genres || []),
-      ...(character.tags || [])
-    ].map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
+    const genreLabels = (character.genres || []).map(genreLabel);
+
+elements.characterPreviewKicker.textContent =
+  genreLabels.join(" · ") || "CHARACTER";
+
+elements.characterPreviewModalTags.innerHTML = [
+  ...genreLabels,
+  ...(character.tags || [])
+]
+  .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+  .join("");
     elements.characterPreviewModalTags.hidden = !(character.genres || []).length && !(character.tags || []).length;
     renderSoundtrack(elements.characterPreviewSoundtrack, character);
 
