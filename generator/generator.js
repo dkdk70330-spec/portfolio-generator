@@ -126,10 +126,10 @@ function normalizeGenreId(value) {
   const characterPreviewFilterState = {
     query: "",
     genre: new Set(),
+    tag: new Set(),
     platform: new Set(),
     world: new Set()
   };
-  const CHARACTER_FILTER_PREVIEW_LIMIT = 4;
   let activeCharacterFilterPickerGroup = null;
   let characterFilterPickerQuery = "";
   const worldImageBlobs = new Map();
@@ -272,6 +272,7 @@ function normalizeGenreId(value) {
     previewCharacterResultSummary: document.querySelector("#previewCharacterResultSummary"),
     previewCharacterSearchInput: document.querySelector("#previewCharacterSearchInput"),
     previewGenreFilters: document.querySelector("#previewGenreFilters"),
+    previewTagFilters: document.querySelector("#previewTagFilters"),
     previewPlatformFilters: document.querySelector("#previewPlatformFilters"),
     previewWorldFilters: document.querySelector("#previewWorldFilters"),
     previewCharacterResetFilters: document.querySelector("#previewCharacterResetFilters"),
@@ -303,6 +304,20 @@ function normalizeGenreId(value) {
     saveStatus: document.querySelector("#saveStatus"),
     imageDropZones: [...document.querySelectorAll("[data-image-drop-target]")]
   };
+
+  const observedCharacterFilterRows = new WeakSet();
+  let characterFilterFitFrame = 0;
+  const characterFilterResizeObserver =
+    typeof window.ResizeObserver === "function"
+      ? new ResizeObserver((entries) => {
+          window.cancelAnimationFrame(characterFilterFitFrame);
+          characterFilterFitFrame = window.requestAnimationFrame(() => {
+            entries.forEach((entry) =>
+              fitCharacterPreviewFilterRow(entry.target)
+            );
+          });
+        })
+      : null;
 
   function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
@@ -2539,6 +2554,10 @@ const genres = (character.genres || [])
       project.characters.flatMap((character) => character.genres || [])
     );
 
+    const tagUsage = characterPreviewUsageEntries(
+      project.characters.flatMap((character) => character.tags || [])
+    );
+
     const platformUsage = characterPreviewUsageEntries(
       project.characters.flatMap((character) =>
         (character.platforms || []).map((link) => link.id)
@@ -2570,6 +2589,7 @@ const genres = (character.genres || [])
 
     return {
       genreUsage,
+      tagUsage,
       platformUsage,
       usedWorlds,
       independentCount
@@ -2579,6 +2599,7 @@ const genres = (character.genres || [])
   function characterPreviewFilterOptions(group) {
     const {
       genreUsage,
+      tagUsage,
       platformUsage,
       usedWorlds,
       independentCount
@@ -2591,11 +2612,26 @@ const genres = (character.genres || [])
           value: "전체",
           count: project.characters.length
         },
-...genreUsage.map(([id, count]) => ({
-  label: genreLabel(id),
-  value: id,
-  count
-}))
+        ...genreUsage.map(([id, count]) => ({
+          label: genreLabel(id),
+          value: id,
+          count
+        }))
+      ];
+    }
+
+    if (group === "tag") {
+      return [
+        {
+          label: "전체",
+          value: "전체",
+          count: project.characters.length
+        },
+        ...tagUsage.map(([tag, count]) => ({
+          label: tag,
+          value: tag,
+          count
+        }))
       ];
     }
 
@@ -2653,7 +2689,7 @@ const genres = (character.genres || [])
   }
 
   function pruneCharacterPreviewFilters() {
-    for (const group of ["genre", "platform", "world"]) {
+    for (const group of ["genre", "tag", "platform", "world"]) {
       const valid = new Set(
         characterPreviewFilterOptions(group)
           .slice(1)
@@ -2699,6 +2735,7 @@ const genres = (character.genres || [])
         aria-pressed="${active}"
         data-character-filter-group="${group}"
         data-character-filter-value="${escapeHtml(value)}"
+        data-character-filter-selected="${active}"
       >
         <span>${escapeHtml(label)}</span>
         ${countMarkup}
@@ -2706,35 +2743,120 @@ const genres = (character.genres || [])
     `;
   }
 
-  function compactCharacterPreviewFilterOptions(group) {
+  function scheduleCharacterPreviewFilterFit() {
+    window.cancelAnimationFrame(characterFilterFitFrame);
+    characterFilterFitFrame = window.requestAnimationFrame(() => {
+      [
+        elements.previewGenreFilters,
+        elements.previewTagFilters,
+        elements.previewPlatformFilters,
+        elements.previewWorldFilters
+      ].forEach(fitCharacterPreviewFilterRow);
+    });
+  }
+
+  function fitCharacterPreviewFilterRow(container) {
+    if (!container || !container.isConnected) return;
+
+    const optionButtons = [
+      ...container.querySelectorAll(
+        ".filter-chip[data-character-filter-group]"
+      )
+    ];
+    const moreButton = container.querySelector(
+      "[data-character-filter-more]"
+    );
+
+    if (optionButtons.length === 0 || !moreButton) return;
+
+    optionButtons.forEach((button) => {
+      button.hidden = false;
+    });
+    moreButton.hidden = true;
+
+    const availableWidth = container.clientWidth;
+    if (availableWidth <= 0) return;
+
+    const style = getComputedStyle(container);
+    const gap = Number.parseFloat(
+      style.columnGap || style.gap || "0"
+    ) || 0;
+
+    const fullWidth = optionButtons.reduce(
+      (total, button, index) =>
+        total + button.offsetWidth + (index > 0 ? gap : 0),
+      0
+    );
+
+    if (fullWidth <= availableWidth + 0.5) {
+      return;
+    }
+
+    const allButton = optionButtons[0];
+    const selectedButtons = optionButtons.slice(1).filter(
+      (button) => button.dataset.characterFilterSelected === "true"
+    );
+    const ordinaryButtons = optionButtons.slice(1).filter(
+      (button) => button.dataset.characterFilterSelected !== "true"
+    );
+
+    moreButton.hidden = false;
+
+    let usedWidth = allButton.offsetWidth;
+
+    selectedButtons.forEach((button) => {
+      usedWidth += gap + button.offsetWidth;
+    });
+
+    let hiddenCount = 0;
+
+    ordinaryButtons.forEach((button) => {
+      const requiredWidth =
+        usedWidth +
+        gap +
+        button.offsetWidth +
+        gap +
+        moreButton.offsetWidth;
+
+      if (requiredWidth <= availableWidth + 0.5) {
+        usedWidth += gap + button.offsetWidth;
+        return;
+      }
+
+      button.hidden = true;
+      hiddenCount += 1;
+    });
+
+    moreButton.hidden = hiddenCount === 0;
+    const count = moreButton.querySelector("b");
+    if (count) count.textContent = `+${hiddenCount}`;
+  }
+
+  function observeCharacterPreviewFilterRow(container) {
+    if (
+      !characterFilterResizeObserver ||
+      observedCharacterFilterRows.has(container)
+    ) {
+      return;
+    }
+
+    observedCharacterFilterRows.add(container);
+    characterFilterResizeObserver.observe(container);
+  }
+
+  function renderCharacterPreviewFilterRow(container, group) {
     const options = characterPreviewFilterOptions(group);
     const allOption = options[0];
     const remaining = options.slice(1);
     const selected = selectedCharacterPreviewFilters(group);
 
-    // 원본 로직: 선택된 항목은 기본 행 밖으로 밀려나지 않는다.
-    const visible = remaining.filter((option) =>
-      selected.has(option.value)
-    );
+    const ordered = [
+      ...remaining.filter((option) => selected.has(option.value)),
+      ...remaining.filter((option) => !selected.has(option.value))
+    ];
 
-    for (const option of remaining) {
-      if (visible.length >= CHARACTER_FILTER_PREVIEW_LIMIT) break;
-      if (!visible.some((item) => item.value === option.value)) {
-        visible.push(option);
-      }
-    }
-
-    return {
-      visible: [allOption, ...visible],
-      hiddenCount: Math.max(0, remaining.length - visible.length)
-    };
-  }
-
-  function renderCharacterPreviewFilterRow(container, group) {
-    const { visible, hiddenCount } =
-      compactCharacterPreviewFilterOptions(group);
-
-    container.innerHTML = visible
+    container.dataset.characterFilterRow = group;
+    container.innerHTML = [allOption, ...ordered]
       .map((option) =>
         characterPreviewFilterButton(
           option.label,
@@ -2745,21 +2867,22 @@ const genres = (character.genres || [])
       )
       .join("");
 
-    if (hiddenCount > 0) {
-      container.insertAdjacentHTML(
-        "beforeend",
-        `
-          <button
-            class="filter-more"
-            type="button"
-            data-character-filter-more="${group}"
-            aria-haspopup="dialog"
-          >
-            더보기 <b>+${hiddenCount}</b>
-          </button>
-        `
-      );
-    }
+    container.insertAdjacentHTML(
+      "beforeend",
+      `
+        <button
+          class="filter-more"
+          type="button"
+          data-character-filter-more="${group}"
+          aria-haspopup="dialog"
+          hidden
+        >
+          더보기 <b>+0</b>
+        </button>
+      `
+    );
+
+    observeCharacterPreviewFilterRow(container);
   }
 
   function renderCharacterPreviewFilters() {
@@ -2769,6 +2892,10 @@ const genres = (character.genres || [])
       "genre"
     );
     renderCharacterPreviewFilterRow(
+      elements.previewTagFilters,
+      "tag"
+    );
+    renderCharacterPreviewFilterRow(
       elements.previewPlatformFilters,
       "platform"
     );
@@ -2776,10 +2903,12 @@ const genres = (character.genres || [])
       elements.previewWorldFilters,
       "world"
     );
+    scheduleCharacterPreviewFilterFit();
   }
 
   function characterPreviewFilterPickerLabel(group) {
     if (group === "genre") return "장르 선택";
+    if (group === "tag") return "태그 선택";
     if (group === "platform") return "플랫폼 선택";
     return "세계관 선택";
   }
@@ -2849,6 +2978,7 @@ const genres = (character.genres || [])
     return Boolean(
       characterPreviewFilterState.query.trim() ||
       characterPreviewFilterState.genre.size > 0 ||
+      characterPreviewFilterState.tag.size > 0 ||
       characterPreviewFilterState.platform.size > 0 ||
       characterPreviewFilterState.world.size > 0
     );
@@ -2889,6 +3019,12 @@ const genres = (character.genres || [])
           characterPreviewFilterState.genre.has(genre)
         );
 
+      const tagMatch =
+        characterPreviewFilterState.tag.size === 0 ||
+        (character.tags || []).some((tag) =>
+          characterPreviewFilterState.tag.has(tag)
+        );
+
       const platformMatch =
         characterPreviewFilterState.platform.size === 0 ||
         (character.platforms || []).some((link) =>
@@ -2904,13 +3040,20 @@ const genres = (character.genres || [])
         );
 
       // 원본 규칙: 같은 분류 안에서는 OR, 서로 다른 분류 사이에서는 AND.
-      return queryMatch && genreMatch && platformMatch && worldMatch;
+      return (
+        queryMatch &&
+        genreMatch &&
+        tagMatch &&
+        platformMatch &&
+        worldMatch
+      );
     });
   }
 
   function resetCharacterPreviewFilters() {
     characterPreviewFilterState.query = "";
     characterPreviewFilterState.genre.clear();
+    characterPreviewFilterState.tag.clear();
     characterPreviewFilterState.platform.clear();
     characterPreviewFilterState.world.clear();
     elements.previewCharacterSearchInput.value = "";
@@ -4227,6 +4370,7 @@ elements.characterPreviewModalTags.innerHTML = [
     requestAnimationFrame(() => {
       updateWorldPreviewLimit();
       updateCharacterPreviewLimit();
+      scheduleCharacterPreviewFilterFit();
     });
   }
 
@@ -5780,6 +5924,11 @@ elements.worldPreviewSoundtrack.addEventListener(
   elements.previewWidthInput.addEventListener("input", (event) => {
     applyPreviewWidth(event.target.value);
   });
+
+  window.addEventListener(
+    "resize",
+    scheduleCharacterPreviewFilterFit
+  );
 
   elements.resetProjectButton.addEventListener(
     "click",

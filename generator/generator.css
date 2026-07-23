@@ -1891,10 +1891,12 @@ body.world-preview-modal-open {
 .search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 .search-box input { width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text); }
 .search-box input::placeholder { color: var(--muted); }
-.filter-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin-top: 1rem; }
-.filter-group { display: grid; gap: .7rem; }
+.filter-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+.filter-group { min-width: 0; display: grid; gap: .7rem; }
 .filter-label { color: var(--muted); font-size: .75rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
-.chip-list { display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; }
+.chip-list { min-width: 0; display: flex; gap: .45rem; flex-wrap: nowrap; align-items: center; overflow: hidden; }
+.chip-list > .filter-chip,
+.chip-list > .filter-more { flex: 0 0 auto; }
 .filter-chip,
 .filter-more { min-height: 38px; padding: .45rem .72rem; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; cursor: pointer; font-size: .82rem; }
 .filter-chip { display: inline-flex; align-items: center; justify-content: space-between; gap: .8rem; }
@@ -2028,7 +2030,6 @@ body.character-filter-picker-open { overflow: hidden; }
 
 @media (max-width: 1180px) {
   .filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .filter-group--world { grid-column: 1 / -1; }
   .character-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
@@ -2040,7 +2041,6 @@ body.character-filter-picker-open { overflow: hidden; }
 
 @media (max-width: 760px) {
   .filter-row { grid-template-columns: 1fr; }
-  .filter-group--world { grid-column: auto; }
   .filter-picker {
     width: 100%;
     max-width: none;
@@ -2187,8 +2187,7 @@ body.character-filter-picker-open { overflow: hidden; }
   .stardust-world-preview .world-preview-section-heading > p {
     text-align: left;
   }
-  .filter-row { grid-template-columns: 1fr; }
-  .filter-group--world { grid-column: auto; }
+  .filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .character-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
@@ -2209,6 +2208,10 @@ body.character-filter-picker-open { overflow: hidden; }
   .character-featured-grid .character-preview-card-body p { font-size: .58rem; }
   .character-featured-grid .character-preview-card-more { display: none; }
   .character-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container live-preview (max-width: 440px) {
+  .filter-row { grid-template-columns: 1fr; }
 }
 
 @container live-preview (max-width: 420px) {
