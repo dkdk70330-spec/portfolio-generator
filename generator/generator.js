@@ -1555,21 +1555,7 @@ function normalizeGenreId(value) {
     return missingMusicIds.size;
   }
 
-  function soundtrackTrackButton(track, index, activeIndex) {
-    return `
-      <button
-        class="soundtrack-track ${index === activeIndex ? "is-active" : ""}"
-        type="button"
-        data-soundtrack-track="${index}"
-        aria-pressed="${index === activeIndex}"
-      >
-        <span>${String(index + 1).padStart(2, "0")}</span>
-        <strong>${escapeHtml(musicTitle(track, index))}</strong>
-        <small>${track.type === "mp3" ? "MP3" : "YouTube"}</small>
-      </button>
-    `;
-  }
-
+  
   function soundtrackPlayerMarkup(track, index) {
     const title = musicTitle(track, index);
 
@@ -1609,49 +1595,65 @@ function normalizeGenreId(value) {
   }
 
   function renderSoundtrack(section, owner, activeIndex = 0) {
-    const tracks = playableMusicTracks(owner);
-    section.hidden = tracks.length === 0;
+  const tracks = playableMusicTracks(owner);
+  section.hidden = tracks.length === 0;
 
-    if (tracks.length === 0) {
-      section.innerHTML = "";
-      return;
-    }
-
-    const safeIndex = Math.min(
-      Math.max(Number(activeIndex) || 0, 0),
-      tracks.length - 1
-    );
-    section.dataset.soundtrackOwner = owner.id;
-    section.dataset.soundtrackActive = String(safeIndex);
-
-    const first = tracks.slice(0, 3).map((track, index) =>
-      soundtrackTrackButton(track, index, safeIndex)
-    ).join("");
-    const rest = tracks.slice(3);
-    const more = rest.length
-      ? `
-        <details class="soundtrack-more" ${safeIndex >= 3 ? "open" : ""}>
-          <summary>트랙 더보기 +${rest.length}</summary>
-          <div>${rest.map((track, index) =>
-            soundtrackTrackButton(track, index + 3, safeIndex)
-          ).join("")}</div>
-        </details>
-      `
-      : "";
-
-    section.innerHTML = `
-      <header class="soundtrack-heading">
-        <span><small>SOUNDTRACK</small><strong>이 이야기의 음악</strong></span>
-        <b aria-hidden="true">♫</b>
-      </header>
-      <div class="soundtrack-player">
-        ${soundtrackPlayerMarkup(tracks[safeIndex], safeIndex)}
-      </div>
-      ${tracks.length > 1
-        ? `<div class="soundtrack-track-list">${first}${more}</div>`
-        : ""}
-    `;
+  if (tracks.length === 0) {
+    section.innerHTML = "";
+    return;
   }
+
+  const safeIndex = Math.min(
+    Math.max(Number(activeIndex) || 0, 0),
+    tracks.length - 1
+  );
+
+  section.dataset.soundtrackOwner = owner.id;
+  section.dataset.soundtrackActive = String(safeIndex);
+
+  const trackOptions = tracks
+    .map((track, index) => {
+      const number = String(index + 1).padStart(2, "0");
+      const type = track.type === "mp3" ? "MP3" : "YouTube";
+
+      return `
+        <option
+          value="${index}"
+          ${index === safeIndex ? "selected" : ""}
+        >
+          ${number} · ${escapeHtml(musicTitle(track, index))} · ${type}
+        </option>
+      `;
+    })
+    .join("");
+
+  section.innerHTML = `
+    <header class="soundtrack-heading">
+      <span>
+        <small>SOUNDTRACK</small>
+        <strong>이 이야기의 음악</strong>
+      </span>
+      <b aria-hidden="true">♫</b>
+    </header>
+
+    <div class="soundtrack-player">
+      ${soundtrackPlayerMarkup(tracks[safeIndex], safeIndex)}
+    </div>
+
+    ${
+      tracks.length > 1
+        ? `
+          <label class="soundtrack-track-selector">
+            <span>TRACK LIST</span>
+            <select data-soundtrack-select>
+              ${trackOptions}
+            </select>
+          </label>
+        `
+        : ""
+    }
+  `;
+}
 
   function stopSoundtrack(section) {
     const audio = section.querySelector("audio");
@@ -5536,42 +5538,48 @@ elements.characterPreviewModalTags.innerHTML = [
     updateCharacterPreviewLimit();
   });
 
-  elements.characterPreviewSoundtrack.addEventListener(
-    "click",
-    (event) => {
-      const button = event.target.closest("[data-soundtrack-track]");
-      if (!button) return;
-      const character = project.characters.find(
-        (item) =>
-          item.id === elements.characterPreviewSoundtrack.dataset.soundtrackOwner
-      );
-      if (!character) return;
-      activateSoundtrackTrack(
-        elements.characterPreviewSoundtrack,
-        character,
-        Number(button.dataset.soundtrackTrack)
-      );
-    }
-  );
+elements.characterPreviewSoundtrack.addEventListener(
+  "change",
+  (event) => {
+    const select = event.target.closest("[data-soundtrack-select]");
+    if (!select) return;
 
-  elements.worldPreviewSoundtrack.addEventListener(
-    "click",
-    (event) => {
-      const button = event.target.closest("[data-soundtrack-track]");
-      if (!button) return;
-      const world = project.worlds.find(
-        (item) =>
-          item.id === elements.worldPreviewSoundtrack.dataset.soundtrackOwner
-      );
-      if (!world) return;
-      activateSoundtrackTrack(
-        elements.worldPreviewSoundtrack,
-        world,
-        Number(button.dataset.soundtrackTrack)
-      );
-    }
-  );
+    const character = project.characters.find(
+      (item) =>
+        item.id ===
+        elements.characterPreviewSoundtrack.dataset.soundtrackOwner
+    );
 
+    if (!character) return;
+
+    activateSoundtrackTrack(
+      elements.characterPreviewSoundtrack,
+      character,
+      Number(select.value)
+    );
+  }
+);
+elements.worldPreviewSoundtrack.addEventListener(
+  "change",
+  (event) => {
+    const select = event.target.closest("[data-soundtrack-select]");
+    if (!select) return;
+
+    const world = project.worlds.find(
+      (item) =>
+        item.id ===
+        elements.worldPreviewSoundtrack.dataset.soundtrackOwner
+    );
+
+    if (!world) return;
+
+    activateSoundtrackTrack(
+      elements.worldPreviewSoundtrack,
+      world,
+      Number(select.value)
+    );
+  }
+);
   for (const soundtrack of [
     elements.characterPreviewSoundtrack,
     elements.worldPreviewSoundtrack
