@@ -9,9 +9,9 @@
 <body>
   <header class="app-header">
     <div>
-      <p class="eyebrow">PORTFOLIO GENERATOR</p>
-      <h1>제작자 프로필 편집기</h1>
-      <p>사이트와 제작자 정보를 입력하면 오른쪽 미리보기에 즉시 반영됩니다.</p>
+      <p class="eyebrow">PuddingCat Portfolio Generator</p>
+      <h1>AI채팅 제작자 포트폴리오 생성기</h1>
+      <p>캐릭터와 링크 정보를 입력하면 오른쪽 미리보기에 즉시 반영됩니다.</p>
     </div>
 
     <div class="header-actions" aria-label="프로젝트 관리">
@@ -51,25 +51,25 @@
 
       <form id="profileForm" novalidate>
         <fieldset>
-          <legend>사이트 정보</legend>
+          <legend>포트폴리오</legend>
 
           <label>
-            <span>사이트 제목</span>
+            <span>제목</span>
             <input
               id="siteTitleInput"
               type="text"
               maxlength="60"
-              placeholder="예: 별개의 서재"
+              placeholder="예: 콘의 비밀보따리"
             >
           </label>
 
           <label>
-            <span>사이트 소개</span>
+            <span>제작자 짧은 한줄 소개 (이름 위에 작게)</span>
             <textarea
               id="siteDescriptionInput"
               rows="3"
               maxlength="180"
-              placeholder="이 포트폴리오를 소개하는 짧은 문장"
+              placeholder="대물을 가진 제작자"
             ></textarea>
           </label>
 
@@ -97,12 +97,12 @@
           <div class="avatar-editor image-drop-zone" data-image-drop-target="avatar" tabindex="0" role="group" aria-label="프로필 이미지 업로드 영역">
             <div class="avatar-preview" aria-hidden="true">
               <img id="avatarEditorPreview" alt="" hidden>
-              <span id="avatarEditorFallback">✦</span>
+              <span id="avatarEditorFallback">★</span>
             </div>
 
             <div>
               <label class="file-label" for="avatarInput">
-                프로필 PNG 선택
+                프로필 이미지 업로드
               </label>
               <input
                 id="avatarInput"
@@ -176,7 +176,7 @@
               id="creatorNameInput"
               type="text"
               maxlength="50"
-              placeholder="예: 별가루 공방"
+              placeholder="예: 푸딩냥"
             >
           </label>
 
@@ -186,7 +186,7 @@
               id="creatorHandleInput"
               type="text"
               maxlength="50"
-              placeholder="예: @stardust_archive"
+              placeholder="예: @id"
             >
           </label>
 
@@ -196,7 +196,7 @@
               id="creatorFallbackInput"
               type="text"
               maxlength="2"
-              placeholder="예: 별"
+              placeholder="예: 냥"
             >
           </label>
 
@@ -206,7 +206,7 @@
               id="creatorBioInput"
               rows="6"
               maxlength="800"
-              placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
+              placeholder="제작자 소개글"
             ></textarea>
           </label>
         </fieldset>
@@ -618,7 +618,6 @@
             <p class="eyebrow">FEATURED CHARACTERS</p>
             <h2 id="previewFeaturedTitle">추천 캐릭터</h2>
           </div>
-          <p>지금 가장 먼저 만나볼 캐릭터입니다.</p>
         </div>
         <div class="character-featured-grid" id="previewFeaturedGrid"></div>
       </section>
@@ -629,7 +628,6 @@
             <p class="eyebrow">SHARED WORLDS</p>
             <h2 id="previewWorldTitle">세계관 아카이브</h2>
           </div>
-          <p>서로의 이야기가 이어지는 세계를 먼저 둘러보세요.</p>
         </div>
 
         <div class="world-grid" id="previewWorldGrid"></div>
