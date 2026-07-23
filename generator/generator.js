@@ -37,7 +37,8 @@
   const IMAGE_DB_NAME = "portfolio-generator-images";
   const IMAGE_DB_VERSION = 1;
   const IMAGE_STORE_NAME = "images";
-  const MAX_AVATAR_FILE_BYTES = 10 * 1024 * 1024;
+  const MAX_IMAGE_FILE_BYTES = 10 * 1024 * 1024;
+  const MAX_WORLD_COUNT = 60;
   const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 
   const services = Array.isArray(adminCatalog.profileLinkServices)
@@ -52,6 +53,11 @@
   let creatorAvatarBlob = null;
   let creatorAvatarPreviewUrl = "";
   let avatarRestoreMissing = false;
+  let selectedWorldId = "";
+  let worldPreviewExpanded = false;
+  const worldImageBlobs = new Map();
+  const worldImagePreviewUrls = new Map();
+  const missingWorldImageIds = new Set();
   let imageDatabasePromise = null;
   let autosaveTimer = 0;
   let restoredAutosave = false;
@@ -82,6 +88,25 @@
     socialError: document.querySelector("#socialError"),
     socialLinkList: document.querySelector("#socialLinkList"),
 
+    addWorldButton: document.querySelector("#addWorldButton"),
+    worldEditorList: document.querySelector("#worldEditorList"),
+    worldEditorEmpty: document.querySelector("#worldEditorEmpty"),
+    worldForm: document.querySelector("#worldForm"),
+    moveWorldUpButton: document.querySelector("#moveWorldUpButton"),
+    moveWorldDownButton: document.querySelector("#moveWorldDownButton"),
+    deleteWorldButton: document.querySelector("#deleteWorldButton"),
+    worldImageInput: document.querySelector("#worldImageInput"),
+    worldImageEditorPreview: document.querySelector("#worldImageEditorPreview"),
+    worldImageEditorFallback: document.querySelector("#worldImageEditorFallback"),
+    worldImageStorageStatus: document.querySelector("#worldImageStorageStatus"),
+    removeWorldImageButton: document.querySelector("#removeWorldImageButton"),
+    worldNameInput: document.querySelector("#worldNameInput"),
+    worldSubtitleInput: document.querySelector("#worldSubtitleInput"),
+    worldTagsInput: document.querySelector("#worldTagsInput"),
+    worldDescriptionInput: document.querySelector("#worldDescriptionInput"),
+    addWorldSectionButton: document.querySelector("#addWorldSectionButton"),
+    worldSectionList: document.querySelector("#worldSectionList"),
+
     previewSiteTitle: document.querySelector("#previewSiteTitle"),
     previewSiteDescription: document.querySelector("#previewSiteDescription"),
     previewCreatorName: document.querySelector("#previewCreatorName"),
@@ -90,6 +115,23 @@
     previewCreatorLinks: document.querySelector("#previewCreatorLinks"),
     previewAvatarImage: document.querySelector("#previewAvatarImage"),
     previewAvatarFallback: document.querySelector("#previewAvatarFallback"),
+
+    previewWorldSection: document.querySelector("#previewWorldSection"),
+    previewWorldGrid: document.querySelector("#previewWorldGrid"),
+    previewWorldToggleWrap: document.querySelector("#previewWorldToggleWrap"),
+    previewWorldToggle: document.querySelector("#previewWorldToggle"),
+    previewWorldEmpty: document.querySelector("#previewWorldEmpty"),
+    worldPreviewModal: document.querySelector("#worldPreviewModal"),
+    worldPreviewModalClose: document.querySelector("#worldPreviewModalClose"),
+    worldPreviewModalImage: document.querySelector("#worldPreviewModalImage"),
+    worldPreviewModalImageFallback: document.querySelector("#worldPreviewModalImageFallback"),
+    worldPreviewModalTitle: document.querySelector("#worldPreviewModalTitle"),
+    worldPreviewModalSummary: document.querySelector("#worldPreviewModalSummary"),
+    worldPreviewModalTags: document.querySelector("#worldPreviewModalTags"),
+    worldPreviewModalDescription: document.querySelector("#worldPreviewModalDescription"),
+    worldPreviewModalSections: document.querySelector("#worldPreviewModalSections"),
+    worldPreviewCharacterSection: document.querySelector("#worldPreviewCharacterSection"),
+    worldPreviewCharacterList: document.querySelector("#worldPreviewCharacterList"),
 
     saveStatus: document.querySelector("#saveStatus")
   };
@@ -173,6 +215,139 @@
     };
   }
 
+
+  function normalizeWorldImage(value, fieldName) {
+    if (value === undefined || value === null || value === "") return "";
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (!isPlainObject(value)) {
+      throw new Error(`${fieldName} 항목의 형식이 올바르지 않습니다.`);
+    }
+
+    const id = normalizeString(value.id, `${fieldName}.id`).trim();
+    const name = normalizeString(
+      value.name || "world.png",
+      `${fieldName}.name`
+    ).trim();
+    const type = normalizeString(
+      value.type || "image/png",
+      `${fieldName}.type`
+    ).trim();
+    const size = Number(value.size || 0);
+    const width = Number(value.width || 0);
+    const height = Number(value.height || 0);
+    const updatedAt = normalizeString(
+      value.updatedAt || "",
+      `${fieldName}.updatedAt`
+    ).trim();
+
+    if (!id) throw new Error(`${fieldName}.id가 비어 있습니다.`);
+    if (type !== "image/png") {
+      throw new Error(`${fieldName}는 PNG 이미지여야 합니다.`);
+    }
+    if (!Number.isFinite(size) || size < 0) {
+      throw new Error(`${fieldName}.size가 올바르지 않습니다.`);
+    }
+    if (!Number.isFinite(width) || width < 0) {
+      throw new Error(`${fieldName}.width가 올바르지 않습니다.`);
+    }
+    if (!Number.isFinite(height) || height < 0) {
+      throw new Error(`${fieldName}.height가 올바르지 않습니다.`);
+    }
+
+    return {
+      id,
+      name: name || "world.png",
+      type: "image/png",
+      size: Math.round(size),
+      width: Math.round(width),
+      height: Math.round(height),
+      updatedAt
+    };
+  }
+
+  function normalizeWorldSection(section, worldIndex, sectionIndex) {
+    if (!isPlainObject(section)) {
+      throw new Error(
+        `worlds[${worldIndex}].sections[${sectionIndex}] 항목의 형식이 올바르지 않습니다.`
+      );
+    }
+
+    const rawContent = section.content ?? section.body ?? [];
+    const content = Array.isArray(rawContent)
+      ? rawContent.map((paragraph, paragraphIndex) =>
+          normalizeString(
+            paragraph,
+            `worlds[${worldIndex}].sections[${sectionIndex}].content[${paragraphIndex}]`
+          ).trim()
+        ).filter(Boolean)
+      : bioTextToArray(
+          normalizeString(
+            rawContent,
+            `worlds[${worldIndex}].sections[${sectionIndex}].content`
+          )
+        );
+
+    return {
+      ...cloneJson(section),
+      id: normalizeString(
+        section.id || `section-${sectionIndex + 1}`,
+        `worlds[${worldIndex}].sections[${sectionIndex}].id`
+      ).trim(),
+      title: normalizeString(
+        section.title,
+        `worlds[${worldIndex}].sections[${sectionIndex}].title`
+      ),
+      content
+    };
+  }
+
+  function normalizeWorld(world, index) {
+    if (!isPlainObject(world)) {
+      throw new Error(`worlds[${index}] 항목의 형식이 올바르지 않습니다.`);
+    }
+
+    const id = normalizeString(world.id, `worlds[${index}].id`).trim();
+    if (!id) throw new Error(`worlds[${index}].id가 비어 있습니다.`);
+
+    const rawTags = world.tags || [];
+    const rawDescription = world.description || [];
+    const rawSections = world.sections || [];
+
+    if (!Array.isArray(rawTags)) {
+      throw new Error(`worlds[${index}].tags 항목은 배열이어야 합니다.`);
+    }
+    if (!Array.isArray(rawDescription)) {
+      throw new Error(`worlds[${index}].description 항목은 배열이어야 합니다.`);
+    }
+    if (!Array.isArray(rawSections)) {
+      throw new Error(`worlds[${index}].sections 항목은 배열이어야 합니다.`);
+    }
+
+    return {
+      ...cloneJson(world),
+      id,
+      name: normalizeString(world.name, `worlds[${index}].name`),
+      subtitle: normalizeString(world.subtitle, `worlds[${index}].subtitle`),
+      image: normalizeWorldImage(world.image, `worlds[${index}].image`),
+      tags: rawTags.map((tag, tagIndex) =>
+        normalizeString(tag, `worlds[${index}].tags[${tagIndex}]`).trim()
+      ).filter(Boolean),
+      description: rawDescription.map((paragraph, paragraphIndex) =>
+        normalizeString(
+          paragraph,
+          `worlds[${index}].description[${paragraphIndex}]`
+        ).trim()
+      ).filter(Boolean),
+      sections: rawSections.map((section, sectionIndex) =>
+        normalizeWorldSection(section, index, sectionIndex)
+      )
+    };
+  }
+
   function normalizeProject(rawProject) {
     if (!isPlainObject(rawProject)) {
       throw new Error("프로젝트 JSON의 최상위 값은 객체여야 합니다.");
@@ -225,6 +400,16 @@
       normalizeString(paragraph, `creator.bio[${index}]`).trim()
     ).filter(Boolean);
 
+    const worlds = (rawProject.worlds || []).map(normalizeWorld);
+    const worldIds = new Set();
+
+    for (const world of worlds) {
+      if (worldIds.has(world.id)) {
+        throw new Error(`중복된 세계관 ID가 있습니다: ${world.id}`);
+      }
+      worldIds.add(world.id);
+    }
+
     const links = (rawCreator.links || []).map((link, index) => {
       if (!isPlainObject(link)) {
         throw new Error(`creator.links[${index}] 항목의 형식이 올바르지 않습니다.`);
@@ -273,7 +458,7 @@
         bio,
         links
       },
-      worlds: cloneJson(rawProject.worlds || []),
+      worlds,
       characters: cloneJson(rawProject.characters || [])
     };
   }
@@ -338,6 +523,85 @@
     return `image-${Date.now().toString(36)}-${Math.random()
       .toString(36)
       .slice(2, 10)}`;
+  }
+
+
+  function createEntityId(prefix) {
+    if (window.crypto?.randomUUID) {
+      return `${prefix}-${window.crypto.randomUUID()}`;
+    }
+
+    return `${prefix}-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 10)}`;
+  }
+
+  function createWorld() {
+    return {
+      id: createEntityId("world"),
+      name: "",
+      subtitle: "",
+      image: "",
+      tags: [],
+      description: [],
+      sections: []
+    };
+  }
+
+  function createWorldSection() {
+    return {
+      id: createEntityId("world-section"),
+      title: "",
+      content: []
+    };
+  }
+
+  function getSelectedWorld() {
+    return project.worlds.find((world) => world.id === selectedWorldId) || null;
+  }
+
+  function getWorldImageMetadata(world) {
+    return isPlainObject(world?.image) ? world.image : null;
+  }
+
+  function splitTags(value) {
+    const seen = new Set();
+
+    return String(value || "")
+      .split(/[,\n]/)
+      .map((tag) => tag.trim())
+      .filter((tag) => {
+        if (!tag || seen.has(tag)) return false;
+        seen.add(tag);
+        return true;
+      });
+  }
+
+  function legacyImageUrl(path) {
+    const value = String(path || "").trim();
+    if (!value) return "";
+    if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+    return `${ADMIN_ASSET_BASE}${value.replace(/^\.?\//, "")}`;
+  }
+
+  function worldImageUrl(world) {
+    if (!world) return "";
+    const storedUrl = worldImagePreviewUrls.get(world.id);
+    if (storedUrl) return storedUrl;
+    return typeof world.image === "string" ? legacyImageUrl(world.image) : "";
+  }
+
+  function characterImageUrl(character) {
+    const firstImage = Array.isArray(character?.images)
+      ? character.images[0]
+      : "";
+    return typeof firstImage === "string" ? legacyImageUrl(firstImage) : "";
+  }
+
+  function charactersInWorld(worldId) {
+    return project.characters.filter(
+      (character) => character && character.worldId === worldId
+    );
   }
 
   function setSaveStatus(message) {
@@ -674,6 +938,594 @@
       .join("");
   }
 
+
+  function releaseWorldImageObjectUrl(worldId) {
+    const url = worldImagePreviewUrls.get(worldId);
+    if (url) URL.revokeObjectURL(url);
+    worldImagePreviewUrls.delete(worldId);
+    worldImageBlobs.delete(worldId);
+    missingWorldImageIds.delete(worldId);
+  }
+
+  function releaseAllWorldImageObjectUrls() {
+    for (const worldId of [...worldImagePreviewUrls.keys()]) {
+      releaseWorldImageObjectUrl(worldId);
+    }
+    worldImageBlobs.clear();
+    missingWorldImageIds.clear();
+  }
+
+  function updateWorldImageStorageStatus() {
+    const world = getSelectedWorld();
+    if (!elements.worldImageStorageStatus || !world) return;
+
+    const metadata = getWorldImageMetadata(world);
+
+    if (missingWorldImageIds.has(world.id)) {
+      elements.worldImageStorageStatus.textContent =
+        "저장된 PNG 파일을 찾을 수 없습니다. PNG를 다시 선택해 주세요.";
+      return;
+    }
+
+    if (worldImageBlobs.has(world.id) && metadata) {
+      elements.worldImageStorageStatus.textContent =
+        `브라우저에 저장됨: ${metadata.name} · ${formatBytes(metadata.size)}`;
+      return;
+    }
+
+    if (metadata) {
+      elements.worldImageStorageStatus.textContent = "저장된 PNG를 확인하는 중입니다.";
+      return;
+    }
+
+    if (typeof world.image === "string" && world.image) {
+      elements.worldImageStorageStatus.textContent =
+        "프로젝트의 기존 이미지 경로를 사용 중입니다. 새 PNG로 교체할 수 있습니다.";
+      return;
+    }
+
+    elements.worldImageStorageStatus.textContent =
+      "PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다. 최대 10MB.";
+  }
+
+  function renderWorldImageEditorPreview() {
+    const world = getSelectedWorld();
+    if (!world) return;
+
+    const url = worldImageUrl(world);
+    elements.worldImageEditorPreview.hidden = !url;
+    elements.worldImageEditorFallback.hidden = Boolean(url);
+    elements.removeWorldImageButton.hidden = !world.image;
+
+    if (url) elements.worldImageEditorPreview.src = url;
+    else elements.worldImageEditorPreview.removeAttribute("src");
+
+    updateWorldImageStorageStatus();
+  }
+
+  function renderWorldList() {
+    if (project.worlds.length === 0) {
+      elements.worldEditorList.innerHTML =
+        '<p class="empty-message">등록된 세계관이 없습니다.</p>';
+      return;
+    }
+
+    elements.worldEditorList.innerHTML = project.worlds.map((world, index) => {
+      const url = worldImageUrl(world);
+      const thumb = url
+        ? `<img src="${escapeHtml(url)}" alt="">`
+        : "WORLD";
+
+      return `
+        <button
+          class="world-editor-list-item ${world.id === selectedWorldId ? "is-active" : ""}"
+          type="button"
+          data-select-world="${escapeHtml(world.id)}"
+          aria-pressed="${world.id === selectedWorldId}"
+        >
+          <span class="world-editor-list-thumb" aria-hidden="true">${thumb}</span>
+          <span class="world-editor-list-copy">
+            <strong>${escapeHtml(world.name || `새 세계관 ${index + 1}`)}</strong>
+            <small>${escapeHtml(world.subtitle || "부제를 입력해 주세요")}</small>
+          </span>
+        </button>
+      `;
+    }).join("");
+  }
+
+  function renderWorldSectionsEditor() {
+    const world = getSelectedWorld();
+    if (!world || world.sections.length === 0) {
+      elements.worldSectionList.innerHTML =
+        '<p class="empty-message">추가 정보가 없습니다.</p>';
+      return;
+    }
+
+    elements.worldSectionList.innerHTML = world.sections.map((section, index) => `
+      <article class="world-section-editor-item" data-world-section-id="${escapeHtml(section.id)}">
+        <div class="world-section-editor-toolbar">
+          <button type="button" data-move-world-section="up" ${index === 0 ? "disabled" : ""}>위로</button>
+          <button type="button" data-move-world-section="down" ${index === world.sections.length - 1 ? "disabled" : ""}>아래로</button>
+          <button type="button" data-delete-world-section>삭제</button>
+        </div>
+        <label>
+          <span>제목</span>
+          <input
+            type="text"
+            maxlength="100"
+            value="${escapeHtml(section.title)}"
+            placeholder="예: 세계의 핵심"
+            data-world-section-field="title"
+          >
+        </label>
+        <label>
+          <span>내용</span>
+          <textarea
+            rows="5"
+            maxlength="1400"
+            placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
+            data-world-section-field="content"
+          >${escapeHtml(bioArrayToText(section.content))}</textarea>
+        </label>
+      </article>
+    `).join("");
+  }
+
+  function populateWorldFields() {
+    const world = getSelectedWorld();
+    const hasWorld = Boolean(world);
+
+    elements.worldForm.hidden = !hasWorld;
+    elements.worldEditorEmpty.hidden = hasWorld;
+
+    if (!world) return;
+
+    elements.worldNameInput.value = world.name || "";
+    elements.worldSubtitleInput.value = world.subtitle || "";
+    elements.worldTagsInput.value = (world.tags || []).join(", ");
+    elements.worldDescriptionInput.value = bioArrayToText(world.description);
+
+    const index = project.worlds.findIndex((item) => item.id === world.id);
+    elements.moveWorldUpButton.disabled = index <= 0;
+    elements.moveWorldDownButton.disabled = index < 0 || index >= project.worlds.length - 1;
+
+    renderWorldSectionsEditor();
+    renderWorldImageEditorPreview();
+  }
+
+  function renderWorldEditor() {
+    if (!project.worlds.some((world) => world.id === selectedWorldId)) {
+      selectedWorldId = project.worlds[0]?.id || "";
+    }
+
+    renderWorldList();
+    populateWorldFields();
+  }
+
+  function worldFaceMarkup(character) {
+    const imageUrl = characterImageUrl(character);
+    if (imageUrl) {
+      return `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`;
+    }
+    return escapeHtml(String(character?.name || "?").slice(0, 1));
+  }
+
+  function worldCardMarkup(world) {
+    const related = charactersInWorld(world.id);
+    const tags = (world.tags || []).slice(0, 3)
+      .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+      .join("");
+    const faces = related.slice(0, 4).map((character) => `
+      <span class="world-face" title="${escapeHtml(character.name || "캐릭터")}">
+        ${worldFaceMarkup(character)}
+      </span>
+    `).join("");
+    const imageUrl = worldImageUrl(world);
+    const cover = imageUrl
+      ? `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
+      : '<span class="world-card-image-fallback">WORLD ARCHIVE</span>';
+
+    return `
+      <article class="world-card">
+        <button
+          class="world-card-button"
+          type="button"
+          data-preview-world="${escapeHtml(world.id)}"
+          aria-label="${escapeHtml(world.name || "이름 없는 세계관")} 세계관 보기"
+        >
+          <div class="world-card-image">
+            ${cover}
+            <div class="world-face-stack" aria-label="연결된 캐릭터">${faces}</div>
+          </div>
+          <div class="world-card-body">
+            <div class="world-card-meta"><span>${related.length} Characters</span><b aria-hidden="true">↗</b></div>
+            <h3>${escapeHtml(world.name || "이름 없는 세계관")}</h3>
+            <p>${escapeHtml(world.subtitle || "세계관 부제를 입력해 주세요.")}</p>
+            <div class="world-card-tags">${tags}</div>
+          </div>
+        </button>
+      </article>
+    `;
+  }
+
+  function previewWorldColumnCount() {
+    if (!elements.previewWorldGrid) return 3;
+    const template = getComputedStyle(elements.previewWorldGrid).gridTemplateColumns;
+    if (!template || template === "none") return 3;
+    return Math.max(1, template.split(/\s+/).filter(Boolean).length);
+  }
+
+  function updateWorldPreviewLimit() {
+    const cards = [...elements.previewWorldGrid.children];
+    const visibleLimit = previewWorldColumnCount() * 2;
+    const canCollapse = cards.length > visibleLimit;
+    const isExpanded = worldPreviewExpanded || !canCollapse;
+
+    cards.forEach((card, index) => {
+      card.hidden = !isExpanded && index >= visibleLimit;
+    });
+
+    elements.previewWorldToggleWrap.hidden = !canCollapse;
+    elements.previewWorldToggle.classList.toggle("is-expanded", isExpanded);
+    elements.previewWorldToggle.setAttribute("aria-expanded", String(isExpanded));
+
+    const label = elements.previewWorldToggle.querySelector("span");
+    if (label) {
+      label.textContent = isExpanded
+        ? "세계관 접기"
+        : `세계관 더보기 +${Math.max(0, cards.length - visibleLimit)}`;
+    }
+  }
+
+  function renderWorldPreview() {
+    const hasWorlds = project.worlds.length > 0;
+    elements.previewWorldGrid.hidden = !hasWorlds;
+    elements.previewWorldEmpty.hidden = hasWorlds;
+    elements.previewWorldGrid.innerHTML = hasWorlds
+      ? project.worlds.map(worldCardMarkup).join("")
+      : "";
+
+    if (!hasWorlds) worldPreviewExpanded = false;
+    updateWorldPreviewLimit();
+    renderWorldImageEditorPreview();
+  }
+
+  function worldInfoSectionMarkup(section) {
+    return `
+      <article class="world-info-block">
+        <h3>${escapeHtml(section.title || "세계관 정보")}</h3>
+        <div>${(section.content || []).map((paragraph) =>
+          `<p>${escapeHtml(paragraph)}</p>`
+        ).join("")}</div>
+      </article>
+    `;
+  }
+
+  function openWorldPreview(world) {
+    if (!world) return;
+
+    const imageUrl = worldImageUrl(world);
+    elements.worldPreviewModalImage.hidden = !imageUrl;
+    elements.worldPreviewModalImageFallback.hidden = Boolean(imageUrl);
+
+    if (imageUrl) {
+      elements.worldPreviewModalImage.src = imageUrl;
+      elements.worldPreviewModalImage.alt = `${world.name || "세계관"} 대표 이미지`;
+    } else {
+      elements.worldPreviewModalImage.removeAttribute("src");
+      elements.worldPreviewModalImage.alt = "";
+    }
+
+    elements.worldPreviewModalTitle.textContent = world.name || "이름 없는 세계관";
+    elements.worldPreviewModalSummary.textContent = world.subtitle || "";
+    elements.worldPreviewModalSummary.hidden = !world.subtitle;
+    elements.worldPreviewModalTags.innerHTML = (world.tags || [])
+      .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+      .join("");
+    elements.worldPreviewModalTags.hidden = !(world.tags || []).length;
+    elements.worldPreviewModalDescription.innerHTML = (world.description || [])
+      .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+      .join("");
+    elements.worldPreviewModalDescription.hidden = !(world.description || []).length;
+    elements.worldPreviewModalSections.innerHTML = (world.sections || [])
+      .map(worldInfoSectionMarkup)
+      .join("");
+    elements.worldPreviewModalSections.hidden = !(world.sections || []).length;
+
+    const related = charactersInWorld(world.id);
+    elements.worldPreviewCharacterSection.hidden = related.length === 0;
+    elements.worldPreviewCharacterList.innerHTML = related.map((character) => {
+      const imageUrl = characterImageUrl(character);
+      const face = imageUrl
+        ? `<img src="${escapeHtml(imageUrl)}" alt="">`
+        : `<span class="world-character-face-fallback" aria-hidden="true">${escapeHtml(String(character.name || "?").slice(0, 1))}</span>`;
+
+      return `
+        <article class="world-character-button">
+          ${face}
+          <span>
+            <strong>${escapeHtml(character.name || "이름 없는 캐릭터")}</strong>
+            <small>${escapeHtml(character.subtitle || "")}</small>
+          </span>
+        </article>
+      `;
+    }).join("");
+
+    elements.worldPreviewModal.showModal();
+    document.body.classList.add("modal-open");
+  }
+
+  function closeWorldPreview() {
+    if (elements.worldPreviewModal.open) {
+      elements.worldPreviewModal.close();
+    }
+    document.body.classList.remove("modal-open");
+  }
+
+  function syncWorldFromFields() {
+    const world = getSelectedWorld();
+    if (!world) return;
+
+    world.name = elements.worldNameInput.value.trim();
+    world.subtitle = elements.worldSubtitleInput.value.trim();
+    world.tags = splitTags(elements.worldTagsInput.value);
+    world.description = bioTextToArray(elements.worldDescriptionInput.value);
+
+    renderWorldList();
+    renderWorldPreview();
+    scheduleAutosave();
+  }
+
+  function addWorld() {
+    if (project.worlds.length >= MAX_WORLD_COUNT) {
+      window.alert(`세계관은 최대 ${MAX_WORLD_COUNT}개까지 만들 수 있습니다.`);
+      return;
+    }
+
+    const world = createWorld();
+    project.worlds.push(world);
+    selectedWorldId = world.id;
+    if (project.worlds.length > previewWorldColumnCount() * 2) {
+      worldPreviewExpanded = true;
+    }
+    renderWorldEditor();
+    renderWorldPreview();
+    scheduleAutosave();
+    elements.worldNameInput.focus();
+  }
+
+  async function deleteSelectedWorld() {
+    const world = getSelectedWorld();
+    if (!world) return;
+
+    const linkedCharacters = charactersInWorld(world.id);
+    const linkedMessage = linkedCharacters.length
+      ? `\n연결된 캐릭터 ${linkedCharacters.length}명은 독립 캐릭터로 변경됩니다.`
+      : "";
+    const confirmed = window.confirm(
+      `“${world.name || "이름 없는 세계관"}”을 삭제할까요?${linkedMessage}`
+    );
+
+    if (!confirmed) return;
+
+    const metadata = getWorldImageMetadata(world);
+    const index = project.worlds.findIndex((item) => item.id === world.id);
+
+    for (const character of linkedCharacters) {
+      character.worldId = "";
+    }
+
+    releaseWorldImageObjectUrl(world.id);
+    project.worlds.splice(index, 1);
+    selectedWorldId = project.worlds[index]?.id || project.worlds[index - 1]?.id || "";
+    if (project.worlds.length <= previewWorldColumnCount() * 2) {
+      worldPreviewExpanded = false;
+    }
+
+    if (metadata?.id) {
+      try {
+        await deleteImageRecord(metadata.id);
+      } catch (error) {
+        console.error(error);
+        setSaveStatus("세계관은 삭제됐지만 저장 이미지 정리에 실패함");
+      }
+    }
+
+    renderWorldEditor();
+    renderWorldPreview();
+    saveProjectToStorage();
+  }
+
+  function moveSelectedWorld(direction) {
+    const index = project.worlds.findIndex((world) => world.id === selectedWorldId);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= project.worlds.length) return;
+
+    const [world] = project.worlds.splice(index, 1);
+    project.worlds.splice(targetIndex, 0, world);
+    renderWorldEditor();
+    renderWorldPreview();
+    scheduleAutosave();
+  }
+
+  function addWorldSection() {
+    const world = getSelectedWorld();
+    if (!world) return;
+    world.sections.push(createWorldSection());
+    renderWorldSectionsEditor();
+    renderWorldPreview();
+    scheduleAutosave();
+
+    requestAnimationFrame(() => {
+      const items = elements.worldSectionList.querySelectorAll(".world-section-editor-item");
+      items[items.length - 1]?.querySelector("input")?.focus();
+    });
+  }
+
+  function updateWorldSectionFromInput(target) {
+    const item = target.closest("[data-world-section-id]");
+    const world = getSelectedWorld();
+    if (!item || !world) return;
+
+    const section = world.sections.find(
+      (entry) => entry.id === item.dataset.worldSectionId
+    );
+    if (!section) return;
+
+    if (target.dataset.worldSectionField === "title") {
+      section.title = target.value.trim();
+    } else if (target.dataset.worldSectionField === "content") {
+      section.content = bioTextToArray(target.value);
+    } else {
+      return;
+    }
+
+    renderWorldPreview();
+    scheduleAutosave();
+  }
+
+  function handleWorldSectionAction(button) {
+    const item = button.closest("[data-world-section-id]");
+    const world = getSelectedWorld();
+    if (!item || !world) return;
+
+    const index = world.sections.findIndex(
+      (section) => section.id === item.dataset.worldSectionId
+    );
+    if (index < 0) return;
+
+    if (button.hasAttribute("data-delete-world-section")) {
+      world.sections.splice(index, 1);
+    } else {
+      const direction = button.dataset.moveWorldSection === "up" ? -1 : 1;
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= world.sections.length) return;
+      const [section] = world.sections.splice(index, 1);
+      world.sections.splice(targetIndex, 0, section);
+    }
+
+    renderWorldSectionsEditor();
+    renderWorldPreview();
+    scheduleAutosave();
+  }
+
+  async function restoreWorldImagesFromDatabase() {
+    releaseAllWorldImageObjectUrls();
+
+    for (const world of project.worlds) {
+      const metadata = getWorldImageMetadata(world);
+      if (!metadata?.id) continue;
+
+      try {
+        const record = await getImageRecord(metadata.id);
+        if (!record?.blob || record.blob.type !== "image/png") {
+          missingWorldImageIds.add(world.id);
+          continue;
+        }
+
+        worldImageBlobs.set(world.id, record.blob);
+        worldImagePreviewUrls.set(world.id, URL.createObjectURL(record.blob));
+      } catch (error) {
+        console.error(error);
+        missingWorldImageIds.add(world.id);
+      }
+    }
+
+    renderWorldEditor();
+    renderWorldPreview();
+    return missingWorldImageIds.size;
+  }
+
+  async function handleWorldImageSelection() {
+    const world = getSelectedWorld();
+    const file = elements.worldImageInput.files?.[0] || null;
+    if (!world || !file) return;
+
+    elements.worldImageInput.disabled = true;
+    setSaveStatus("세계관 PNG 저장 중…");
+
+    try {
+      const previousMetadata = getWorldImageMetadata(world);
+      const sanitized = await sanitizePng(file, "세계관 PNG");
+      const id = createImageId();
+      const updatedAt = new Date().toISOString();
+      const record = {
+        id,
+        role: "world-cover",
+        ownerId: world.id,
+        name: file.name || "world.png",
+        type: "image/png",
+        size: sanitized.blob.size,
+        width: sanitized.width,
+        height: sanitized.height,
+        updatedAt,
+        blob: sanitized.blob
+      };
+
+      await putImageRecord(record);
+
+      world.image = {
+        id,
+        name: record.name,
+        type: record.type,
+        size: record.size,
+        width: record.width,
+        height: record.height,
+        updatedAt
+      };
+
+      releaseWorldImageObjectUrl(world.id);
+      worldImageBlobs.set(world.id, sanitized.blob);
+      worldImagePreviewUrls.set(world.id, URL.createObjectURL(sanitized.blob));
+      missingWorldImageIds.delete(world.id);
+
+      if (previousMetadata?.id && previousMetadata.id !== id) {
+        try {
+          await deleteImageRecord(previousMetadata.id);
+        } catch (cleanupError) {
+          console.error(cleanupError);
+        }
+      }
+
+      renderWorldEditor();
+      renderWorldPreview();
+      saveProjectToStorage();
+      setSaveStatus("세계관 PNG가 브라우저에 저장됨");
+    } catch (error) {
+      elements.worldImageInput.value = "";
+      console.error(error);
+      window.alert(error.message || "세계관 이미지를 처리하지 못했습니다.");
+      setSaveStatus("세계관 PNG 저장 실패");
+    } finally {
+      elements.worldImageInput.disabled = false;
+    }
+  }
+
+  async function removeWorldImage() {
+    const world = getSelectedWorld();
+    if (!world) return;
+
+    const metadata = getWorldImageMetadata(world);
+    releaseWorldImageObjectUrl(world.id);
+    world.image = "";
+    elements.worldImageInput.value = "";
+    renderWorldEditor();
+    renderWorldPreview();
+    saveProjectToStorage();
+
+    if (metadata?.id) {
+      try {
+        await deleteImageRecord(metadata.id);
+      } catch (error) {
+        console.error(error);
+        setSaveStatus("이미지 연결은 제거됐지만 저장 파일 정리에 실패함");
+        return;
+      }
+    }
+
+    setSaveStatus("세계관 PNG가 제거됨");
+  }
+
   function renderAvatarPreview() {
     const fallback =
       project.creator.fallbackText ||
@@ -760,6 +1612,7 @@
       project.creator.links.length === 0;
 
     renderAvatarPreview();
+    renderWorldPreview();
 
     document.title = `${siteTitle} | 포트폴리오 생성기`;
   }
@@ -785,13 +1638,13 @@
     elements.avatarInput.value = "";
   }
 
-  async function validatePngFile(file) {
+  async function validatePngFile(file, label = "PNG 이미지") {
     if (!file || file.size <= 0) {
       throw new Error("비어 있는 이미지 파일은 사용할 수 없습니다.");
     }
 
-    if (file.size > MAX_AVATAR_FILE_BYTES) {
-      throw new Error("프로필 PNG는 10MB 이하만 사용할 수 있습니다.");
+    if (file.size > MAX_IMAGE_FILE_BYTES) {
+      throw new Error(`${label}는 10MB 이하만 사용할 수 있습니다.`);
     }
 
     if (file.type && file.type !== "image/png") {
@@ -811,8 +1664,8 @@
     }
   }
 
-  async function sanitizePng(file) {
-    await validatePngFile(file);
+  async function sanitizePng(file, label = "PNG 이미지") {
+    await validatePngFile(file, label);
     const sourceUrl = URL.createObjectURL(file);
 
     try {
@@ -850,8 +1703,8 @@
         }, "image/png");
       });
 
-      if (blob.size > MAX_AVATAR_FILE_BYTES) {
-        throw new Error("변환된 프로필 PNG가 10MB를 초과합니다.");
+      if (blob.size > MAX_IMAGE_FILE_BYTES) {
+        throw new Error(`변환된 ${label}가 10MB를 초과합니다.`);
       }
 
       return {
@@ -906,7 +1759,7 @@
 
     try {
       const previousMetadata = getAvatarMetadata();
-      const sanitized = await sanitizePng(file);
+      const sanitized = await sanitizePng(file, "프로필 PNG");
       const id = createImageId();
       const updatedAt = new Date().toISOString();
       const record = {
@@ -981,16 +1834,22 @@
     setSaveStatus("프로필 PNG가 제거됨");
   }
 
-  async function replaceCurrentProject(nextProject, restoreAvatar = true) {
+  async function replaceCurrentProject(nextProject, restoreImages = true) {
     project = normalizeProject(nextProject);
     releaseAvatarObjectUrl();
+    releaseAllWorldImageObjectUrls();
     avatarRestoreMissing = false;
+    selectedWorldId = project.worlds[0]?.id || "";
+    worldPreviewExpanded = false;
     populateFieldsFromProject();
     renderSocialLinks();
+    renderWorldEditor();
     renderPreview();
 
-    if (!restoreAvatar) return false;
-    return await restoreAvatarFromDatabase();
+    if (!restoreImages) return false;
+    const avatarRestored = await restoreAvatarFromDatabase();
+    await restoreWorldImagesFromDatabase();
+    return avatarRestored;
   }
 
   function buildDownloadFilename() {
@@ -1025,9 +1884,12 @@
       URL.revokeObjectURL(url);
 
       saveProjectToStorage();
+      const storedImageCount =
+        (getAvatarMetadata() ? 1 : 0) +
+        project.worlds.filter((world) => getWorldImageMetadata(world)).length;
       setSaveStatus(
-        getAvatarMetadata()
-          ? "프로젝트 JSON 저장됨 · PNG는 이 브라우저에 유지됨"
+        storedImageCount > 0
+          ? `프로젝트 JSON 저장됨 · PNG ${storedImageCount}개는 이 브라우저에 유지됨`
           : "프로젝트 JSON 저장됨"
       );
     } catch (error) {
@@ -1055,8 +1917,15 @@
       const restoredAvatar = await replaceCurrentProject(nextProject);
       saveProjectToStorage();
 
-      if (getAvatarMetadata() && !restoredAvatar) {
-        setSaveStatus("프로젝트 불러옴 · PNG를 다시 선택해 주세요");
+      const missingWorldCount = missingWorldImageIds.size;
+
+      if ((getAvatarMetadata() && !restoredAvatar) || missingWorldCount > 0) {
+        const missingImages = [];
+        if (getAvatarMetadata() && !restoredAvatar) missingImages.push("프로필 PNG");
+        if (missingWorldCount > 0) missingImages.push(`세계관 PNG ${missingWorldCount}개`);
+        setSaveStatus(
+          `프로젝트 불러옴 · ${missingImages.join(" · ")}를 다시 선택해 주세요`
+        );
       } else {
         setSaveStatus("프로젝트 불러오기 완료");
       }
@@ -1069,13 +1938,14 @@
 
   async function resetProject() {
     const confirmed = window.confirm(
-      "현재 입력한 제작자 프로필, 자동 저장 데이터와 저장된 PNG를 모두 초기화할까요?"
+      "현재 입력한 제작자 프로필과 세계관, 자동 저장 데이터와 저장된 PNG를 모두 초기화할까요?"
     );
 
     if (!confirmed) return;
 
     clearStoredProject();
     releaseAvatarObjectUrl();
+    releaseAllWorldImageObjectUrls();
     avatarRestoreMissing = false;
 
     try {
@@ -1090,6 +1960,63 @@
     await replaceCurrentProject(createEmptyProject(), false);
     setSaveStatus("입력, 자동 저장 데이터와 PNG가 초기화됨");
   }
+
+
+  elements.addWorldButton.addEventListener("click", addWorld);
+
+  elements.worldEditorList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-select-world]");
+    if (!button) return;
+    selectedWorldId = button.dataset.selectWorld;
+    renderWorldEditor();
+  });
+
+  elements.worldForm.addEventListener("input", (event) => {
+    if (event.target === elements.worldImageInput) return;
+    if (event.target.matches("[data-world-section-field]")) {
+      updateWorldSectionFromInput(event.target);
+      return;
+    }
+    syncWorldFromFields();
+  });
+
+  elements.worldSectionList.addEventListener("click", (event) => {
+    const button = event.target.closest(
+      "[data-delete-world-section], [data-move-world-section]"
+    );
+    if (!button) return;
+    handleWorldSectionAction(button);
+  });
+
+  elements.addWorldSectionButton.addEventListener("click", addWorldSection);
+  elements.moveWorldUpButton.addEventListener("click", () => moveSelectedWorld(-1));
+  elements.moveWorldDownButton.addEventListener("click", () => moveSelectedWorld(1));
+  elements.deleteWorldButton.addEventListener("click", deleteSelectedWorld);
+  elements.worldImageInput.addEventListener("change", handleWorldImageSelection);
+  elements.removeWorldImageButton.addEventListener("click", removeWorldImage);
+
+  elements.previewWorldGrid.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-preview-world]");
+    if (!button) return;
+    openWorldPreview(
+      project.worlds.find((world) => world.id === button.dataset.previewWorld)
+    );
+  });
+
+  elements.previewWorldToggle.addEventListener("click", () => {
+    worldPreviewExpanded = !worldPreviewExpanded;
+    updateWorldPreviewLimit();
+  });
+
+  window.addEventListener("resize", updateWorldPreviewLimit);
+
+  elements.worldPreviewModalClose.addEventListener("click", closeWorldPreview);
+  elements.worldPreviewModal.addEventListener("click", (event) => {
+    if (event.target === elements.worldPreviewModal) closeWorldPreview();
+  });
+  elements.worldPreviewModal.addEventListener("close", () => {
+    document.body.classList.remove("modal-open");
+  });
 
   elements.profileForm.addEventListener("input", (event) => {
     if (event.target === elements.avatarInput) return;
@@ -1144,19 +2071,23 @@
     }
 
     releaseAvatarObjectUrl();
+    releaseAllWorldImageObjectUrls();
   });
 
   async function initialize() {
     loadProjectFromStorage();
     renderServiceOptions();
+    selectedWorldId = project.worlds[0]?.id || "";
     populateFieldsFromProject();
     renderSocialLinks();
+    renderWorldEditor();
     renderPreview();
 
     const avatarMetadata = getAvatarMetadata();
     const restoredAvatar = avatarMetadata
       ? await restoreAvatarFromDatabase()
       : false;
+    const missingWorldCount = await restoreWorldImagesFromDatabase();
 
     if (autosaveRestoreError) {
       setSaveStatus("자동 저장 복구 실패");
@@ -1166,17 +2097,18 @@
       return;
     }
 
-    if (avatarMetadata && !restoredAvatar) {
+    if ((avatarMetadata && !restoredAvatar) || missingWorldCount > 0) {
+      const messages = [];
+      if (avatarMetadata && !restoredAvatar) messages.push("프로필 PNG");
+      if (missingWorldCount > 0) messages.push(`세계관 PNG ${missingWorldCount}개`);
       setSaveStatus(
-        restoredAutosave
-          ? "이전 자동 저장 복구됨 · PNG를 다시 선택해 주세요"
-          : "PNG를 다시 선택해 주세요"
+        `${restoredAutosave ? "이전 자동 저장 복구됨 · " : ""}${messages.join(" · ")}를 다시 선택해 주세요`
       );
       return;
     }
 
-    if (restoredAutosave && restoredAvatar) {
-      setSaveStatus("이전 자동 저장과 PNG를 복구함");
+    if (restoredAutosave && (restoredAvatar || project.worlds.length > 0)) {
+      setSaveStatus("이전 자동 저장과 저장 이미지를 복구함");
     } else if (restoredAutosave) {
       setSaveStatus("이전 자동 저장을 복구함");
     } else {

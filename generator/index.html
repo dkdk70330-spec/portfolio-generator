@@ -10,8 +10,8 @@
   <header class="app-header">
     <div>
       <p class="eyebrow">PORTFOLIO GENERATOR</p>
-      <h1>제작자 프로필 편집기</h1>
-      <p>사이트와 제작자 정보를 입력하면 오른쪽 미리보기에 즉시 반영됩니다.</p>
+      <h1>포트폴리오 편집기</h1>
+      <p>제작자 프로필과 세계관을 입력하면 오른쪽에 실제 아카이브 형태로 반영됩니다.</p>
     </div>
 
     <div class="header-actions" aria-label="프로젝트 관리">
@@ -170,6 +170,132 @@
           </div>
         </fieldset>
       </form>
+
+      <section class="world-editor-section" aria-labelledby="worldEditorTitle">
+        <header class="editor-section-heading">
+          <div>
+            <p class="eyebrow">SHARED WORLDS</p>
+            <h2 id="worldEditorTitle">세계관 편집</h2>
+          </div>
+          <button id="addWorldButton" class="primary-button" type="button">
+            새 세계관
+          </button>
+        </header>
+
+        <div class="world-editor-layout">
+          <aside class="world-editor-sidebar" aria-label="세계관 목록">
+            <div id="worldEditorList" class="world-editor-list">
+              <p class="empty-message">등록된 세계관이 없습니다.</p>
+            </div>
+          </aside>
+
+          <div id="worldEditorEmpty" class="world-editor-empty">
+            <strong>세계관을 추가해 주세요.</strong>
+            <p>대표 이미지와 소개를 입력하면 미리보기에 세계관 카드가 나타납니다.</p>
+          </div>
+
+          <form id="worldForm" class="world-form" novalidate hidden>
+            <div class="world-form-actions" aria-label="선택한 세계관 관리">
+              <button id="moveWorldUpButton" class="secondary-button" type="button">
+                위로
+              </button>
+              <button id="moveWorldDownButton" class="secondary-button" type="button">
+                아래로
+              </button>
+              <button id="deleteWorldButton" class="danger-button" type="button">
+                세계관 삭제
+              </button>
+            </div>
+
+            <div class="world-image-editor">
+              <div class="world-image-editor-preview" aria-hidden="true">
+                <img id="worldImageEditorPreview" alt="" hidden>
+                <span id="worldImageEditorFallback">WORLD</span>
+              </div>
+
+              <div>
+                <label class="file-label" for="worldImageInput">
+                  세계관 대표 PNG 선택
+                </label>
+                <input
+                  id="worldImageInput"
+                  class="file-input"
+                  type="file"
+                  accept="image/png"
+                >
+                <p
+                  id="worldImageStorageStatus"
+                  class="field-help"
+                  role="status"
+                  aria-live="polite"
+                >
+                  PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다. 최대 10MB.
+                </p>
+                <button id="removeWorldImageButton" class="text-button" type="button" hidden>
+                  이미지 제거
+                </button>
+              </div>
+            </div>
+
+            <label>
+              <span>세계관 이름</span>
+              <input
+                id="worldNameInput"
+                type="text"
+                maxlength="80"
+                placeholder="예: 별의 왕관"
+              >
+            </label>
+
+            <label>
+              <span>부제</span>
+              <input
+                id="worldSubtitleInput"
+                type="text"
+                maxlength="160"
+                placeholder="예: 사라진 별과 패전국을 둘러싼 왕국 연대기"
+              >
+            </label>
+
+            <label>
+              <span>태그</span>
+              <input
+                id="worldTagsInput"
+                type="text"
+                maxlength="240"
+                placeholder="왕국, 천문, 정치극"
+              >
+              <small class="field-help">쉼표로 구분해 주세요.</small>
+            </label>
+
+            <label>
+              <span>세계관 소개</span>
+              <textarea
+                id="worldDescriptionInput"
+                rows="7"
+                maxlength="1600"
+                placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
+              ></textarea>
+            </label>
+
+            <section class="world-section-editor" aria-labelledby="worldSectionsTitle">
+              <div class="subsection-heading">
+                <div>
+                  <span class="field-label" id="worldSectionsTitle">추가 정보</span>
+                  <small>세계의 핵심, 주요 갈등처럼 상세창에 표시할 내용을 추가합니다.</small>
+                </div>
+                <button id="addWorldSectionButton" class="secondary-button" type="button">
+                  항목 추가
+                </button>
+              </div>
+
+              <div id="worldSectionList" class="world-section-editor-list">
+                <p class="empty-message">추가 정보가 없습니다.</p>
+              </div>
+            </section>
+          </form>
+        </div>
+      </section>
     </section>
 
     <section class="preview-panel" aria-labelledby="previewTitle">
@@ -202,9 +328,62 @@
           </div>
         </div>
       </article>
+
+      <section class="stardust-world-preview" id="previewWorldSection" aria-labelledby="previewWorldTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SHARED WORLDS</p>
+            <h2 id="previewWorldTitle">세계관 아카이브</h2>
+          </div>
+          <p>서로의 이야기가 이어지는 세계를 먼저 둘러보세요.</p>
+        </div>
+
+        <div class="world-grid" id="previewWorldGrid"></div>
+        <div class="archive-toggle-wrap" id="previewWorldToggleWrap" hidden>
+          <button
+            class="archive-toggle"
+            id="previewWorldToggle"
+            type="button"
+            aria-controls="previewWorldGrid"
+            aria-expanded="false"
+          >
+            <span>세계관 더보기</span>
+            <b aria-hidden="true">↓</b>
+          </button>
+        </div>
+        <p id="previewWorldEmpty" class="world-preview-empty">
+          아직 등록된 세계관이 없습니다.
+        </p>
+      </section>
     </section>
   </main>
 
+
+  <dialog class="world-modal" id="worldPreviewModal" aria-labelledby="worldPreviewModalTitle">
+    <div class="world-modal-shell">
+      <button class="modal-close" id="worldPreviewModalClose" type="button" aria-label="세계관 상세 닫기">×</button>
+      <div class="world-cover-panel">
+        <img id="worldPreviewModalImage" src="" alt="" hidden>
+        <div id="worldPreviewModalImageFallback" class="world-cover-fallback">WORLD ARCHIVE</div>
+      </div>
+      <article class="world-modal-content">
+        <p class="modal-kicker">WORLD ARCHIVE</p>
+        <h2 id="worldPreviewModalTitle"></h2>
+        <p class="world-modal-summary" id="worldPreviewModalSummary"></p>
+        <div class="tag-list" id="worldPreviewModalTags"></div>
+        <div class="world-modal-description" id="worldPreviewModalDescription"></div>
+        <div class="world-section-list" id="worldPreviewModalSections"></div>
+
+        <section class="world-character-section" id="worldPreviewCharacterSection" aria-labelledby="worldPreviewCharacterHeading">
+          <div class="panel-heading">
+            <p class="eyebrow">CHARACTERS IN THIS WORLD</p>
+            <h3 id="worldPreviewCharacterHeading">이 세계의 캐릭터</h3>
+          </div>
+          <div class="world-character-list" id="worldPreviewCharacterList"></div>
+        </section>
+      </article>
+    </div>
+  </dialog>
   <script src="../shared/admin-catalog.js"></script>
   <script src="../shared/empty-project.js"></script>
   <script src="./generator.js" defer></script>
