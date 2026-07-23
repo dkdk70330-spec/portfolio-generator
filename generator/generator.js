@@ -734,6 +734,7 @@ const elements = {
       title: normalizeString(item.title, `characters[${characterIndex}].contents[${contentIndex}].title`),
       content,
       spoiler: item.spoiler === true,
+      collapsible: item.collapsible === true,
       warning: normalizeString(item.warning, `characters[${characterIndex}].contents[${contentIndex}].warning`)
     };
   }
@@ -1103,6 +1104,7 @@ const elements = {
       title: "",
       content: [],
       spoiler: false,
+      collapsible: false,
       warning: ""
     };
   }
@@ -2455,10 +2457,16 @@ function renderCharacterGenres() {
           <span>내용</span>
           <textarea rows="5" placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요." data-character-content-field="content">${escapeHtml(bioArrayToText(item.content))}</textarea>
         </label>
-        <label class="character-content-spoiler-option">
-          <input type="checkbox" data-character-content-field="spoiler" ${item.spoiler ? "checked" : ""}>
-          <span>스포일러 콘텐츠</span>
-        </label>
+        <div class="character-content-display-options">
+          <label class="character-content-toggle-option">
+            <input type="checkbox" data-character-content-field="spoiler" ${item.spoiler ? "checked" : ""}>
+            <span><strong>스포일러 콘텐츠</strong><small>경고문 뒤에 내용을 숨깁니다.</small></span>
+          </label>
+          <label class="character-content-toggle-option">
+            <input type="checkbox" data-character-content-field="collapsible" ${item.collapsible ? "checked" : ""}>
+            <span><strong>접기 사용</strong><small>상세화면에서 제목만 보이고 눌러 펼칩니다.</small></span>
+          </label>
+        </div>
         <label data-character-warning-field ${item.spoiler ? "" : "hidden"}>
           <span>스포일러 경고문</span>
           <input type="text" value="${escapeHtml(item.warning)}" placeholder="예: 핵심 반전이 포함되어 있습니다." data-character-content-field="warning">
@@ -3169,6 +3177,18 @@ const genres = (character.genres || [])
         </details>
       `;
     }
+    if (item.collapsible) {
+      return `
+        <details class="character-preview-content-box is-public is-collapsible">
+          <summary>
+            <span class="character-preview-content-icon">✦</span>
+            <span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong></span>
+            <b aria-hidden="true">⌄</b>
+          </summary>
+          <div class="character-preview-content-body">${body}</div>
+        </details>
+      `;
+    }
     return `
       <article class="character-preview-content-box is-public">
         <header>
@@ -3415,6 +3435,8 @@ elements.characterPreviewModalTags.innerHTML = [
     else if (field === "spoiler") {
       item.spoiler = target.checked;
       itemElement.querySelector("[data-character-warning-field]").hidden = !item.spoiler;
+    } else if (field === "collapsible") {
+      item.collapsible = target.checked;
     } else if (["type", "title", "warning"].includes(field)) item[field] = target.value.trim();
     else return;
 
@@ -6107,6 +6129,14 @@ elements.characterPreviewModalTags.innerHTML = [
               <span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong><em>${escapeHtml(item.warning || "스포일러가 포함되어 있습니다.")}</em></span>
               <b aria-hidden="true">⌄</b>
             </summary>
+            <div class="character-preview-content-body">${body}</div>
+          </details>
+        `;
+      }
+      if (item.collapsible) {
+        return `
+          <details class="character-preview-content-box is-public is-collapsible">
+            <summary><span class="character-preview-content-icon">✦</span><span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong></span><b aria-hidden="true">⌄</b></summary>
             <div class="character-preview-content-body">${body}</div>
           </details>
         `;

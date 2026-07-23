@@ -66,8 +66,19 @@
       <h2 id="editorTitle">편집</h2>
 
       <form id="profileForm" novalidate>
-        <fieldset>
-          <legend>포트폴리오</legend>
+        <details class="major-editor-fold" id="portfolioEditorFold" open>
+
+          <summary class="major-editor-fold-summary">
+
+            <span><strong>포트폴리오</strong><small>사이트 제목과 테마 색상을 설정합니다.</small></span>
+
+            <b aria-hidden="true">⌄</b>
+
+          </summary>
+
+          <div class="major-editor-fold-body">
+
+            <fieldset>
 
           <label>
             <span>제목</span>
@@ -105,10 +116,33 @@
               </span>
             </label>
           </div>
-        </fieldset>
+        
 
-        <fieldset>
-          <legend>제작자 프로필</legend>
+            </fieldset>
+
+          </div>
+
+        </details>
+
+        <details class="major-editor-fold" id="creatorEditorFold">
+
+
+          <summary class="major-editor-fold-summary">
+
+
+            <span><strong>제작자 프로필</strong><small>프로필 이미지와 제작자 소개를 설정합니다.</small></span>
+
+
+            <b aria-hidden="true">⌄</b>
+
+
+          </summary>
+
+
+          <div class="major-editor-fold-body">
+
+
+            <fieldset>
 
           <div class="avatar-editor image-drop-zone" data-image-drop-target="avatar" tabindex="0" role="group" aria-label="프로필 이미지 업로드 영역">
             <div class="avatar-preview" aria-hidden="true">
@@ -225,10 +259,36 @@
               placeholder="제작자 소개글"
             ></textarea>
           </label>
-        </fieldset>
+        
 
-        <fieldset>
-          <legend>소셜 링크</legend>
+
+            </fieldset>
+
+
+          </div>
+
+
+        </details>
+
+        <details class="major-editor-fold" id="socialEditorFold">
+
+
+          <summary class="major-editor-fold-summary">
+
+
+            <span><strong>소셜 링크</strong><small>외부 프로필과 소셜 주소를 관리합니다.</small></span>
+
+
+            <b aria-hidden="true">⌄</b>
+
+
+          </summary>
+
+
+          <div class="major-editor-fold-body">
+
+
+            <fieldset>
 
           <div class="social-entry">
             <label>
@@ -256,19 +316,29 @@
           <div id="socialLinkList" class="social-link-list">
             <p class="empty-message">등록된 링크가 없습니다.</p>
           </div>
-        </fieldset>
+        
+
+
+            </fieldset>
+
+
+          </div>
+
+
+        </details>
       </form>
 
-      <section class="world-editor-section" aria-labelledby="worldEditorTitle">
-        <header class="editor-section-heading">
-          <div>
-            <p class="eyebrow">SHARED WORLDS</p>
-            <h2 id="worldEditorTitle">세계관 편집</h2>
-          </div>
-          <button id="addWorldButton" class="primary-button" type="button">
-            새 세계관
-          </button>
-        </header>
+      <details class="major-editor-fold major-editor-collection-fold" id="worldEditorFold">
+        <summary class="major-editor-fold-summary">
+          <span><strong id="worldEditorTitle">세계관 편집</strong><small>세계관 목록과 상세 정보를 관리합니다.</small></span>
+          <b aria-hidden="true">⌄</b>
+        </summary>
+        <div class="major-editor-fold-body">
+          <section class="world-editor-section" aria-labelledby="worldEditorTitle">
+            <div class="major-editor-action-row">
+              <p class="eyebrow">SHARED WORLDS</p>
+              <button id="addWorldButton" class="primary-button" type="button">새 세계관</button>
+            </div>
 
         <div class="world-editor-layout">
           <aside class="world-editor-sidebar" aria-label="세계관 목록">
@@ -422,18 +492,21 @@
             </details>
           </form>
         </div>
-      </section>
+          </section>
+        </div>
+      </details>
 
-      <section class="character-editor-section" aria-labelledby="characterEditorTitle">
-        <header class="character-editor-heading">
-          <div>
-            <p class="eyebrow">CHARACTERS</p>
-            <h2 id="characterEditorTitle">캐릭터 편집</h2>
-          </div>
-          <button id="addCharacterButton" class="primary-button" type="button">
-            새 캐릭터
-          </button>
-        </header>
+      <details class="major-editor-fold major-editor-collection-fold" id="characterEditorFold">
+        <summary class="major-editor-fold-summary">
+          <span><strong id="characterEditorTitle">캐릭터 편집</strong><small>캐릭터 목록과 상세 정보를 관리합니다.</small></span>
+          <b aria-hidden="true">⌄</b>
+        </summary>
+        <div class="major-editor-fold-body">
+          <section class="character-editor-section" aria-labelledby="characterEditorTitle">
+            <div class="major-editor-action-row">
+              <p class="eyebrow">CHARACTERS</p>
+              <button id="addCharacterButton" class="primary-button" type="button">새 캐릭터</button>
+            </div>
 
         <div class="character-editor-layout">
           <aside class="character-editor-sidebar" aria-label="캐릭터 목록">
@@ -454,7 +527,7 @@
               <button id="deleteCharacterButton" class="character-danger-button" type="button">캐릭터 삭제</button>
             </div>
 
-            <details class="character-image-editor editor-fold image-drop-zone" data-image-drop-target="character" tabindex="0" aria-labelledby="characterImagesTitle" open>
+            <details class="character-image-editor editor-fold image-drop-zone" data-image-drop-target="character" tabindex="0" aria-labelledby="characterImagesTitle">
               <summary class="editor-fold-summary">
                 <span>
                   <strong class="character-field-label" id="characterImagesTitle">캐릭터 이미지</strong>
@@ -578,7 +651,9 @@
             </details>
           </form>
         </div>
-      </section>
+          </section>
+        </div>
+      </details>
     </section>
 
     <section class="preview-panel" aria-labelledby="previewTitle">
