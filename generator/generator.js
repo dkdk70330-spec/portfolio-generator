@@ -52,6 +52,7 @@
   const IMAGE_STORE_NAME = "images";
   const MAX_IMAGE_FILE_BYTES = 10 * 1024 * 1024;
   const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+  const MP3_MIME_TYPE = "audio/mpeg";
 
   const services = Array.isArray(adminCatalog.profileLinkServices)
     ? adminCatalog.profileLinkServices
@@ -97,6 +98,9 @@
   const characterImageBlobs = new Map();
   const characterImagePreviewUrls = new Map();
   const missingCharacterImageIds = new Set();
+  const musicBlobs = new Map();
+  const musicPreviewUrls = new Map();
+  const missingMusicIds = new Set();
   let imageDatabasePromise = null;
   let autosaveTimer = 0;
   let activeImageDropTarget = null;
@@ -156,6 +160,8 @@
     worldTagsInput: document.querySelector("#worldTagsInput"),
     worldDescriptionInput: document.querySelector("#worldDescriptionInput"),
     worldCharacterLinkList: document.querySelector("#worldCharacterLinkList"),
+    addWorldMusicButton: document.querySelector("#addWorldMusicButton"),
+    worldMusicList: document.querySelector("#worldMusicList"),
     addWorldSectionButton: document.querySelector("#addWorldSectionButton"),
     worldSectionList: document.querySelector("#worldSectionList"),
 
@@ -176,6 +182,8 @@
     characterGenreList: document.querySelector("#characterGenreList"),
     characterTagsInput: document.querySelector("#characterTagsInput"),
     characterDescriptionInput: document.querySelector("#characterDescriptionInput"),
+    addCharacterMusicButton: document.querySelector("#addCharacterMusicButton"),
+    characterMusicList: document.querySelector("#characterMusicList"),
     characterPlatformList: document.querySelector("#characterPlatformList"),
     addCharacterContentButton: document.querySelector("#addCharacterContentButton"),
     characterContentList: document.querySelector("#characterContentList"),
@@ -208,6 +216,7 @@
     worldPreviewModalTitle: document.querySelector("#worldPreviewModalTitle"),
     worldPreviewModalSummary: document.querySelector("#worldPreviewModalSummary"),
     worldPreviewModalTags: document.querySelector("#worldPreviewModalTags"),
+    worldPreviewSoundtrack: document.querySelector("#worldPreviewSoundtrack"),
     worldPreviewModalDescription: document.querySelector("#worldPreviewModalDescription"),
     worldPreviewModalSections: document.querySelector("#worldPreviewModalSections"),
     worldPreviewCharacterSection: document.querySelector("#worldPreviewCharacterSection"),
@@ -242,6 +251,7 @@
     characterPreviewPlatforms: document.querySelector("#characterPreviewPlatforms"),
     characterPreviewKicker: document.querySelector("#characterPreviewKicker"),
     characterPreviewModalTags: document.querySelector("#characterPreviewModalTags"),
+    characterPreviewSoundtrack: document.querySelector("#characterPreviewSoundtrack"),
     characterPreviewModalDescription: document.querySelector("#characterPreviewModalDescription"),
     characterPreviewWorldPanel: document.querySelector("#characterPreviewWorldPanel"),
     characterPreviewWorldButton: document.querySelector("#characterPreviewWorldButton"),
@@ -383,6 +393,82 @@
   }
 
 
+  function normalizeMusicFile(value, fieldName) {
+    if (value === undefined || value === null || value === "") return "";
+    if (typeof value === "string") return value;
+
+    if (!isPlainObject(value)) {
+      throw new Error(`${fieldName} 항목의 형식이 올바르지 않습니다.`);
+    }
+
+    const id = normalizeString(value.id, `${fieldName}.id`).trim();
+    const name = normalizeString(
+      value.name || "soundtrack.mp3",
+      `${fieldName}.name`
+    ).trim();
+    const type = normalizeString(
+      value.type || MP3_MIME_TYPE,
+      `${fieldName}.type`
+    ).trim();
+    const size = Number(value.size || 0);
+    const duration = Number(value.duration || 0);
+    const updatedAt = normalizeString(
+      value.updatedAt || "",
+      `${fieldName}.updatedAt`
+    ).trim();
+
+    if (!id) throw new Error(`${fieldName}.id가 비어 있습니다.`);
+    if (!["audio/mpeg", "audio/mp3"].includes(type)) {
+      throw new Error(`${fieldName}는 MP3 파일이어야 합니다.`);
+    }
+    if (!Number.isFinite(size) || size < 0) {
+      throw new Error(`${fieldName}.size가 올바르지 않습니다.`);
+    }
+    if (!Number.isFinite(duration) || duration < 0) {
+      throw new Error(`${fieldName}.duration이 올바르지 않습니다.`);
+    }
+
+    return {
+      id,
+      name: name || "soundtrack.mp3",
+      type: MP3_MIME_TYPE,
+      size: Math.round(size),
+      duration,
+      updatedAt
+    };
+  }
+
+  function normalizeMusicTrack(track, ownerField, trackIndex) {
+    if (!isPlainObject(track)) {
+      throw new Error(
+        `${ownerField}.music[${trackIndex}] 항목의 형식이 올바르지 않습니다.`
+      );
+    }
+
+    const type = track.type === "mp3" ? "mp3" : "youtube";
+
+    return {
+      ...cloneJson(track),
+      id: normalizeString(
+        track.id || `music-${trackIndex + 1}`,
+        `${ownerField}.music[${trackIndex}].id`
+      ).trim(),
+      title: normalizeString(
+        track.title,
+        `${ownerField}.music[${trackIndex}].title`
+      ),
+      type,
+      url: normalizeString(
+        track.url,
+        `${ownerField}.music[${trackIndex}].url`
+      ).trim(),
+      file: normalizeMusicFile(
+        track.file,
+        `${ownerField}.music[${trackIndex}].file`
+      )
+    };
+  }
+
   function normalizeWorldImage(value, fieldName) {
     if (value === undefined || value === null || value === "") return "";
 
@@ -484,6 +570,7 @@
     const rawTags = world.tags || [];
     const rawDescription = world.description || [];
     const rawSections = world.sections || [];
+    const rawMusic = world.music || [];
 
     if (!Array.isArray(rawTags)) {
       throw new Error(`worlds[${index}].tags 항목은 배열이어야 합니다.`);
@@ -493,6 +580,9 @@
     }
     if (!Array.isArray(rawSections)) {
       throw new Error(`worlds[${index}].sections 항목은 배열이어야 합니다.`);
+    }
+    if (!Array.isArray(rawMusic)) {
+      throw new Error(`worlds[${index}].music 항목은 배열이어야 합니다.`);
     }
 
     return {
@@ -512,6 +602,9 @@
       ).filter(Boolean),
       sections: rawSections.map((section, sectionIndex) =>
         normalizeWorldSection(section, index, sectionIndex)
+      ),
+      music: rawMusic.map((track, trackIndex) =>
+        normalizeMusicTrack(track, `worlds[${index}]`, trackIndex)
       )
     };
   }
@@ -595,6 +688,7 @@
     const rawImages = character.images || [];
     const rawPlatforms = character.platforms || [];
     const rawContents = character.contents || character.content || [];
+    const rawMusic = character.music || [];
 
     if (!Array.isArray(rawDescription)) throw new Error(`characters[${index}].description 항목은 배열이어야 합니다.`);
     if (!Array.isArray(rawGenres)) throw new Error(`characters[${index}].genres 항목은 배열이어야 합니다.`);
@@ -602,6 +696,7 @@
     if (!Array.isArray(rawImages)) throw new Error(`characters[${index}].images 항목은 배열이어야 합니다.`);
     if (!Array.isArray(rawPlatforms)) throw new Error(`characters[${index}].platforms 항목은 배열이어야 합니다.`);
     if (!Array.isArray(rawContents)) throw new Error(`characters[${index}].contents 항목은 배열이어야 합니다.`);
+    if (!Array.isArray(rawMusic)) throw new Error(`characters[${index}].music 항목은 배열이어야 합니다.`);
     if (rawImages.length > 5) throw new Error(`characters[${index}].images는 최대 5개까지 사용할 수 있습니다.`);
 
     return {
@@ -642,6 +737,9 @@
       }),
       contents: rawContents.map((item, contentIndex) =>
         normalizeCharacterContent(item, index, contentIndex)
+      ),
+      music: rawMusic.map((track, trackIndex) =>
+        normalizeMusicTrack(track, `characters[${index}]`, trackIndex)
       )
     };
   }
@@ -881,7 +979,8 @@
       image: "",
       tags: [],
       description: [],
-      sections: []
+      sections: [],
+      music: []
     };
   }
 
@@ -907,7 +1006,18 @@
       featured: false,
       images: [],
       platforms: [],
-      contents: []
+      contents: [],
+      music: []
+    };
+  }
+
+  function createMusicTrack() {
+    return {
+      id: createEntityId("music"),
+      title: "",
+      type: "youtube",
+      url: "",
+      file: ""
     };
   }
 
@@ -920,6 +1030,591 @@
       spoiler: false,
       warning: ""
     };
+  }
+
+  function getMusicFileMetadata(track) {
+    return isPlainObject(track?.file) ? track.file : null;
+  }
+
+  function musicTrackFileUrl(track) {
+    if (!track) return "";
+    if (typeof track.file === "string") {
+      return legacyImageUrl(track.file);
+    }
+    const metadata = getMusicFileMetadata(track);
+    return metadata?.id ? musicPreviewUrls.get(metadata.id) || "" : "";
+  }
+
+  function youtubeVideoId(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+
+    try {
+      const url = new URL(raw);
+      const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
+
+      if (hostname === "youtu.be") {
+        return url.pathname.split("/").filter(Boolean)[0] || "";
+      }
+
+      if (
+        hostname === "youtube.com" ||
+        hostname === "m.youtube.com" ||
+        hostname === "music.youtube.com" ||
+        hostname === "youtube-nocookie.com"
+      ) {
+        if (url.pathname === "/watch") {
+          return url.searchParams.get("v") || "";
+        }
+
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (["embed", "shorts", "live"].includes(parts[0])) {
+          return parts[1] || "";
+        }
+      }
+    } catch {
+      return "";
+    }
+
+    return "";
+  }
+
+  function youtubeEmbedUrl(value) {
+    const id = youtubeVideoId(value);
+    return id
+      ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(
+          id
+        )}?rel=0&modestbranding=1`
+      : "";
+  }
+
+  function playableMusicTracks(owner) {
+    return (owner?.music || []).filter((track) => {
+      if (track.type === "mp3") return Boolean(musicTrackFileUrl(track));
+      return Boolean(youtubeVideoId(track.url));
+    });
+  }
+
+  function hasPlayableMusic(owner) {
+    return playableMusicTracks(owner).length > 0;
+  }
+
+  function musicOwner(ownerType) {
+    return ownerType === "world"
+      ? getSelectedWorld()
+      : getSelectedCharacter();
+  }
+
+  function musicEditorElements(ownerType) {
+    return ownerType === "world"
+      ? { list: elements.worldMusicList }
+      : { list: elements.characterMusicList };
+  }
+
+  function releaseMusicObjectUrl(id) {
+    const url = musicPreviewUrls.get(id);
+    if (url) URL.revokeObjectURL(url);
+    musicPreviewUrls.delete(id);
+    musicBlobs.delete(id);
+    missingMusicIds.delete(id);
+  }
+
+  function releaseAllMusicObjectUrls() {
+    for (const url of musicPreviewUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
+    musicPreviewUrls.clear();
+    musicBlobs.clear();
+    missingMusicIds.clear();
+  }
+
+  async function validateMp3File(file, label = "MP3") {
+    if (!(file instanceof Blob)) {
+      throw new Error(`${label} 파일을 읽을 수 없습니다.`);
+    }
+
+    const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    const hasId3 =
+      bytes.length >= 3 &&
+      bytes[0] === 0x49 &&
+      bytes[1] === 0x44 &&
+      bytes[2] === 0x33;
+    const hasFrameSync =
+      bytes.length >= 2 &&
+      bytes[0] === 0xff &&
+      (bytes[1] & 0xe0) === 0xe0;
+
+    if (!hasId3 && !hasFrameSync) {
+      throw new Error(`${label}는 올바른 MP3 파일이 아닙니다.`);
+    }
+  }
+
+  async function readAudioDuration(blob) {
+    return await new Promise((resolve) => {
+      const audio = document.createElement("audio");
+      const url = URL.createObjectURL(blob);
+      const finish = (duration = 0) => {
+        URL.revokeObjectURL(url);
+        audio.removeAttribute("src");
+        resolve(Number.isFinite(duration) ? duration : 0);
+      };
+      audio.preload = "metadata";
+      audio.addEventListener(
+        "loadedmetadata",
+        () => finish(audio.duration),
+        { once: true }
+      );
+      audio.addEventListener("error", () => finish(0), { once: true });
+      audio.src = url;
+    });
+  }
+
+  function musicTitle(track, index) {
+    return track.title?.trim() ||
+      `Track ${String(index + 1).padStart(2, "0")}`;
+  }
+
+  function renderMusicEditor(ownerType) {
+    const owner = musicOwner(ownerType);
+    const { list } = musicEditorElements(ownerType);
+
+    if (!owner || owner.music.length === 0) {
+      list.innerHTML =
+        '<p class="empty-message">등록된 음악이 없습니다.</p>';
+      return;
+    }
+
+    list.innerHTML = owner.music.map((track, index) => {
+      const metadata = getMusicFileMetadata(track);
+      const missing = Boolean(
+        metadata?.id && missingMusicIds.has(metadata.id)
+      );
+      const fileStatus = metadata
+        ? missing
+          ? "저장된 MP3를 찾을 수 없습니다. 다시 선택해 주세요."
+          : `${metadata.name} · ${formatBytes(metadata.size)}`
+        : "선택된 MP3가 없습니다.";
+
+      const sourceEditor = track.type === "mp3"
+        ? `
+          <div class="music-file-row">
+            <label class="file-label">
+              MP3 선택
+              <input
+                class="file-input"
+                type="file"
+                accept=".mp3,audio/mpeg,audio/mp3"
+                data-music-file
+              >
+            </label>
+            <span class="music-file-status">${escapeHtml(fileStatus)}</span>
+            ${metadata ? `
+              <button
+                class="text-button"
+                type="button"
+                data-remove-music-file
+              >파일 제거</button>
+            ` : ""}
+          </div>
+        `
+        : `
+          <label>
+            <span>YouTube 링크</span>
+            <input
+              type="url"
+              inputmode="url"
+              value="${escapeHtml(track.url || "")}"
+              placeholder="https://www.youtube.com/watch?v=..."
+              data-music-field="url"
+            >
+            <small class="field-help">
+              일반 영상, Shorts, youtu.be 링크를 사용할 수 있습니다.
+            </small>
+          </label>
+        `;
+
+      return `
+        <article
+          class="music-editor-item"
+          data-music-owner="${ownerType}"
+          data-music-id="${escapeHtml(track.id)}"
+        >
+          <div class="music-editor-toolbar">
+            <span>Track ${String(index + 1).padStart(2, "0")}</span>
+            <button
+              type="button"
+              data-move-music="up"
+              ${index === 0 ? "disabled" : ""}
+            >위로</button>
+            <button
+              type="button"
+              data-move-music="down"
+              ${index === owner.music.length - 1 ? "disabled" : ""}
+            >아래로</button>
+            <button type="button" data-delete-music>삭제</button>
+          </div>
+
+          <div class="music-editor-grid">
+            <label>
+              <span>제목</span>
+              <input
+                type="text"
+                value="${escapeHtml(track.title || "")}"
+                placeholder="예: 유리 정원의 밤"
+                data-music-field="title"
+              >
+            </label>
+
+            <label>
+              <span>재생 방식</span>
+              <select data-music-field="type">
+                <option value="youtube" ${
+                  track.type === "youtube" ? "selected" : ""
+                }>YouTube</option>
+                <option value="mp3" ${
+                  track.type === "mp3" ? "selected" : ""
+                }>MP3 파일</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="music-source-editor">
+            ${sourceEditor}
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  function renderAllMusicEditors() {
+    renderMusicEditor("world");
+    renderMusicEditor("character");
+  }
+
+  function addMusicTrack(ownerType) {
+    const owner = musicOwner(ownerType);
+    if (!owner) return;
+
+    owner.music.push(createMusicTrack());
+    renderMusicEditor(ownerType);
+    renderWorldPreview();
+    renderCharacterPreview();
+    scheduleAutosave();
+
+    requestAnimationFrame(() => {
+      const { list } = musicEditorElements(ownerType);
+      const items = list.querySelectorAll(".music-editor-item");
+      items[items.length - 1]
+        ?.querySelector('[data-music-field="title"]')
+        ?.focus();
+    });
+  }
+
+  async function removeMusicFile(track) {
+    const metadata = getMusicFileMetadata(track);
+    track.file = "";
+
+    if (metadata?.id) {
+      releaseMusicObjectUrl(metadata.id);
+      try {
+        await deleteImageRecord(metadata.id);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
+
+  async function updateMusicFromInput(ownerType, target) {
+    const owner = musicOwner(ownerType);
+    const item = target.closest("[data-music-id]");
+    if (!owner || !item) return;
+
+    const track = owner.music.find(
+      (entry) => entry.id === item.dataset.musicId
+    );
+    if (!track) return;
+
+    const field = target.dataset.musicField;
+
+    if (field === "title") {
+      track.title = target.value.trim();
+    } else if (field === "url") {
+      track.url = target.value.trim();
+    } else if (field === "type") {
+      const nextType = target.value === "mp3" ? "mp3" : "youtube";
+      if (track.type === "mp3" && nextType !== "mp3") {
+        await removeMusicFile(track);
+      }
+      track.type = nextType;
+      if (nextType === "mp3") track.url = "";
+      renderMusicEditor(ownerType);
+    } else {
+      return;
+    }
+
+    renderWorldPreview();
+    renderCharacterPreview();
+    scheduleAutosave();
+  }
+
+  async function storeMusicFile(ownerType, trackId, file) {
+    const owner = musicOwner(ownerType);
+    const track = owner?.music.find((entry) => entry.id === trackId);
+    if (!owner || !track || !file) return;
+
+    await validateMp3File(file, file.name || "MP3");
+    const duration = await readAudioDuration(file);
+    const previous = getMusicFileMetadata(track);
+    const id = createEntityId("audio");
+    const updatedAt = new Date().toISOString();
+
+    const record = {
+      id,
+      role: `${ownerType}-music`,
+      ownerId: owner.id,
+      trackId: track.id,
+      name: file.name || "soundtrack.mp3",
+      type: MP3_MIME_TYPE,
+      size: file.size,
+      duration,
+      updatedAt,
+      blob: file
+    };
+
+    await putImageRecord(record);
+
+    track.type = "mp3";
+    track.file = {
+      id,
+      name: record.name,
+      type: MP3_MIME_TYPE,
+      size: record.size,
+      duration,
+      updatedAt
+    };
+
+    if (!track.title.trim()) {
+      track.title = record.name.replace(/\.mp3$/i, "");
+    }
+
+    musicBlobs.set(id, file);
+    musicPreviewUrls.set(id, URL.createObjectURL(file));
+    missingMusicIds.delete(id);
+
+    if (previous?.id && previous.id !== id) {
+      releaseMusicObjectUrl(previous.id);
+      try {
+        await deleteImageRecord(previous.id);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    renderMusicEditor(ownerType);
+    renderWorldPreview();
+    renderCharacterPreview();
+    saveProjectToStorage();
+    setSaveStatus("MP3가 브라우저에 저장됨");
+  }
+
+  async function handleMusicFileSelection(ownerType, input) {
+    const item = input.closest("[data-music-id]");
+    const file = input.files?.[0] || null;
+    input.value = "";
+    if (!item || !file) return;
+
+    try {
+      await storeMusicFile(ownerType, item.dataset.musicId, file);
+    } catch (error) {
+      console.error(error);
+      window.alert(error.message || "MP3 파일을 저장하지 못했습니다.");
+      setSaveStatus("MP3 저장 실패");
+    }
+  }
+
+  async function handleMusicAction(ownerType, button) {
+    const owner = musicOwner(ownerType);
+    const item = button.closest("[data-music-id]");
+    if (!owner || !item) return;
+
+    const index = owner.music.findIndex(
+      (track) => track.id === item.dataset.musicId
+    );
+    if (index < 0) return;
+
+    const track = owner.music[index];
+
+    if (button.hasAttribute("data-delete-music")) {
+      await removeMusicFile(track);
+      owner.music.splice(index, 1);
+    } else if (button.hasAttribute("data-remove-music-file")) {
+      await removeMusicFile(track);
+    } else {
+      const direction = button.dataset.moveMusic === "up" ? -1 : 1;
+      const target = index + direction;
+      if (target < 0 || target >= owner.music.length) return;
+      const [moved] = owner.music.splice(index, 1);
+      owner.music.splice(target, 0, moved);
+    }
+
+    renderMusicEditor(ownerType);
+    renderWorldPreview();
+    renderCharacterPreview();
+    saveProjectToStorage();
+  }
+
+  async function restoreMusicFromDatabase() {
+    releaseAllMusicObjectUrls();
+
+    const owners = [
+      ...project.worlds,
+      ...project.characters
+    ];
+
+    for (const owner of owners) {
+      for (const track of owner.music || []) {
+        const metadata = getMusicFileMetadata(track);
+        if (!metadata?.id) continue;
+
+        try {
+          const record = await getImageRecord(metadata.id);
+          if (
+            !record?.blob ||
+            !["audio/mpeg", "audio/mp3"].includes(record.blob.type)
+          ) {
+            missingMusicIds.add(metadata.id);
+            continue;
+          }
+
+          musicBlobs.set(metadata.id, record.blob);
+          musicPreviewUrls.set(
+            metadata.id,
+            URL.createObjectURL(record.blob)
+          );
+        } catch (error) {
+          console.error(error);
+          missingMusicIds.add(metadata.id);
+        }
+      }
+    }
+
+    renderAllMusicEditors();
+    renderWorldPreview();
+    renderCharacterPreview();
+    return missingMusicIds.size;
+  }
+
+  function soundtrackTrackButton(track, index, activeIndex) {
+    return `
+      <button
+        class="soundtrack-track ${index === activeIndex ? "is-active" : ""}"
+        type="button"
+        data-soundtrack-track="${index}"
+        aria-pressed="${index === activeIndex}"
+      >
+        <span>${String(index + 1).padStart(2, "0")}</span>
+        <strong>${escapeHtml(musicTitle(track, index))}</strong>
+        <small>${track.type === "mp3" ? "MP3" : "YouTube"}</small>
+      </button>
+    `;
+  }
+
+  function soundtrackPlayerMarkup(track, index) {
+    const title = musicTitle(track, index);
+
+    if (track.type === "mp3") {
+      return `
+        <div class="soundtrack-now-playing">
+          <span class="soundtrack-disc" aria-hidden="true">♫</span>
+          <span><small>NOW PLAYING</small><strong>${escapeHtml(title)}</strong></span>
+        </div>
+        <audio
+          class="soundtrack-audio"
+          controls
+          controlslist="nodownload noplaybackrate"
+          disablepictureinpicture
+          preload="metadata"
+          src="${escapeHtml(musicTrackFileUrl(track))}"
+        ></audio>
+      `;
+    }
+
+    return `
+      <div class="soundtrack-now-playing">
+        <span class="soundtrack-disc" aria-hidden="true">♫</span>
+        <span><small>NOW PLAYING · YOUTUBE</small><strong>${escapeHtml(title)}</strong></span>
+      </div>
+      <div class="soundtrack-youtube">
+        <iframe
+          src="${escapeHtml(youtubeEmbedUrl(track.url))}"
+          title="${escapeHtml(title)}"
+          loading="lazy"
+          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
+      </div>
+    `;
+  }
+
+  function renderSoundtrack(section, owner, activeIndex = 0) {
+    const tracks = playableMusicTracks(owner);
+    section.hidden = tracks.length === 0;
+
+    if (tracks.length === 0) {
+      section.innerHTML = "";
+      return;
+    }
+
+    const safeIndex = Math.min(
+      Math.max(Number(activeIndex) || 0, 0),
+      tracks.length - 1
+    );
+    section.dataset.soundtrackOwner = owner.id;
+    section.dataset.soundtrackActive = String(safeIndex);
+
+    const first = tracks.slice(0, 3).map((track, index) =>
+      soundtrackTrackButton(track, index, safeIndex)
+    ).join("");
+    const rest = tracks.slice(3);
+    const more = rest.length
+      ? `
+        <details class="soundtrack-more" ${safeIndex >= 3 ? "open" : ""}>
+          <summary>트랙 더보기 +${rest.length}</summary>
+          <div>${rest.map((track, index) =>
+            soundtrackTrackButton(track, index + 3, safeIndex)
+          ).join("")}</div>
+        </details>
+      `
+      : "";
+
+    section.innerHTML = `
+      <header class="soundtrack-heading">
+        <span><small>SOUNDTRACK</small><strong>이 이야기의 음악</strong></span>
+        <b aria-hidden="true">♫</b>
+      </header>
+      <div class="soundtrack-player">
+        ${soundtrackPlayerMarkup(tracks[safeIndex], safeIndex)}
+      </div>
+      ${tracks.length > 1
+        ? `<div class="soundtrack-track-list">${first}${more}</div>`
+        : ""}
+    `;
+  }
+
+  function stopSoundtrack(section) {
+    const audio = section.querySelector("audio");
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    const frame = section.querySelector("iframe");
+    if (frame) frame.src = "about:blank";
+  }
+
+  function activateSoundtrackTrack(section, owner, index) {
+    stopSoundtrack(section);
+    renderSoundtrack(section, owner, index);
   }
 
   function getSelectedCharacter() {
@@ -1704,6 +2399,7 @@
     renderCharacterGenres();
     renderCharacterPlatforms();
     renderCharacterImagesEditor();
+    renderMusicEditor("character");
     renderCharacterContentsEditor();
   }
 
@@ -1738,6 +2434,11 @@
           <div class="character-preview-card-image-wrap">
             ${image}
             <div class="character-preview-card-platforms">${characterPlatformDots(character)}</div>
+            ${
+              hasPlayableMusic(character)
+                ? '<span class="archive-music-mark" title="음악 있음" aria-hidden="true">♫</span>'
+                : ""
+            }
           </div>
           <div class="character-preview-card-body">
             <div class="character-preview-card-genres">${genres}</div>
@@ -2296,6 +2997,8 @@
       ...(character.tags || [])
     ].map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
     elements.characterPreviewModalTags.hidden = !(character.genres || []).length && !(character.tags || []).length;
+    renderSoundtrack(elements.characterPreviewSoundtrack, character);
+
     elements.characterPreviewModalDescription.innerHTML = (character.description || [])
       .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
     elements.characterPreviewModalDescription.hidden = !(character.description || []).length;
@@ -2333,6 +3036,7 @@
   }
 
   function closeCharacterPreview() {
+    stopSoundtrack(elements.characterPreviewSoundtrack);
     if (elements.characterPreviewModal.open) elements.characterPreviewModal.close();
     document.body.classList.remove("character-preview-modal-open");
   }
@@ -2389,7 +3093,11 @@
 
     const index = project.characters.findIndex((item) => item.id === character.id);
     const metadata = character.images.map(getCharacterImageMetadata).filter(Boolean);
+    const musicMetadata = (character.music || [])
+      .map(getMusicFileMetadata)
+      .filter(Boolean);
     for (const image of metadata) releaseCharacterImageObjectUrl(image.id);
+    for (const audio of musicMetadata) releaseMusicObjectUrl(audio.id);
     project.characters.splice(index, 1);
     selectedCharacterId = project.characters[index]?.id || project.characters[index - 1]?.id || "";
     if (project.characters.length <= previewCharacterColumnCount() * 2) characterPreviewExpanded = false;
@@ -2402,6 +3110,9 @@
 
     for (const image of metadata) {
       try { await deleteImageRecord(image.id); } catch (error) { console.error(error); }
+    }
+    for (const audio of musicMetadata) {
+      try { await deleteImageRecord(audio.id); } catch (error) { console.error(error); }
     }
     setSaveStatus("캐릭터가 삭제됨");
   }
@@ -2784,6 +3495,7 @@
     elements.moveWorldUpButton.disabled = index <= 0;
     elements.moveWorldDownButton.disabled = index < 0 || index >= project.worlds.length - 1;
 
+    renderMusicEditor("world");
     renderWorldCharacterLinks();
     renderWorldSectionsEditor();
     renderWorldImageEditorPreview();
@@ -2832,6 +3544,11 @@
           <div class="world-card-image">
             ${cover}
             <div class="world-face-stack" aria-label="연결된 캐릭터">${faces}</div>
+            ${
+              hasPlayableMusic(world)
+                ? '<span class="archive-music-mark" title="음악 있음" aria-hidden="true">♫</span>'
+                : ""
+            }
           </div>
           <div class="world-card-body">
             <div class="world-card-meta"><span>${related.length} Characters</span><b aria-hidden="true">↗</b></div>
@@ -2932,6 +3649,8 @@
       .map((tag) => `<span>${escapeHtml(tag)}</span>`)
       .join("");
     elements.worldPreviewModalTags.hidden = !(world.tags || []).length;
+    renderSoundtrack(elements.worldPreviewSoundtrack, world);
+
     elements.worldPreviewModalDescription.innerHTML = (world.description || [])
       .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
       .join("");
@@ -2965,6 +3684,7 @@
   }
 
   function closeWorldPreview() {
+    stopSoundtrack(elements.worldPreviewSoundtrack);
     if (elements.worldPreviewModal.open) {
       elements.worldPreviewModal.close();
     }
@@ -3017,6 +3737,9 @@
     if (!confirmed) return;
 
     const metadata = getWorldImageMetadata(world);
+    const musicMetadata = (world.music || [])
+      .map(getMusicFileMetadata)
+      .filter(Boolean);
     const index = project.worlds.findIndex((item) => item.id === world.id);
 
     for (const character of linkedCharacters) {
@@ -3024,6 +3747,7 @@
     }
 
     releaseWorldImageObjectUrl(world.id);
+    for (const audio of musicMetadata) releaseMusicObjectUrl(audio.id);
     project.worlds.splice(index, 1);
     selectedWorldId = project.worlds[index]?.id || project.worlds[index - 1]?.id || "";
     if (project.worlds.length <= previewWorldColumnCount()) {
@@ -3037,6 +3761,9 @@
         console.error(error);
         setSaveStatus("세계관은 삭제됐지만 저장 이미지 정리에 실패함");
       }
+    }
+    for (const audio of musicMetadata) {
+      try { await deleteImageRecord(audio.id); } catch (error) { console.error(error); }
     }
 
     renderWorldEditor();
@@ -3956,6 +4683,7 @@
     releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
+    releaseAllMusicObjectUrls();
     avatarRestoreMissing = false;
     creatorBackgroundRestoreMissing = false;
     selectedWorldId = project.worlds[0]?.id || "";
@@ -3973,6 +4701,7 @@
     await restoreCreatorBackgroundFromDatabase();
     await restoreWorldImagesFromDatabase();
     await restoreCharacterImagesFromDatabase();
+    await restoreMusicFromDatabase();
     return avatarRestored;
   }
 
@@ -4214,6 +4943,40 @@
     return items;
   }
 
+  function projectAudioMetadata() {
+    const items = [];
+
+    project.worlds.forEach((world) => {
+      (world.music || []).forEach((track) => {
+        const file = getMusicFileMetadata(track);
+        if (file) {
+          items.push({
+            ...file,
+            role: "world-music",
+            ownerId: world.id,
+            trackId: track.id
+          });
+        }
+      });
+    });
+
+    project.characters.forEach((character) => {
+      (character.music || []).forEach((track) => {
+        const file = getMusicFileMetadata(track);
+        if (file) {
+          items.push({
+            ...file,
+            role: "character-music",
+            ownerId: character.id,
+            trackId: track.id
+          });
+        }
+      });
+    });
+
+    return items;
+  }
+
   function downloadTextBackup() {
     window.clearTimeout(autosaveTimer);
     autosaveTimer = 0;
@@ -4238,15 +5001,17 @@
     window.clearTimeout(autosaveTimer);
     autosaveTimer = 0;
     elements.downloadFullBackupButton.disabled = true;
-    setSaveStatus("이미지 포함 백업 생성 중…");
+    setSaveStatus("이미지·음악 포함 백업 생성 중…");
 
     try {
       const normalizedProject = normalizeProject(project);
       const metadata = projectImageMetadata();
+      const audioMetadata = projectAudioMetadata();
       const records = new Map(
         (await getAllImageRecords()).map((record) => [record.id, record])
       );
       const manifestImages = [];
+      const manifestAudio = [];
       const entries = [
         {
           name: "project.json",
@@ -4279,9 +5044,32 @@
         });
       }
 
+      for (const audio of audioMetadata) {
+        const record = records.get(audio.id);
+        if (!record?.blob) {
+          missing.push(audio.name || audio.id);
+          continue;
+        }
+
+        const path = `audio/${audio.id}.mp3`;
+        entries.push({ name: path, data: record.blob });
+        manifestAudio.push({
+          id: audio.id,
+          path,
+          role: audio.role,
+          ownerId: audio.ownerId,
+          trackId: audio.trackId,
+          name: audio.name,
+          type: MP3_MIME_TYPE,
+          size: record.blob.size,
+          duration: audio.duration || record.duration || 0,
+          updatedAt: audio.updatedAt || record.updatedAt || ""
+        });
+      }
+
       if (missing.length > 0) {
         throw new Error(
-          `브라우저 저장소에서 찾을 수 없는 이미지가 있습니다: ${missing.join(", ")}`
+          `브라우저 저장소에서 찾을 수 없는 파일이 있습니다: ${missing.join(", ")}`
         );
       }
 
@@ -4290,7 +5078,8 @@
         version: FULL_BACKUP_VERSION,
         projectVersion: CURRENT_PROJECT_VERSION,
         createdAt: new Date().toISOString(),
-        images: manifestImages
+        images: manifestImages,
+        audio: manifestAudio
       };
       entries.push({
         name: "backup-manifest.json",
@@ -4300,12 +5089,14 @@
       const zip = await createStoredZip(entries);
       downloadBlob(zip, `${buildBackupBaseName()}-full-backup.zip`);
       saveProjectToStorage();
-      setSaveStatus(`이미지 포함 백업 저장됨 · PNG ${manifestImages.length}개`);
+      setSaveStatus(
+        `전체 백업 저장됨 · PNG ${manifestImages.length}개 · MP3 ${manifestAudio.length}개`
+      );
       elements.backupMenu.open = false;
     } catch (error) {
       console.error(error);
-      window.alert(error.message || "이미지 포함 백업을 저장하지 못했습니다.");
-      setSaveStatus("이미지 포함 백업 실패");
+      window.alert(error.message || "전체 백업을 저장하지 못했습니다.");
+      setSaveStatus("전체 백업 실패");
     } finally {
       elements.downloadFullBackupButton.disabled = false;
     }
@@ -4315,7 +5106,7 @@
     const text = await file.text();
     const nextProject = normalizeProject(JSON.parse(text));
     const confirmed = window.confirm(
-      "현재 입력 내용을 불러온 텍스트 프로젝트로 교체할까요? 이미지 파일은 현재 브라우저 저장소에 같은 ID가 있을 때만 연결됩니다."
+      "현재 입력 내용을 불러온 텍스트 프로젝트로 교체할까요? PNG·MP3는 현재 브라우저 저장소에 같은 ID가 있을 때만 연결됩니다."
     );
     if (!confirmed) return;
 
@@ -4323,18 +5114,21 @@
     saveProjectToStorage();
     const missingWorldCount = missingWorldImageIds.size;
     const missingCharacterCount = missingCharacterImageIds.size;
+    const missingMusicCount = missingMusicIds.size;
 
     if (
       (getAvatarMetadata() && !restoredAvatar) ||
       creatorBackgroundRestoreMissing ||
       missingWorldCount > 0 ||
-      missingCharacterCount > 0
+      missingCharacterCount > 0 ||
+      missingMusicCount > 0
     ) {
       const missingImages = [];
       if (getAvatarMetadata() && !restoredAvatar) missingImages.push("프로필 PNG");
       if (creatorBackgroundRestoreMissing) missingImages.push("프로필 배경 PNG");
       if (missingWorldCount > 0) missingImages.push(`세계관 PNG ${missingWorldCount}개`);
       if (missingCharacterCount > 0) missingImages.push(`캐릭터 PNG ${missingCharacterCount}개`);
+      if (missingMusicCount > 0) missingImages.push(`MP3 ${missingMusicCount}개`);
       setSaveStatus(`텍스트 프로젝트 불러옴 · ${missingImages.join(" · ")}를 다시 선택해 주세요`);
     } else {
       setSaveStatus("텍스트 프로젝트 불러오기 완료");
@@ -4346,7 +5140,7 @@
     const projectBytes = entries.get("project.json");
     const manifestBytes = entries.get("backup-manifest.json");
     if (!projectBytes || !manifestBytes) {
-      throw new Error("생성기에서 만든 이미지 포함 백업 ZIP이 아닙니다.");
+      throw new Error("생성기에서 만든 전체 백업 ZIP이 아닙니다.");
     }
 
     const decoder = new TextDecoder("utf-8");
@@ -4357,7 +5151,8 @@
     if (
       manifest.format !== FULL_BACKUP_FORMAT ||
       Number(manifest.version) !== FULL_BACKUP_VERSION ||
-      !Array.isArray(manifest.images)
+      !Array.isArray(manifest.images) ||
+      (manifest.audio !== undefined && !Array.isArray(manifest.audio))
     ) {
       throw new Error("지원하지 않는 전체 백업 형식입니다.");
     }
@@ -4386,8 +5181,31 @@
       });
     }
 
+    const manifestAudio = Array.isArray(manifest.audio)
+      ? manifest.audio
+      : [];
+
+    for (const audio of manifestAudio) {
+      const data = entries.get(audio.path);
+      if (!data) throw new Error(`백업 MP3가 없습니다: ${audio.path}`);
+      const blob = new Blob([data], { type: MP3_MIME_TYPE });
+      await validateMp3File(blob, audio.name || "백업 MP3");
+      restoredRecords.push({
+        id: audio.id,
+        role: audio.role,
+        ownerId: audio.ownerId,
+        trackId: audio.trackId,
+        name: audio.name || `${audio.id}.mp3`,
+        type: MP3_MIME_TYPE,
+        size: blob.size,
+        duration: Number(audio.duration) || 0,
+        updatedAt: audio.updatedAt || new Date().toISOString(),
+        blob
+      });
+    }
+
     const confirmed = window.confirm(
-      `현재 프로젝트를 이미지 포함 백업으로 교체할까요? PNG ${manifest.images.length}개가 함께 복구됩니다.`
+      `현재 프로젝트를 전체 백업으로 교체할까요? PNG ${manifest.images.length}개와 MP3 ${manifestAudio.length}개가 함께 복구됩니다.`
     );
     if (!confirmed) return;
 
@@ -4397,9 +5215,12 @@
     releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
+    releaseAllMusicObjectUrls();
     await replaceCurrentProject(nextProject, true);
     saveProjectToStorage();
-    setSaveStatus(`이미지 포함 백업 불러오기 완료 · PNG ${manifest.images.length}개`);
+    setSaveStatus(
+      `전체 백업 불러오기 완료 · PNG ${manifest.images.length}개 · MP3 ${manifestAudio.length}개`
+    );
   }
 
   async function importProjectFile() {
@@ -4423,7 +5244,7 @@
 
   async function resetProject() {
     const confirmed = window.confirm(
-      "현재 입력한 제작자 프로필과 세계관, 캐릭터, 자동 저장 데이터와 저장된 PNG를 모두 초기화할까요?"
+      "현재 입력한 제작자 프로필과 세계관, 캐릭터, 자동 저장 데이터와 저장된 PNG·MP3를 모두 초기화할까요?"
     );
 
     if (!confirmed) return;
@@ -4433,6 +5254,7 @@
     releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
+    releaseAllMusicObjectUrls();
     avatarRestoreMissing = false;
     creatorBackgroundRestoreMissing = false;
 
@@ -4441,12 +5263,12 @@
     } catch (error) {
       console.error(error);
       window.alert(
-        "입력은 초기화하지만 브라우저의 저장 이미지 일부를 정리하지 못했습니다."
+        "입력은 초기화하지만 브라우저의 저장 PNG·MP3 일부를 정리하지 못했습니다."
       );
     }
 
     await replaceCurrentProject(createEmptyProject(), false);
-    setSaveStatus("입력, 자동 저장 데이터와 PNG가 초기화됨");
+    setSaveStatus("입력, 자동 저장 데이터와 PNG·MP3가 초기화됨");
   }
 
 
@@ -4475,6 +5297,10 @@
       updateCharacterContentFromInput(target);
       return;
     }
+    if (target.matches("[data-music-field]")) {
+      updateMusicFromInput("character", target);
+      return;
+    }
     syncCharacterFromFields();
   });
 
@@ -4484,6 +5310,25 @@
     if (!button) return;
     handleCharacterImageAction(button);
   });
+  elements.addCharacterMusicButton.addEventListener(
+    "click",
+    () => addMusicTrack("character")
+  );
+
+  elements.characterMusicList.addEventListener("change", (event) => {
+    const input = event.target.closest("[data-music-file]");
+    if (!input) return;
+    handleMusicFileSelection("character", input);
+  });
+
+  elements.characterMusicList.addEventListener("click", (event) => {
+    const button = event.target.closest(
+      "[data-delete-music], [data-move-music], [data-remove-music-file]"
+    );
+    if (!button) return;
+    handleMusicAction("character", button);
+  });
+
   elements.addCharacterContentButton.addEventListener("click", addCharacterContent);
   elements.characterContentList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-delete-character-content], [data-move-character-content]");
@@ -4617,11 +5462,57 @@
     updateCharacterPreviewLimit();
   });
 
+  elements.characterPreviewSoundtrack.addEventListener(
+    "click",
+    (event) => {
+      const button = event.target.closest("[data-soundtrack-track]");
+      if (!button) return;
+      const character = project.characters.find(
+        (item) =>
+          item.id === elements.characterPreviewSoundtrack.dataset.soundtrackOwner
+      );
+      if (!character) return;
+      activateSoundtrackTrack(
+        elements.characterPreviewSoundtrack,
+        character,
+        Number(button.dataset.soundtrackTrack)
+      );
+    }
+  );
+
+  elements.worldPreviewSoundtrack.addEventListener(
+    "click",
+    (event) => {
+      const button = event.target.closest("[data-soundtrack-track]");
+      if (!button) return;
+      const world = project.worlds.find(
+        (item) =>
+          item.id === elements.worldPreviewSoundtrack.dataset.soundtrackOwner
+      );
+      if (!world) return;
+      activateSoundtrackTrack(
+        elements.worldPreviewSoundtrack,
+        world,
+        Number(button.dataset.soundtrackTrack)
+      );
+    }
+  );
+
+  for (const soundtrack of [
+    elements.characterPreviewSoundtrack,
+    elements.worldPreviewSoundtrack
+  ]) {
+    soundtrack.addEventListener("contextmenu", (event) => {
+      if (event.target.closest("audio")) event.preventDefault();
+    });
+  }
+
   elements.characterPreviewModalClose.addEventListener("click", closeCharacterPreview);
   elements.characterPreviewModal.addEventListener("click", (event) => {
     if (event.target === elements.characterPreviewModal) closeCharacterPreview();
   });
   elements.characterPreviewModal.addEventListener("close", () => {
+    stopSoundtrack(elements.characterPreviewSoundtrack);
     document.body.classList.remove("character-preview-modal-open");
   });
   elements.characterPreviewWorldButton.addEventListener("click", (event) => {
@@ -4670,6 +5561,10 @@
       updateWorldSectionFromInput(event.target);
       return;
     }
+    if (event.target.matches("[data-music-field]")) {
+      updateMusicFromInput("world", event.target);
+      return;
+    }
     syncWorldFromFields();
   });
 
@@ -4685,6 +5580,25 @@
     const checkbox = event.target.closest("[data-world-character-index]");
     if (!checkbox) return;
     updateWorldCharacterLink(checkbox);
+  });
+
+  elements.addWorldMusicButton.addEventListener(
+    "click",
+    () => addMusicTrack("world")
+  );
+
+  elements.worldMusicList.addEventListener("change", (event) => {
+    const input = event.target.closest("[data-music-file]");
+    if (!input) return;
+    handleMusicFileSelection("world", input);
+  });
+
+  elements.worldMusicList.addEventListener("click", (event) => {
+    const button = event.target.closest(
+      "[data-delete-music], [data-move-music], [data-remove-music-file]"
+    );
+    if (!button) return;
+    handleMusicAction("world", button);
   });
 
   elements.addWorldSectionButton.addEventListener("click", addWorldSection);
@@ -4717,6 +5631,7 @@
     if (event.target === elements.worldPreviewModal) closeWorldPreview();
   });
   elements.worldPreviewModal.addEventListener("close", () => {
+    stopSoundtrack(elements.worldPreviewSoundtrack);
     document.body.classList.remove("world-preview-modal-open");
   });
 
@@ -4798,6 +5713,7 @@
     releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
+    releaseAllMusicObjectUrls();
   });
 
   async function initialize() {
@@ -4823,6 +5739,7 @@
       : false;
     const missingWorldCount = await restoreWorldImagesFromDatabase();
     const missingCharacterCount = await restoreCharacterImagesFromDatabase();
+    const missingMusicCount = await restoreMusicFromDatabase();
 
     if (autosaveRestoreError) {
       setSaveStatus("자동 저장 복구 실패");
@@ -4836,7 +5753,8 @@
       (avatarMetadata && !restoredAvatar) ||
       (creatorBackgroundMetadata && !restoredCreatorBackground) ||
       missingWorldCount > 0 ||
-      missingCharacterCount > 0
+      missingCharacterCount > 0 ||
+      missingMusicCount > 0
     ) {
       const messages = [];
       if (avatarMetadata && !restoredAvatar) messages.push("프로필 PNG");
@@ -4845,6 +5763,7 @@
       }
       if (missingWorldCount > 0) messages.push(`세계관 PNG ${missingWorldCount}개`);
       if (missingCharacterCount > 0) messages.push(`캐릭터 PNG ${missingCharacterCount}개`);
+      if (missingMusicCount > 0) messages.push(`MP3 ${missingMusicCount}개`);
       setSaveStatus(
         `${restoredAutosave ? "이전 자동 저장 복구됨 · " : ""}${messages.join(" · ")}를 다시 선택해 주세요`
       );

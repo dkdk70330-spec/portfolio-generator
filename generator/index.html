@@ -23,8 +23,8 @@
             <small>프로젝트 데이터만 JSON으로 저장</small>
           </button>
           <button id="downloadFullBackupButton" type="button">
-            <strong>이미지 포함 모두 저장</strong>
-            <small>프로젝트와 저장 이미지를 ZIP으로 저장</small>
+            <strong>이미지·음악 포함 모두 저장</strong>
+            <small>프로젝트와 저장 PNG·MP3를 ZIP으로 저장</small>
           </button>
         </div>
       </details>
@@ -348,6 +348,28 @@
             </label>
 
             <details
+              class="world-music-editor music-editor editor-fold"
+              aria-labelledby="worldMusicTitle"
+            >
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="field-label" id="worldMusicTitle">음악</strong>
+                  <small>세계관과 어울리는 MP3 또는 YouTube 음악을 등록합니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div class="editor-fold-action-row">
+                  <button id="addWorldMusicButton" class="secondary-button" type="button">트랙 추가</button>
+                </div>
+                <p class="field-help">MP3는 브라우저에 저장되고 전체 백업 ZIP에 포함됩니다. YouTube는 링크만 저장됩니다.</p>
+                <div id="worldMusicList" class="music-editor-list">
+                  <p class="empty-message">등록된 음악이 없습니다.</p>
+                </div>
+              </div>
+            </details>
+
+            <details
               class="world-character-link-editor editor-fold"
               aria-labelledby="worldCharacterLinkTitle"
             >
@@ -485,6 +507,28 @@
               <span>캐릭터 소개</span>
               <textarea id="characterDescriptionInput" rows="7" placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."></textarea>
             </label>
+
+            <details
+              class="character-music-editor music-editor editor-fold"
+              aria-labelledby="characterMusicTitle"
+            >
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="character-field-label" id="characterMusicTitle">음악</strong>
+                  <small>캐릭터와 어울리는 MP3 또는 YouTube 음악을 등록합니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div class="editor-fold-action-row">
+                  <button id="addCharacterMusicButton" class="secondary-button" type="button">트랙 추가</button>
+                </div>
+                <p class="field-help">MP3는 브라우저에 저장되고 전체 백업 ZIP에 포함됩니다. YouTube는 링크만 저장됩니다.</p>
+                <div id="characterMusicList" class="music-editor-list">
+                  <p class="empty-message">등록된 음악이 없습니다.</p>
+                </div>
+              </div>
+            </details>
 
             <details class="character-platform-editor editor-fold" aria-labelledby="characterPlatformsTitle">
               <summary class="editor-fold-summary">
@@ -714,6 +758,7 @@
       <article class="character-preview-modal-content">
         <div class="character-preview-kicker" id="characterPreviewKicker"></div>
         <div class="character-preview-tag-list" id="characterPreviewModalTags"></div>
+        <section class="soundtrack-panel" id="characterPreviewSoundtrack" aria-label="캐릭터 음악" hidden></section>
         <div class="character-preview-description" id="characterPreviewModalDescription"></div>
         <section class="character-preview-world-panel" id="characterPreviewWorldPanel" hidden>
           <button class="character-preview-world-button" id="characterPreviewWorldButton" type="button">
@@ -744,6 +789,7 @@
         <h2 id="worldPreviewModalTitle"></h2>
         <p class="world-modal-summary" id="worldPreviewModalSummary"></p>
         <div class="world-preview-tag-list" id="worldPreviewModalTags"></div>
+        <section class="soundtrack-panel" id="worldPreviewSoundtrack" aria-label="세계관 음악" hidden></section>
         <div class="world-modal-description" id="worldPreviewModalDescription"></div>
         <div class="world-section-list" id="worldPreviewModalSections"></div>
 
