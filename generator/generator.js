@@ -103,6 +103,7 @@
     worldSubtitleInput: document.querySelector("#worldSubtitleInput"),
     worldTagsInput: document.querySelector("#worldTagsInput"),
     worldDescriptionInput: document.querySelector("#worldDescriptionInput"),
+    worldCharacterLinkList: document.querySelector("#worldCharacterLinkList"),
     addWorldSectionButton: document.querySelector("#addWorldSectionButton"),
     worldSectionList: document.querySelector("#worldSectionList"),
 
@@ -1041,31 +1042,119 @@
     }
 
     elements.worldSectionList.innerHTML = world.sections.map((section, index) => `
-      <article class="world-section-editor-item" data-world-section-id="${escapeHtml(section.id)}">
-        <div class="world-section-editor-toolbar">
-          <button type="button" data-move-world-section="up" ${index === 0 ? "disabled" : ""}>위로</button>
-          <button type="button" data-move-world-section="down" ${index === world.sections.length - 1 ? "disabled" : ""}>아래로</button>
-          <button type="button" data-delete-world-section>삭제</button>
+      <details
+        class="world-section-editor-item"
+        data-world-section-id="${escapeHtml(section.id)}"
+        open
+      >
+        <summary class="world-section-editor-summary">
+          <span>추가 정보 ${index + 1}</span>
+          <strong data-world-section-summary-title>
+            ${escapeHtml(section.title || "제목 없음")}
+          </strong>
+        </summary>
+
+        <div class="world-section-editor-body">
+          <div class="world-section-editor-toolbar">
+            <button type="button" data-move-world-section="up" ${index === 0 ? "disabled" : ""}>위로</button>
+            <button type="button" data-move-world-section="down" ${index === world.sections.length - 1 ? "disabled" : ""}>아래로</button>
+            <button type="button" data-delete-world-section>삭제</button>
+          </div>
+          <label>
+            <span>제목</span>
+            <input
+              type="text"
+              value="${escapeHtml(section.title)}"
+              placeholder="예: 세계의 핵심"
+              data-world-section-field="title"
+            >
+          </label>
+          <label>
+            <span>내용</span>
+            <textarea
+              rows="5"
+              placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
+              data-world-section-field="content"
+            >${escapeHtml(bioArrayToText(section.content))}</textarea>
+          </label>
         </div>
-        <label>
-          <span>제목</span>
-          <input
-            type="text"
-            value="${escapeHtml(section.title)}"
-            placeholder="예: 세계의 핵심"
-            data-world-section-field="title"
-          >
-        </label>
-        <label>
-          <span>내용</span>
-          <textarea
-            rows="5"
-            placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
-            data-world-section-field="content"
-          >${escapeHtml(bioArrayToText(section.content))}</textarea>
-        </label>
-      </article>
+      </details>
     `).join("");
+  }
+
+  function renderWorldCharacterLinks() {
+    const world = getSelectedWorld();
+
+    if (!world || project.characters.length === 0) {
+      elements.worldCharacterLinkList.innerHTML =
+        '<p class="empty-message">등록된 캐릭터가 없습니다.</p>';
+      return;
+    }
+
+    const characters = project.characters
+      .map((character, index) => ({ character, index }))
+      .filter(({ character }) => character && typeof character === "object");
+
+    if (characters.length === 0) {
+      elements.worldCharacterLinkList.innerHTML =
+        '<p class="empty-message">등록된 캐릭터가 없습니다.</p>';
+      return;
+    }
+
+    elements.worldCharacterLinkList.innerHTML = characters.map(
+      ({ character, index }) => {
+        const imageUrl = characterImageUrl(character);
+        const currentWorld = project.worlds.find(
+          (entry) => entry.id === character.worldId
+        );
+        const isLinked = character.worldId === world.id;
+        const status = isLinked
+          ? "현재 세계관에 연결됨"
+          : currentWorld
+            ? `${currentWorld.name || "이름 없는 세계관"}에 연결됨`
+            : "연결된 세계관 없음";
+        const thumbnail = imageUrl
+          ? `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
+          : `<span aria-hidden="true">${escapeHtml(
+              String(character.name || "?").slice(0, 1)
+            )}</span>`;
+
+        return `
+          <label class="world-character-link-item">
+            <input
+              type="checkbox"
+              data-world-character-index="${index}"
+              ${isLinked ? "checked" : ""}
+            >
+            <span class="world-character-link-thumb" aria-hidden="true">
+              ${thumbnail}
+            </span>
+            <span class="world-character-link-copy">
+              <strong>${escapeHtml(character.name || "이름 없는 캐릭터")}</strong>
+              <small>${escapeHtml(status)}</small>
+            </span>
+          </label>
+        `;
+      }
+    ).join("");
+  }
+
+  function updateWorldCharacterLink(target) {
+    const world = getSelectedWorld();
+    const characterIndex = Number(target.dataset.worldCharacterIndex);
+    const character = project.characters[characterIndex];
+
+    if (!world || !Number.isInteger(characterIndex) || !character) return;
+
+    if (target.checked) {
+      character.worldId = world.id;
+    } else if (character.worldId === world.id) {
+      character.worldId = "";
+    }
+
+    renderWorldCharacterLinks();
+    renderWorldPreview();
+    scheduleAutosave();
   }
 
   function populateWorldFields() {
@@ -1086,6 +1175,7 @@
     elements.moveWorldUpButton.disabled = index <= 0;
     elements.moveWorldDownButton.disabled = index < 0 || index >= project.worlds.length - 1;
 
+    renderWorldCharacterLinks();
     renderWorldSectionsEditor();
     renderWorldImageEditorPreview();
   }
@@ -1154,7 +1244,7 @@
 
   function updateWorldPreviewLimit() {
     const cards = [...elements.previewWorldGrid.children];
-    const visibleLimit = previewWorldColumnCount() * 2;
+    const visibleLimit = previewWorldColumnCount();
     const canCollapse = cards.length > visibleLimit;
     const isExpanded = worldPreviewExpanded || !canCollapse;
 
@@ -1277,7 +1367,7 @@
     const world = createWorld();
     project.worlds.push(world);
     selectedWorldId = world.id;
-    if (project.worlds.length > previewWorldColumnCount() * 2) {
+    if (project.worlds.length > previewWorldColumnCount()) {
       worldPreviewExpanded = true;
     }
     renderWorldEditor();
@@ -1310,7 +1400,7 @@
     releaseWorldImageObjectUrl(world.id);
     project.worlds.splice(index, 1);
     selectedWorldId = project.worlds[index]?.id || project.worlds[index - 1]?.id || "";
-    if (project.worlds.length <= previewWorldColumnCount() * 2) {
+    if (project.worlds.length <= previewWorldColumnCount()) {
       worldPreviewExpanded = false;
     }
 
@@ -1366,6 +1456,12 @@
 
     if (target.dataset.worldSectionField === "title") {
       section.title = target.value.trim();
+      const summaryTitle = item.querySelector(
+        "[data-world-section-summary-title]"
+      );
+      if (summaryTitle) {
+        summaryTitle.textContent = section.title || "제목 없음";
+      }
     } else if (target.dataset.worldSectionField === "content") {
       section.content = bioTextToArray(target.value);
     } else {
@@ -1978,6 +2074,12 @@
     );
     if (!button) return;
     handleWorldSectionAction(button);
+  });
+
+  elements.worldCharacterLinkList.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("[data-world-character-index]");
+    if (!checkbox) return;
+    updateWorldCharacterLink(checkbox);
   });
 
   elements.addWorldSectionButton.addEventListener("click", addWorldSection);

@@ -742,10 +742,78 @@ textarea:focus {
   font-weight: 800;
 }
 
+.world-character-link-editor,
 .world-section-editor {
   margin-top: 1.5rem;
   padding-top: 1.4rem;
   border-top: 1px solid var(--line);
+}
+
+.world-character-link-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+  margin-top: .8rem;
+}
+
+.world-character-link-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 40px minmax(0, 1fr);
+  gap: .65rem;
+  align-items: center;
+  margin: 0;
+  padding: .6rem;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  cursor: pointer;
+}
+
+.world-character-link-item:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.world-character-link-item input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.world-character-link-thumb {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 11px;
+  background: var(--surface-3);
+  font-weight: 850;
+}
+
+.world-character-link-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.world-character-link-copy {
+  min-width: 0;
+}
+
+.world-character-link-copy strong,
+.world-character-link-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.world-character-link-copy small {
+  color: var(--muted);
+  font-size: .68rem;
 }
 
 .world-editor-section .subsection-heading {
@@ -766,10 +834,56 @@ textarea:focus {
 }
 
 .world-section-editor-item {
-  padding: .8rem;
+  overflow: hidden;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+.world-section-editor-summary {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: .65rem;
+  align-items: center;
+  padding: .75rem .8rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.world-section-editor-summary::-webkit-details-marker {
+  display: none;
+}
+
+.world-section-editor-summary::after {
+  content: "⌄";
+  color: var(--accent);
+  font-size: 1rem;
+  transition: transform .2s ease;
+}
+
+.world-section-editor-item[open] .world-section-editor-summary::after {
+  transform: rotate(180deg);
+}
+
+.world-section-editor-summary span {
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.world-section-editor-summary strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .82rem;
+}
+
+.world-section-editor-body {
+  padding: .75rem .8rem .8rem;
+  border-top: 1px solid var(--line);
 }
 
 .world-section-editor-toolbar {
@@ -969,7 +1083,7 @@ textarea:focus {
   font-size: .62rem;
 }
 
-/* stardust-archive의 2행 더보기 동작 */
+/* stardust-archive 세계관 아카이브의 1행 더보기 동작 */
 .archive-toggle-wrap {
   display: flex;
   justify-content: center;
@@ -1290,6 +1404,10 @@ body.world-preview-modal-open {
 
 @media (max-width: 760px) {
   .world-editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .world-character-link-list {
     grid-template-columns: 1fr;
   }
 
