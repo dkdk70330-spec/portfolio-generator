@@ -38,7 +38,6 @@
   const IMAGE_DB_VERSION = 1;
   const IMAGE_STORE_NAME = "images";
   const MAX_IMAGE_FILE_BYTES = 10 * 1024 * 1024;
-  const MAX_WORLD_COUNT = 60;
   const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 
   const services = Array.isArray(adminCatalog.profileLinkServices)
@@ -1052,7 +1051,6 @@
           <span>제목</span>
           <input
             type="text"
-            maxlength="100"
             value="${escapeHtml(section.title)}"
             placeholder="예: 세계의 핵심"
             data-world-section-field="title"
@@ -1062,7 +1060,6 @@
           <span>내용</span>
           <textarea
             rows="5"
-            maxlength="1400"
             placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
             data-world-section-field="content"
           >${escapeHtml(bioArrayToText(section.content))}</textarea>
@@ -1252,14 +1249,14 @@
     }).join("");
 
     elements.worldPreviewModal.showModal();
-    document.body.classList.add("modal-open");
+    document.body.classList.add("world-preview-modal-open");
   }
 
   function closeWorldPreview() {
     if (elements.worldPreviewModal.open) {
       elements.worldPreviewModal.close();
     }
-    document.body.classList.remove("modal-open");
+    document.body.classList.remove("world-preview-modal-open");
   }
 
   function syncWorldFromFields() {
@@ -1277,11 +1274,6 @@
   }
 
   function addWorld() {
-    if (project.worlds.length >= MAX_WORLD_COUNT) {
-      window.alert(`세계관은 최대 ${MAX_WORLD_COUNT}개까지 만들 수 있습니다.`);
-      return;
-    }
-
     const world = createWorld();
     project.worlds.push(world);
     selectedWorldId = world.id;
@@ -2015,7 +2007,7 @@
     if (event.target === elements.worldPreviewModal) closeWorldPreview();
   });
   elements.worldPreviewModal.addEventListener("close", () => {
-    document.body.classList.remove("modal-open");
+    document.body.classList.remove("world-preview-modal-open");
   });
 
   elements.profileForm.addEventListener("input", (event) => {
@@ -2107,8 +2099,10 @@
       return;
     }
 
-    if (restoredAutosave && (restoredAvatar || project.worlds.length > 0)) {
-      setSaveStatus("이전 자동 저장과 저장 이미지를 복구함");
+    if (restoredAutosave && project.worlds.length > 0) {
+      setSaveStatus("자동저장된 세계관 데이터를 복구함");
+    } else if (restoredAutosave && restoredAvatar) {
+      setSaveStatus("이전 자동 저장과 PNG를 복구함");
     } else if (restoredAutosave) {
       setSaveStatus("이전 자동 저장을 복구함");
     } else {

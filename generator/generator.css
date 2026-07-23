@@ -556,16 +556,16 @@ textarea:focus {
 
 
 /* 세계관 편집기 */
-.editor-section-heading,
-.subsection-heading,
-.world-form-actions {
+.world-editor-section .editor-section-heading,
+.world-editor-section .subsection-heading,
+.world-editor-section .world-form-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.editor-section-heading h2 {
+.world-editor-section .editor-section-heading h2 {
   margin: 0;
   letter-spacing: -.05em;
 }
@@ -687,14 +687,14 @@ textarea:focus {
   margin-bottom: 1rem;
 }
 
-.world-form-actions .secondary-button,
-.danger-button {
+.world-editor-section .world-form-actions .secondary-button,
+.world-editor-section .world-editor-section .danger-button {
   min-height: 38px;
   padding: .45rem .72rem;
   font-size: .74rem;
 }
 
-.danger-button {
+.world-editor-section .danger-button {
   border: 1px solid color-mix(in srgb, var(--danger) 58%, var(--line));
   border-radius: 999px;
   background: color-mix(in srgb, var(--danger) 10%, transparent);
@@ -702,7 +702,7 @@ textarea:focus {
   font-weight: 850;
 }
 
-.danger-button:hover {
+.world-editor-section .danger-button:hover {
   border-color: var(--danger);
 }
 
@@ -736,7 +736,7 @@ textarea:focus {
   object-fit: cover;
 }
 
-.field-label {
+.world-editor-section .field-label {
   color: var(--muted);
   font-size: .78rem;
   font-weight: 800;
@@ -748,11 +748,11 @@ textarea:focus {
   border-top: 1px solid var(--line);
 }
 
-.subsection-heading {
+.world-editor-section .subsection-heading {
   align-items: end;
 }
 
-.subsection-heading small {
+.world-editor-section .subsection-heading small {
   display: block;
   margin-top: .15rem;
   color: var(--muted);
@@ -804,7 +804,7 @@ textarea:focus {
   background: var(--bg);
 }
 
-.section-heading {
+.stardust-world-preview .world-preview-section-heading {
   display: flex;
   align-items: end;
   justify-content: space-between;
@@ -812,13 +812,13 @@ textarea:focus {
   margin-bottom: 1rem;
 }
 
-.section-heading h2 {
+.stardust-world-preview .world-preview-section-heading h2 {
   margin: 0;
   font-size: clamp(1.7rem, 4vw, 2.7rem);
   letter-spacing: -.06em;
 }
 
-.section-heading > p {
+.stardust-world-preview .world-preview-section-heading > p {
   max-width: 20rem;
   margin: 0;
   color: var(--muted);
@@ -953,15 +953,15 @@ textarea:focus {
   -webkit-line-clamp: 2;
 }
 
-.world-card-tags,
-.tag-list {
+.stardust-world-preview .world-card-tags,
+#worldPreviewModal .world-preview-tag-list {
   display: flex;
   flex-wrap: wrap;
   gap: .3rem;
 }
 
-.world-card-tags span,
-.tag-list span {
+.stardust-world-preview .world-card-tags span,
+#worldPreviewModal .world-preview-tag-list span {
   padding: .18rem .44rem;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1044,7 +1044,7 @@ textarea:focus {
   min-height: 650px;
 }
 
-.modal-close {
+#worldPreviewModal .world-preview-modal-close {
   position: absolute;
   z-index: 3;
   top: 1rem;
@@ -1096,7 +1096,7 @@ textarea:focus {
   overflow-y: auto;
 }
 
-.modal-kicker {
+#worldPreviewModal .modal-kicker {
   margin: 0;
   color: var(--violet);
   font-size: .68rem;
@@ -1159,7 +1159,7 @@ textarea:focus {
   border-top: 1px solid var(--line);
 }
 
-.panel-heading h3 {
+#worldPreviewModal .panel-heading h3 {
   margin: 0;
 }
 
@@ -1225,14 +1225,14 @@ textarea:focus {
   font-size: .68rem;
 }
 
-body.modal-open {
+body.world-preview-modal-open {
   overflow: hidden;
 }
 
 @container (max-width: 660px) {
-  .section-heading > p,
-  .world-card-body > p,
-  .world-card-tags {
+  .stardust-world-preview .world-preview-section-heading > p,
+  .stardust-world-preview .world-card-body > p,
+  .stardust-world-preview .world-card-tags {
     display: none;
   }
 
@@ -1310,12 +1310,12 @@ body.modal-open {
 @media (max-width: 620px) {
   .editor-section-heading,
   .subsection-heading,
-  .section-heading {
+  .stardust-world-preview .world-preview-section-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .section-heading > p {
+  .stardust-world-preview .world-preview-section-heading > p {
     text-align: left;
   }
 

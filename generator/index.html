@@ -10,8 +10,8 @@
   <header class="app-header">
     <div>
       <p class="eyebrow">PORTFOLIO GENERATOR</p>
-      <h1>포트폴리오 편집기</h1>
-      <p>제작자 프로필과 세계관을 입력하면 오른쪽에 실제 아카이브 형태로 반영됩니다.</p>
+      <h1>제작자 프로필 편집기</h1>
+      <p>사이트와 제작자 정보를 입력하면 오른쪽 미리보기에 즉시 반영됩니다.</p>
     </div>
 
     <div class="header-actions" aria-label="프로젝트 관리">
@@ -242,7 +242,6 @@
               <input
                 id="worldNameInput"
                 type="text"
-                maxlength="80"
                 placeholder="예: 별의 왕관"
               >
             </label>
@@ -252,7 +251,6 @@
               <input
                 id="worldSubtitleInput"
                 type="text"
-                maxlength="160"
                 placeholder="예: 사라진 별과 패전국을 둘러싼 왕국 연대기"
               >
             </label>
@@ -262,7 +260,6 @@
               <input
                 id="worldTagsInput"
                 type="text"
-                maxlength="240"
                 placeholder="왕국, 천문, 정치극"
               >
               <small class="field-help">쉼표로 구분해 주세요.</small>
@@ -273,7 +270,6 @@
               <textarea
                 id="worldDescriptionInput"
                 rows="7"
-                maxlength="1600"
                 placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
               ></textarea>
             </label>
@@ -330,7 +326,7 @@
       </article>
 
       <section class="stardust-world-preview" id="previewWorldSection" aria-labelledby="previewWorldTitle">
-        <div class="section-heading">
+        <div class="world-preview-section-heading">
           <div>
             <p class="eyebrow">SHARED WORLDS</p>
             <h2 id="previewWorldTitle">세계관 아카이브</h2>
@@ -361,7 +357,7 @@
 
   <dialog class="world-modal" id="worldPreviewModal" aria-labelledby="worldPreviewModalTitle">
     <div class="world-modal-shell">
-      <button class="modal-close" id="worldPreviewModalClose" type="button" aria-label="세계관 상세 닫기">×</button>
+      <button class="world-preview-modal-close" id="worldPreviewModalClose" type="button" aria-label="세계관 상세 닫기">×</button>
       <div class="world-cover-panel">
         <img id="worldPreviewModalImage" src="" alt="" hidden>
         <div id="worldPreviewModalImageFallback" class="world-cover-fallback">WORLD ARCHIVE</div>
@@ -370,7 +366,7 @@
         <p class="modal-kicker">WORLD ARCHIVE</p>
         <h2 id="worldPreviewModalTitle"></h2>
         <p class="world-modal-summary" id="worldPreviewModalSummary"></p>
-        <div class="tag-list" id="worldPreviewModalTags"></div>
+        <div class="world-preview-tag-list" id="worldPreviewModalTags"></div>
         <div class="world-modal-description" id="worldPreviewModalDescription"></div>
         <div class="world-section-list" id="worldPreviewModalSections"></div>
 
