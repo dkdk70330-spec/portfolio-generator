@@ -20,7 +20,9 @@
   };
 
   const ADMIN_FALLBACK = {
-    profileLinkServices: []
+    profileLinkServices: [],
+    platforms: [],
+    genres: []
   };
 
   const emptyProject = window.EMPTY_PROJECT || EMPTY_FALLBACK;
@@ -48,15 +50,30 @@
     services.map((service) => [service.id, service])
   );
 
+  const platformOptions = Array.isArray(adminCatalog.platforms)
+    ? adminCatalog.platforms
+    : [];
+  const platformCatalog = new Map(
+    platformOptions.map((platform) => [platform.id, platform])
+  );
+  const genreOptions = Array.isArray(adminCatalog.genres)
+    ? adminCatalog.genres.filter((genre) => typeof genre === "string" && genre.trim())
+    : [];
+
   let project = createEmptyProject();
   let creatorAvatarBlob = null;
   let creatorAvatarPreviewUrl = "";
   let avatarRestoreMissing = false;
   let selectedWorldId = "";
   let worldPreviewExpanded = false;
+  let selectedCharacterId = "";
+  let characterPreviewExpanded = false;
   const worldImageBlobs = new Map();
   const worldImagePreviewUrls = new Map();
   const missingWorldImageIds = new Set();
+  const characterImageBlobs = new Map();
+  const characterImagePreviewUrls = new Map();
+  const missingCharacterImageIds = new Set();
   let imageDatabasePromise = null;
   let autosaveTimer = 0;
   let restoredAutosave = false;
@@ -107,6 +124,27 @@
     addWorldSectionButton: document.querySelector("#addWorldSectionButton"),
     worldSectionList: document.querySelector("#worldSectionList"),
 
+    addCharacterButton: document.querySelector("#addCharacterButton"),
+    characterEditorList: document.querySelector("#characterEditorList"),
+    characterEditorEmpty: document.querySelector("#characterEditorEmpty"),
+    characterForm: document.querySelector("#characterForm"),
+    moveCharacterUpButton: document.querySelector("#moveCharacterUpButton"),
+    moveCharacterDownButton: document.querySelector("#moveCharacterDownButton"),
+    deleteCharacterButton: document.querySelector("#deleteCharacterButton"),
+    characterImageInput: document.querySelector("#characterImageInput"),
+    characterImageStorageStatus: document.querySelector("#characterImageStorageStatus"),
+    characterImageList: document.querySelector("#characterImageList"),
+    characterNameInput: document.querySelector("#characterNameInput"),
+    characterSubtitleInput: document.querySelector("#characterSubtitleInput"),
+    characterWorldSelect: document.querySelector("#characterWorldSelect"),
+    characterFeaturedInput: document.querySelector("#characterFeaturedInput"),
+    characterGenreList: document.querySelector("#characterGenreList"),
+    characterTagsInput: document.querySelector("#characterTagsInput"),
+    characterDescriptionInput: document.querySelector("#characterDescriptionInput"),
+    characterPlatformList: document.querySelector("#characterPlatformList"),
+    addCharacterContentButton: document.querySelector("#addCharacterContentButton"),
+    characterContentList: document.querySelector("#characterContentList"),
+
     previewSiteTitle: document.querySelector("#previewSiteTitle"),
     previewSiteDescription: document.querySelector("#previewSiteDescription"),
     previewCreatorName: document.querySelector("#previewCreatorName"),
@@ -132,6 +170,31 @@
     worldPreviewModalSections: document.querySelector("#worldPreviewModalSections"),
     worldPreviewCharacterSection: document.querySelector("#worldPreviewCharacterSection"),
     worldPreviewCharacterList: document.querySelector("#worldPreviewCharacterList"),
+
+    previewFeaturedSection: document.querySelector("#previewFeaturedSection"),
+    previewFeaturedGrid: document.querySelector("#previewFeaturedGrid"),
+    previewCharacterSection: document.querySelector("#previewCharacterSection"),
+    previewCharacterGrid: document.querySelector("#previewCharacterGrid"),
+    previewCharacterToggleWrap: document.querySelector("#previewCharacterToggleWrap"),
+    previewCharacterToggle: document.querySelector("#previewCharacterToggle"),
+    previewCharacterEmpty: document.querySelector("#previewCharacterEmpty"),
+    characterPreviewModal: document.querySelector("#characterPreviewModal"),
+    characterPreviewModalClose: document.querySelector("#characterPreviewModalClose"),
+    characterPreviewModalTitle: document.querySelector("#characterPreviewModalTitle"),
+    characterPreviewModalSummary: document.querySelector("#characterPreviewModalSummary"),
+    characterPreviewMainImage: document.querySelector("#characterPreviewMainImage"),
+    characterPreviewMainImageFallback: document.querySelector("#characterPreviewMainImageFallback"),
+    characterPreviewThumbnails: document.querySelector("#characterPreviewThumbnails"),
+    characterPreviewPlatforms: document.querySelector("#characterPreviewPlatforms"),
+    characterPreviewKicker: document.querySelector("#characterPreviewKicker"),
+    characterPreviewModalTags: document.querySelector("#characterPreviewModalTags"),
+    characterPreviewModalDescription: document.querySelector("#characterPreviewModalDescription"),
+    characterPreviewWorldPanel: document.querySelector("#characterPreviewWorldPanel"),
+    characterPreviewWorldButton: document.querySelector("#characterPreviewWorldButton"),
+    characterPreviewWorldName: document.querySelector("#characterPreviewWorldName"),
+    characterPreviewWorldSummary: document.querySelector("#characterPreviewWorldSummary"),
+    characterPreviewContentSection: document.querySelector("#characterPreviewContentSection"),
+    characterPreviewContents: document.querySelector("#characterPreviewContents"),
 
     saveStatus: document.querySelector("#saveStatus")
   };
@@ -349,6 +412,136 @@
     };
   }
 
+
+  function normalizeCharacterImage(value, fieldName) {
+    if (value === undefined || value === null || value === "") return "";
+    if (typeof value === "string") return value;
+    if (!isPlainObject(value)) {
+      throw new Error(`${fieldName} 항목의 형식이 올바르지 않습니다.`);
+    }
+
+    const id = normalizeString(value.id, `${fieldName}.id`).trim();
+    const name = normalizeString(value.name || "character.png", `${fieldName}.name`).trim();
+    const type = normalizeString(value.type || "image/png", `${fieldName}.type`).trim();
+    const size = Number(value.size || 0);
+    const width = Number(value.width || 0);
+    const height = Number(value.height || 0);
+    const updatedAt = normalizeString(value.updatedAt || "", `${fieldName}.updatedAt`).trim();
+
+    if (!id) throw new Error(`${fieldName}.id가 비어 있습니다.`);
+    if (type !== "image/png") throw new Error(`${fieldName}는 PNG 이미지여야 합니다.`);
+    if (!Number.isFinite(size) || size < 0) throw new Error(`${fieldName}.size가 올바르지 않습니다.`);
+    if (!Number.isFinite(width) || width < 0) throw new Error(`${fieldName}.width가 올바르지 않습니다.`);
+    if (!Number.isFinite(height) || height < 0) throw new Error(`${fieldName}.height가 올바르지 않습니다.`);
+
+    return {
+      id,
+      name: name || "character.png",
+      type: "image/png",
+      size: Math.round(size),
+      width: Math.round(width),
+      height: Math.round(height),
+      updatedAt
+    };
+  }
+
+  function normalizeCharacterContent(item, characterIndex, contentIndex) {
+    if (!isPlainObject(item)) {
+      throw new Error(`characters[${characterIndex}].contents[${contentIndex}] 항목의 형식이 올바르지 않습니다.`);
+    }
+
+    const rawContent = item.content ?? item.body ?? [];
+    const content = Array.isArray(rawContent)
+      ? rawContent.map((paragraph, paragraphIndex) =>
+          normalizeString(
+            paragraph,
+            `characters[${characterIndex}].contents[${contentIndex}].content[${paragraphIndex}]`
+          ).trim()
+        ).filter(Boolean)
+      : bioTextToArray(normalizeString(
+          rawContent,
+          `characters[${characterIndex}].contents[${contentIndex}].content`
+        ));
+
+    return {
+      ...cloneJson(item),
+      id: normalizeString(
+        item.id || `content-${contentIndex + 1}`,
+        `characters[${characterIndex}].contents[${contentIndex}].id`
+      ).trim(),
+      type: normalizeString(item.type, `characters[${characterIndex}].contents[${contentIndex}].type`),
+      title: normalizeString(item.title, `characters[${characterIndex}].contents[${contentIndex}].title`),
+      content,
+      spoiler: item.spoiler === true,
+      warning: normalizeString(item.warning, `characters[${characterIndex}].contents[${contentIndex}].warning`)
+    };
+  }
+
+  function normalizeCharacter(character, index) {
+    if (!isPlainObject(character)) {
+      throw new Error(`characters[${index}] 항목의 형식이 올바르지 않습니다.`);
+    }
+
+    const id = normalizeString(character.id, `characters[${index}].id`).trim();
+    if (!id) throw new Error(`characters[${index}].id가 비어 있습니다.`);
+
+    const rawDescription = character.description || [];
+    const rawGenres = character.genres || [];
+    const rawTags = character.tags || [];
+    const rawImages = character.images || [];
+    const rawPlatforms = character.platforms || [];
+    const rawContents = character.contents || character.content || [];
+
+    if (!Array.isArray(rawDescription)) throw new Error(`characters[${index}].description 항목은 배열이어야 합니다.`);
+    if (!Array.isArray(rawGenres)) throw new Error(`characters[${index}].genres 항목은 배열이어야 합니다.`);
+    if (!Array.isArray(rawTags)) throw new Error(`characters[${index}].tags 항목은 배열이어야 합니다.`);
+    if (!Array.isArray(rawImages)) throw new Error(`characters[${index}].images 항목은 배열이어야 합니다.`);
+    if (!Array.isArray(rawPlatforms)) throw new Error(`characters[${index}].platforms 항목은 배열이어야 합니다.`);
+    if (!Array.isArray(rawContents)) throw new Error(`characters[${index}].contents 항목은 배열이어야 합니다.`);
+    if (rawImages.length > 5) throw new Error(`characters[${index}].images는 최대 5개까지 사용할 수 있습니다.`);
+
+    return {
+      ...cloneJson(character),
+      id,
+      worldId: normalizeString(character.worldId, `characters[${index}].worldId`).trim(),
+      name: normalizeString(character.name, `characters[${index}].name`),
+      subtitle: normalizeString(character.subtitle, `characters[${index}].subtitle`),
+      description: rawDescription.map((paragraph, paragraphIndex) =>
+        normalizeString(paragraph, `characters[${index}].description[${paragraphIndex}]`).trim()
+      ).filter(Boolean),
+      genres: rawGenres.map((genre, genreIndex) =>
+        normalizeString(genre, `characters[${index}].genres[${genreIndex}]`).trim()
+      ).filter(Boolean),
+      tags: rawTags.map((tag, tagIndex) =>
+        normalizeString(tag, `characters[${index}].tags[${tagIndex}]`).trim()
+      ).filter(Boolean),
+      featured: character.featured === true,
+      images: rawImages.map((image, imageIndex) =>
+        normalizeCharacterImage(image, `characters[${index}].images[${imageIndex}]`)
+      ).filter(Boolean),
+      platforms: rawPlatforms.map((platform, platformIndex) => {
+        if (!isPlainObject(platform)) {
+          throw new Error(`characters[${index}].platforms[${platformIndex}] 항목의 형식이 올바르지 않습니다.`);
+        }
+        const platformId = normalizeString(
+          platform.id,
+          `characters[${index}].platforms[${platformIndex}].id`
+        ).trim();
+        const url = normalizeString(
+          platform.url,
+          `characters[${index}].platforms[${platformIndex}].url`
+        ).trim();
+        if (!platformId) {
+          throw new Error(`characters[${index}].platforms[${platformIndex}].id가 비어 있습니다.`);
+        }
+        return { id: platformId, url };
+      }),
+      contents: rawContents.map((item, contentIndex) =>
+        normalizeCharacterContent(item, index, contentIndex)
+      )
+    };
+  }
+
   function normalizeProject(rawProject) {
     if (!isPlainObject(rawProject)) {
       throw new Error("프로젝트 JSON의 최상위 값은 객체여야 합니다.");
@@ -402,6 +595,7 @@
     ).filter(Boolean);
 
     const worlds = (rawProject.worlds || []).map(normalizeWorld);
+    const characters = (rawProject.characters || []).map(normalizeCharacter);
     const worldIds = new Set();
 
     for (const world of worlds) {
@@ -409,6 +603,14 @@
         throw new Error(`중복된 세계관 ID가 있습니다: ${world.id}`);
       }
       worldIds.add(world.id);
+    }
+
+    const characterIds = new Set();
+    for (const character of characters) {
+      if (characterIds.has(character.id)) {
+        throw new Error(`중복된 캐릭터 ID가 있습니다: ${character.id}`);
+      }
+      characterIds.add(character.id);
     }
 
     const links = (rawCreator.links || []).map((link, index) => {
@@ -460,7 +662,7 @@
         links
       },
       worlds,
-      characters: cloneJson(rawProject.characters || [])
+      characters
     };
   }
 
@@ -558,6 +760,49 @@
     };
   }
 
+
+  function createCharacter() {
+    return {
+      id: createEntityId("character"),
+      worldId: "",
+      name: "",
+      subtitle: "",
+      description: [],
+      genres: [],
+      tags: [],
+      featured: false,
+      images: [],
+      platforms: [],
+      contents: []
+    };
+  }
+
+  function createCharacterContent() {
+    return {
+      id: createEntityId("character-content"),
+      type: "",
+      title: "",
+      content: [],
+      spoiler: false,
+      warning: ""
+    };
+  }
+
+  function getSelectedCharacter() {
+    return project.characters.find(
+      (character) => character.id === selectedCharacterId
+    ) || null;
+  }
+
+  function getCharacterImageMetadata(image) {
+    return isPlainObject(image) ? image : null;
+  }
+
+  function platformIconUrl(platform) {
+    if (!platform?.icon) return "";
+    return `${ADMIN_ASSET_BASE}${platform.icon}`;
+  }
+
   function getSelectedWorld() {
     return project.worlds.find((world) => world.id === selectedWorldId) || null;
   }
@@ -593,11 +838,19 @@
     return typeof world.image === "string" ? legacyImageUrl(world.image) : "";
   }
 
-  function characterImageUrl(character) {
-    const firstImage = Array.isArray(character?.images)
-      ? character.images[0]
+  function characterImageEntryUrl(image) {
+    if (!image) return "";
+    if (typeof image === "string") return legacyImageUrl(image);
+    const metadata = getCharacterImageMetadata(image);
+    if (!metadata?.id) return "";
+    return characterImagePreviewUrls.get(metadata.id) || "";
+  }
+
+  function characterImageUrl(character, index = 0) {
+    const image = Array.isArray(character?.images)
+      ? character.images[index]
       : "";
-    return typeof firstImage === "string" ? legacyImageUrl(firstImage) : "";
+    return characterImageEntryUrl(image);
   }
 
   function charactersInWorld(worldId) {
@@ -957,6 +1210,23 @@
     missingWorldImageIds.clear();
   }
 
+
+  function releaseCharacterImageObjectUrl(imageId) {
+    const url = characterImagePreviewUrls.get(imageId);
+    if (url) URL.revokeObjectURL(url);
+    characterImagePreviewUrls.delete(imageId);
+    characterImageBlobs.delete(imageId);
+    missingCharacterImageIds.delete(imageId);
+  }
+
+  function releaseAllCharacterImageObjectUrls() {
+    for (const imageId of [...characterImagePreviewUrls.keys()]) {
+      releaseCharacterImageObjectUrl(imageId);
+    }
+    characterImageBlobs.clear();
+    missingCharacterImageIds.clear();
+  }
+
   function updateWorldImageStorageStatus() {
     const world = getSelectedWorld();
     if (!elements.worldImageStorageStatus || !world) return;
@@ -1003,6 +1273,697 @@
     else elements.worldImageEditorPreview.removeAttribute("src");
 
     updateWorldImageStorageStatus();
+  }
+
+
+  function characterDisplayName(character, index = 0) {
+    return character?.name || `새 캐릭터 ${index + 1}`;
+  }
+
+  function renderCharacterList() {
+    if (project.characters.length === 0) {
+      elements.characterEditorList.innerHTML =
+        '<p class="empty-message">등록된 캐릭터가 없습니다.</p>';
+      return;
+    }
+
+    elements.characterEditorList.innerHTML = project.characters.map((character, index) => {
+      const imageUrl = characterImageUrl(character);
+      const thumb = imageUrl
+        ? `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
+        : `<span>${escapeHtml(String(character.name || "?").slice(0, 1))}</span>`;
+      return `
+        <button
+          class="character-editor-list-item ${character.id === selectedCharacterId ? "is-active" : ""}"
+          type="button"
+          data-select-character="${escapeHtml(character.id)}"
+          aria-pressed="${character.id === selectedCharacterId}"
+        >
+          <span class="character-editor-list-thumb" aria-hidden="true">${thumb}</span>
+          <span class="character-editor-list-copy">
+            <strong>${escapeHtml(characterDisplayName(character, index))}</strong>
+            <small>${escapeHtml(character.subtitle || "부제를 입력해 주세요")}</small>
+          </span>
+          ${character.featured ? '<b class="character-editor-featured-mark" title="추천 캐릭터">★</b>' : ""}
+        </button>
+      `;
+    }).join("");
+  }
+
+  function renderCharacterWorldOptions() {
+    const character = getSelectedCharacter();
+    if (!character) return;
+
+    elements.characterWorldSelect.innerHTML = [
+      '<option value="">독립 캐릭터</option>',
+      ...project.worlds.map((world) => `
+        <option value="${escapeHtml(world.id)}" ${character.worldId === world.id ? "selected" : ""}>
+          ${escapeHtml(world.name || "이름 없는 세계관")}
+        </option>
+      `)
+    ].join("");
+  }
+
+  function renderCharacterGenres() {
+    const character = getSelectedCharacter();
+    if (!character) return;
+
+    const allGenres = [...new Set([
+      ...genreOptions,
+      ...(character.genres || [])
+    ])];
+
+    if (allGenres.length === 0) {
+      elements.characterGenreList.innerHTML =
+        '<p class="empty-message">관리자 장르가 등록되어 있지 않습니다.</p>';
+      return;
+    }
+
+    elements.characterGenreList.innerHTML = allGenres.map((genre) => `
+      <label class="character-option-item">
+        <input
+          type="checkbox"
+          data-character-genre="${escapeHtml(genre)}"
+          ${(character.genres || []).includes(genre) ? "checked" : ""}
+        >
+        <span>${escapeHtml(genre)}</span>
+      </label>
+    `).join("");
+  }
+
+  function characterPlatformOptions(character) {
+    const selectedIds = (character.platforms || []).map((item) => item.id);
+    const unknown = selectedIds
+      .filter((id) => !platformCatalog.has(id))
+      .map((id) => ({ id, name: id, icon: "" }));
+    return [...platformOptions, ...unknown];
+  }
+
+  function renderCharacterPlatforms() {
+    const character = getSelectedCharacter();
+    if (!character) return;
+
+    const options = characterPlatformOptions(character);
+    if (options.length === 0) {
+      elements.characterPlatformList.innerHTML =
+        '<p class="empty-message">관리자 플랫폼이 등록되어 있지 않습니다.</p>';
+      return;
+    }
+
+    elements.characterPlatformList.innerHTML = options.map((platform) => {
+      const selected = (character.platforms || []).find((item) => item.id === platform.id);
+      const icon = platform.icon
+        ? `<img src="${escapeHtml(platformIconUrl(platform))}" alt="">`
+        : `<span>${escapeHtml(String(platform.name || platform.id).slice(0, 1))}</span>`;
+      return `
+        <div class="character-platform-editor-item" data-character-platform-id="${escapeHtml(platform.id)}">
+          <label class="character-platform-toggle">
+            <input type="checkbox" data-character-platform-toggle ${selected ? "checked" : ""}>
+            <span class="character-platform-editor-icon" aria-hidden="true">${icon}</span>
+            <strong>${escapeHtml(platform.name || platform.id)}</strong>
+          </label>
+          <input
+            type="url"
+            inputmode="url"
+            data-character-platform-url
+            value="${escapeHtml(selected?.url || "")}"
+            placeholder="https://..."
+            ${selected ? "" : "disabled"}
+            aria-label="${escapeHtml(platform.name || platform.id)} 캐릭터 주소"
+          >
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderCharacterImagesEditor() {
+    const character = getSelectedCharacter();
+    if (!character || character.images.length === 0) {
+      elements.characterImageList.innerHTML =
+        '<p class="empty-message">등록된 이미지가 없습니다.</p>';
+      elements.characterImageStorageStatus.textContent =
+        "PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다. 이미지당 최대 10MB.";
+      return;
+    }
+
+    elements.characterImageList.innerHTML = character.images.map((image, index) => {
+      const imageUrl = characterImageEntryUrl(image);
+      const metadata = getCharacterImageMetadata(image);
+      const missing = Boolean(metadata?.id && missingCharacterImageIds.has(metadata.id));
+      const preview = imageUrl
+        ? `<img src="${escapeHtml(imageUrl)}" alt="캐릭터 이미지 ${index + 1}">`
+        : `<span>${missing ? "파일 없음" : "IMAGE"}</span>`;
+      return `
+        <article class="character-image-editor-item" data-character-image-index="${index}">
+          <div class="character-image-editor-preview">${preview}</div>
+          <div class="character-image-editor-meta">
+            <strong>${index === 0 ? "대표 이미지" : `이미지 ${index + 1}`}</strong>
+            <small>${escapeHtml(metadata?.name || (typeof image === "string" ? image : "이미지"))}</small>
+          </div>
+          <div class="character-image-editor-actions">
+            <button type="button" data-move-character-image="up" ${index === 0 ? "disabled" : ""}>위로</button>
+            <button type="button" data-move-character-image="down" ${index === character.images.length - 1 ? "disabled" : ""}>아래로</button>
+            <button type="button" data-delete-character-image>삭제</button>
+          </div>
+        </article>
+      `;
+    }).join("");
+
+    const missingCount = character.images.filter((image) => {
+      const metadata = getCharacterImageMetadata(image);
+      return metadata?.id && missingCharacterImageIds.has(metadata.id);
+    }).length;
+    elements.characterImageStorageStatus.textContent = missingCount > 0
+      ? `저장된 PNG ${missingCount}개를 찾을 수 없습니다. 다시 선택해 주세요.`
+      : `등록 이미지 ${character.images.length}/5 · 브라우저에 저장됨`;
+  }
+
+  function renderCharacterContentsEditor() {
+    const character = getSelectedCharacter();
+    if (!character || character.contents.length === 0) {
+      elements.characterContentList.innerHTML =
+        '<p class="empty-message">추가 콘텐츠가 없습니다.</p>';
+      return;
+    }
+
+    elements.characterContentList.innerHTML = character.contents.map((item, index) => `
+      <article class="character-content-editor-item" data-character-content-id="${escapeHtml(item.id)}">
+        <div class="character-content-editor-toolbar">
+          <span>추가 콘텐츠 ${index + 1}</span>
+          <button type="button" data-move-character-content="up" ${index === 0 ? "disabled" : ""}>위로</button>
+          <button type="button" data-move-character-content="down" ${index === character.contents.length - 1 ? "disabled" : ""}>아래로</button>
+          <button type="button" data-delete-character-content>삭제</button>
+        </div>
+        <label>
+          <span>분류</span>
+          <input type="text" value="${escapeHtml(item.type)}" placeholder="예: 제작 비하인드" data-character-content-field="type">
+        </label>
+        <label>
+          <span>제목</span>
+          <input type="text" value="${escapeHtml(item.title)}" placeholder="예: 이름과 모티프" data-character-content-field="title">
+        </label>
+        <label>
+          <span>내용</span>
+          <textarea rows="5" placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요." data-character-content-field="content">${escapeHtml(bioArrayToText(item.content))}</textarea>
+        </label>
+        <label class="character-content-spoiler-option">
+          <input type="checkbox" data-character-content-field="spoiler" ${item.spoiler ? "checked" : ""}>
+          <span>스포일러 콘텐츠</span>
+        </label>
+        <label data-character-warning-field ${item.spoiler ? "" : "hidden"}>
+          <span>스포일러 경고문</span>
+          <input type="text" value="${escapeHtml(item.warning)}" placeholder="예: 핵심 반전이 포함되어 있습니다." data-character-content-field="warning">
+        </label>
+      </article>
+    `).join("");
+  }
+
+  function populateCharacterFields() {
+    const character = getSelectedCharacter();
+    const hasCharacter = Boolean(character);
+    elements.characterForm.hidden = !hasCharacter;
+    elements.characterEditorEmpty.hidden = hasCharacter;
+    if (!character) return;
+
+    elements.characterNameInput.value = character.name || "";
+    elements.characterSubtitleInput.value = character.subtitle || "";
+    elements.characterFeaturedInput.checked = character.featured === true;
+    elements.characterTagsInput.value = (character.tags || []).join(", ");
+    elements.characterDescriptionInput.value = bioArrayToText(character.description);
+
+    const index = project.characters.findIndex((item) => item.id === character.id);
+    elements.moveCharacterUpButton.disabled = index <= 0;
+    elements.moveCharacterDownButton.disabled = index < 0 || index >= project.characters.length - 1;
+
+    renderCharacterWorldOptions();
+    renderCharacterGenres();
+    renderCharacterPlatforms();
+    renderCharacterImagesEditor();
+    renderCharacterContentsEditor();
+  }
+
+  function renderCharacterEditor() {
+    if (!project.characters.some((character) => character.id === selectedCharacterId)) {
+      selectedCharacterId = project.characters[0]?.id || "";
+    }
+    renderCharacterList();
+    populateCharacterFields();
+  }
+
+  function characterPlatformDots(character) {
+    return (character.platforms || []).map((link) => {
+      const platform = platformCatalog.get(link.id) || { id: link.id, name: link.id, icon: "" };
+      return platform.icon
+        ? `<span class="character-preview-platform-dot" title="${escapeHtml(platform.name)}"><img src="${escapeHtml(platformIconUrl(platform))}" alt=""></span>`
+        : `<span class="character-preview-platform-dot" title="${escapeHtml(platform.name)}">${escapeHtml(String(platform.name).slice(0, 1))}</span>`;
+    }).join("");
+  }
+
+  function characterCardMarkup(character, featured = false) {
+    const imageUrl = characterImageUrl(character);
+    const image = imageUrl
+      ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(character.name || "캐릭터")} 대표 이미지" loading="lazy">`
+      : '<span class="character-preview-card-image-fallback">CHARACTER</span>';
+    const genres = (character.genres || []).slice(0, 2)
+      .map((genre) => `<span>${escapeHtml(genre)}</span>`).join("");
+
+    return `
+      <article class="character-preview-card ${featured ? "is-featured" : ""}" data-preview-character-card="${escapeHtml(character.id)}">
+        <button type="button" class="character-preview-card-button" data-preview-character="${escapeHtml(character.id)}" aria-label="${escapeHtml(character.name || "이름 없는 캐릭터")} 상세 보기">
+          <div class="character-preview-card-image-wrap">
+            ${image}
+            <div class="character-preview-card-platforms">${characterPlatformDots(character)}</div>
+          </div>
+          <div class="character-preview-card-body">
+            <div class="character-preview-card-genres">${genres}</div>
+            <h3>${escapeHtml(character.name || "이름 없는 캐릭터")}</h3>
+            <p>${escapeHtml(character.subtitle || "캐릭터 부제를 입력해 주세요.")}</p>
+            <span class="character-preview-card-more">상세 보기 <b aria-hidden="true">↗</b></span>
+          </div>
+        </button>
+      </article>
+    `;
+  }
+
+  function previewCharacterColumnCount() {
+    const template = getComputedStyle(elements.previewCharacterGrid).gridTemplateColumns;
+    if (!template || template === "none") return 1;
+    return Math.max(1, template.split(/\s+/).filter(Boolean).length);
+  }
+
+  function updateCharacterPreviewLimit() {
+    const cards = [...elements.previewCharacterGrid.children];
+    const visibleLimit = previewCharacterColumnCount() * 2;
+    const canCollapse = cards.length > visibleLimit;
+    const expanded = characterPreviewExpanded || !canCollapse;
+    cards.forEach((card, index) => {
+      card.hidden = !expanded && index >= visibleLimit;
+    });
+    elements.previewCharacterToggleWrap.hidden = !canCollapse;
+    elements.previewCharacterToggle.setAttribute("aria-expanded", String(expanded));
+    elements.previewCharacterToggle.classList.toggle("is-expanded", expanded);
+    const hiddenCount = Math.max(0, cards.length - visibleLimit);
+    const label = elements.previewCharacterToggle.querySelector("span");
+    if (label) label.textContent = expanded ? "캐릭터 접기" : `캐릭터 더보기 +${hiddenCount}`;
+  }
+
+  function renderCharacterPreview() {
+    const featured = [
+      ...project.characters.filter((character) => character.featured),
+      ...project.characters.filter((character) => !character.featured)
+    ].filter((character, index, list) =>
+      list.findIndex((item) => item.id === character.id) === index
+    ).slice(0, 3);
+
+    elements.previewFeaturedSection.hidden = featured.length === 0;
+    elements.previewFeaturedGrid.innerHTML = featured
+      .map((character) => characterCardMarkup(character, true)).join("");
+
+    const hasCharacters = project.characters.length > 0;
+    elements.previewCharacterGrid.innerHTML = hasCharacters
+      ? project.characters.map((character) => characterCardMarkup(character)).join("")
+      : "";
+    elements.previewCharacterEmpty.hidden = hasCharacters;
+    if (!hasCharacters) characterPreviewExpanded = false;
+    updateCharacterPreviewLimit();
+  }
+
+  function characterContentMarkup(item) {
+    const type = item.type || (item.spoiler ? "스포일러" : "추가 정보");
+    const title = item.title || "제목 없는 콘텐츠";
+    const body = (item.content || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+    if (item.spoiler) {
+      return `
+        <details class="character-preview-content-box is-spoiler">
+          <summary>
+            <span class="character-preview-content-icon">⚠</span>
+            <span>
+              <small>${escapeHtml(type)}</small>
+              <strong>${escapeHtml(title)}</strong>
+              <em>${escapeHtml(item.warning || "스포일러가 포함되어 있습니다.")}</em>
+            </span>
+            <b aria-hidden="true">⌄</b>
+          </summary>
+          <div class="character-preview-content-body">${body}</div>
+        </details>
+      `;
+    }
+    return `
+      <article class="character-preview-content-box is-public">
+        <header>
+          <span class="character-preview-content-icon">✦</span>
+          <span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong></span>
+        </header>
+        <div class="character-preview-content-body">${body}</div>
+      </article>
+    `;
+  }
+
+  function openCharacterPreview(character) {
+    if (!character) return;
+    if (elements.worldPreviewModal.open) closeWorldPreview();
+
+    const images = (character.images || []).slice(0, 5);
+    const urls = images.map(characterImageEntryUrl);
+    const firstAvailableIndex = urls.findIndex(Boolean);
+    const mainIndex = firstAvailableIndex >= 0 ? firstAvailableIndex : 0;
+    const mainUrl = urls[mainIndex] || "";
+
+    elements.characterPreviewModalTitle.textContent = character.name || "이름 없는 캐릭터";
+    elements.characterPreviewModalSummary.textContent = character.subtitle || "";
+    elements.characterPreviewModalSummary.hidden = !character.subtitle;
+    elements.characterPreviewMainImage.hidden = !mainUrl;
+    elements.characterPreviewMainImageFallback.hidden = Boolean(mainUrl);
+    if (mainUrl) {
+      elements.characterPreviewMainImage.src = mainUrl;
+      elements.characterPreviewMainImage.alt = `${character.name || "캐릭터"} 이미지 ${mainIndex + 1}`;
+    } else {
+      elements.characterPreviewMainImage.removeAttribute("src");
+      elements.characterPreviewMainImage.alt = "";
+    }
+
+    const validImages = urls.map((url, index) => ({ url, index })).filter((item) => item.url);
+    elements.characterPreviewThumbnails.hidden = validImages.length <= 1;
+    elements.characterPreviewThumbnails.innerHTML = validImages.length > 1
+      ? validImages.map(({ url, index }) => `
+          <button type="button" class="character-preview-thumbnail ${index === mainIndex ? "is-active" : ""}" data-character-preview-image="${escapeHtml(url)}" data-character-preview-alt="${escapeHtml(`${character.name || "캐릭터"} 이미지 ${index + 1}`)}">
+            <img src="${escapeHtml(url)}" alt="">
+          </button>
+        `).join("")
+      : "";
+
+    elements.characterPreviewKicker.textContent = (character.genres || []).join(" · ") || "CHARACTER";
+    elements.characterPreviewModalTags.innerHTML = [
+      ...(character.genres || []),
+      ...(character.tags || [])
+    ].map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
+    elements.characterPreviewModalTags.hidden = !(character.genres || []).length && !(character.tags || []).length;
+    elements.characterPreviewModalDescription.innerHTML = (character.description || [])
+      .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+    elements.characterPreviewModalDescription.hidden = !(character.description || []).length;
+
+    elements.characterPreviewPlatforms.innerHTML = (character.platforms || []).map((link) => {
+      const platform = platformCatalog.get(link.id) || { id: link.id, name: link.id, icon: "" };
+      const content = platform.icon
+        ? `<img src="${escapeHtml(platformIconUrl(platform))}" alt=""><span class="sr-only">${escapeHtml(platform.name)}</span>`
+        : `<span>${escapeHtml(String(platform.name).slice(0, 1))}</span>`;
+      if (link.url && normalizeUrl(link.url)) {
+        return `<a href="${escapeHtml(link.url)}" target="_blank" rel="noreferrer" title="${escapeHtml(platform.name)}">${content}</a>`;
+      }
+      return `<span class="is-disabled" title="${escapeHtml(platform.name)}">${content}</span>`;
+    }).join("");
+    elements.characterPreviewPlatforms.hidden = !(character.platforms || []).length;
+
+    const world = project.worlds.find((item) => item.id === character.worldId);
+    elements.characterPreviewWorldPanel.hidden = !world;
+    if (world) {
+      elements.characterPreviewWorldButton.dataset.previewWorld = world.id;
+      elements.characterPreviewWorldName.textContent = world.name || "이름 없는 세계관";
+      elements.characterPreviewWorldSummary.textContent = world.subtitle || "";
+    } else {
+      delete elements.characterPreviewWorldButton.dataset.previewWorld;
+      elements.characterPreviewWorldName.textContent = "";
+      elements.characterPreviewWorldSummary.textContent = "";
+    }
+
+    elements.characterPreviewContentSection.hidden = !(character.contents || []).length;
+    elements.characterPreviewContents.innerHTML = (character.contents || [])
+      .map(characterContentMarkup).join("");
+
+    elements.characterPreviewModal.showModal();
+    document.body.classList.add("character-preview-modal-open");
+  }
+
+  function closeCharacterPreview() {
+    if (elements.characterPreviewModal.open) elements.characterPreviewModal.close();
+    document.body.classList.remove("character-preview-modal-open");
+  }
+
+  function syncCharacterFromFields() {
+    const character = getSelectedCharacter();
+    if (!character) return;
+
+    const requestedFeatured = elements.characterFeaturedInput.checked;
+    if (requestedFeatured && !character.featured) {
+      const featuredCount = project.characters.filter((item) => item.featured).length;
+      if (featuredCount >= 3) {
+        elements.characterFeaturedInput.checked = false;
+        window.alert("추천 캐릭터는 최대 3명까지 지정할 수 있습니다.");
+      } else {
+        character.featured = true;
+      }
+    } else {
+      character.featured = requestedFeatured;
+    }
+
+    character.name = elements.characterNameInput.value.trim();
+    character.subtitle = elements.characterSubtitleInput.value.trim();
+    character.worldId = elements.characterWorldSelect.value;
+    character.tags = splitTags(elements.characterTagsInput.value);
+    character.description = bioTextToArray(elements.characterDescriptionInput.value);
+
+    renderCharacterList();
+    renderWorldCharacterLinks();
+    renderCharacterPreview();
+    renderWorldPreview();
+    scheduleAutosave();
+  }
+
+  function addCharacter() {
+    const character = createCharacter();
+    project.characters.push(character);
+    selectedCharacterId = character.id;
+    if (project.characters.length > previewCharacterColumnCount() * 2) {
+      characterPreviewExpanded = true;
+    }
+    renderCharacterEditor();
+    renderWorldEditor();
+    renderCharacterPreview();
+    renderWorldPreview();
+    scheduleAutosave();
+    elements.characterNameInput.focus();
+  }
+
+  async function deleteSelectedCharacter() {
+    const character = getSelectedCharacter();
+    if (!character) return;
+    if (!window.confirm(`“${character.name || "이름 없는 캐릭터"}”을 삭제할까요?`)) return;
+
+    const index = project.characters.findIndex((item) => item.id === character.id);
+    const metadata = character.images.map(getCharacterImageMetadata).filter(Boolean);
+    for (const image of metadata) releaseCharacterImageObjectUrl(image.id);
+    project.characters.splice(index, 1);
+    selectedCharacterId = project.characters[index]?.id || project.characters[index - 1]?.id || "";
+    if (project.characters.length <= previewCharacterColumnCount() * 2) characterPreviewExpanded = false;
+
+    renderCharacterEditor();
+    renderWorldEditor();
+    renderCharacterPreview();
+    renderWorldPreview();
+    saveProjectToStorage();
+
+    for (const image of metadata) {
+      try { await deleteImageRecord(image.id); } catch (error) { console.error(error); }
+    }
+    setSaveStatus("캐릭터가 삭제됨");
+  }
+
+  function moveSelectedCharacter(direction) {
+    const index = project.characters.findIndex((character) => character.id === selectedCharacterId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= project.characters.length) return;
+    const [character] = project.characters.splice(index, 1);
+    project.characters.splice(target, 0, character);
+    renderCharacterEditor();
+    renderWorldEditor();
+    renderCharacterPreview();
+    renderWorldPreview();
+    scheduleAutosave();
+  }
+
+  function toggleCharacterGenre(target) {
+    const character = getSelectedCharacter();
+    if (!character) return;
+    const genre = target.dataset.characterGenre;
+    if (target.checked) {
+      if (!character.genres.includes(genre)) character.genres.push(genre);
+    } else {
+      character.genres = character.genres.filter((item) => item !== genre);
+    }
+    renderCharacterPreview();
+    scheduleAutosave();
+  }
+
+  function updateCharacterPlatform(target) {
+    const character = getSelectedCharacter();
+    const row = target.closest("[data-character-platform-id]");
+    if (!character || !row) return;
+    const id = row.dataset.characterPlatformId;
+    const existingIndex = character.platforms.findIndex((item) => item.id === id);
+
+    if (target.hasAttribute("data-character-platform-toggle")) {
+      if (target.checked && existingIndex < 0) character.platforms.push({ id, url: "" });
+      if (!target.checked && existingIndex >= 0) character.platforms.splice(existingIndex, 1);
+      renderCharacterPlatforms();
+    } else if (target.hasAttribute("data-character-platform-url")) {
+      if (existingIndex >= 0) character.platforms[existingIndex].url = target.value.trim();
+    }
+
+    renderCharacterPreview();
+    scheduleAutosave();
+  }
+
+  function addCharacterContent() {
+    const character = getSelectedCharacter();
+    if (!character) return;
+    character.contents.push(createCharacterContent());
+    renderCharacterContentsEditor();
+    renderCharacterPreview();
+    scheduleAutosave();
+    requestAnimationFrame(() => {
+      const items = elements.characterContentList.querySelectorAll(".character-content-editor-item");
+      items[items.length - 1]?.querySelector("input")?.focus();
+    });
+  }
+
+  function updateCharacterContentFromInput(target) {
+    const character = getSelectedCharacter();
+    const itemElement = target.closest("[data-character-content-id]");
+    if (!character || !itemElement) return;
+    const item = character.contents.find((entry) => entry.id === itemElement.dataset.characterContentId);
+    if (!item) return;
+
+    const field = target.dataset.characterContentField;
+    if (field === "content") item.content = bioTextToArray(target.value);
+    else if (field === "spoiler") {
+      item.spoiler = target.checked;
+      itemElement.querySelector("[data-character-warning-field]").hidden = !item.spoiler;
+    } else if (["type", "title", "warning"].includes(field)) item[field] = target.value.trim();
+    else return;
+
+    renderCharacterPreview();
+    scheduleAutosave();
+  }
+
+  function handleCharacterContentAction(button) {
+    const character = getSelectedCharacter();
+    const itemElement = button.closest("[data-character-content-id]");
+    if (!character || !itemElement) return;
+    const index = character.contents.findIndex((item) => item.id === itemElement.dataset.characterContentId);
+    if (index < 0) return;
+
+    if (button.hasAttribute("data-delete-character-content")) {
+      character.contents.splice(index, 1);
+    } else {
+      const direction = button.dataset.moveCharacterContent === "up" ? -1 : 1;
+      const target = index + direction;
+      if (target < 0 || target >= character.contents.length) return;
+      const [item] = character.contents.splice(index, 1);
+      character.contents.splice(target, 0, item);
+    }
+    renderCharacterContentsEditor();
+    renderCharacterPreview();
+    scheduleAutosave();
+  }
+
+  async function handleCharacterImageSelection() {
+    const character = getSelectedCharacter();
+    const files = [...(elements.characterImageInput.files || [])];
+    elements.characterImageInput.value = "";
+    if (!character || files.length === 0) return;
+
+    const remaining = 5 - character.images.length;
+    if (remaining <= 0) {
+      window.alert("캐릭터 이미지는 최대 5장까지 등록할 수 있습니다.");
+      return;
+    }
+    if (files.length > remaining) {
+      window.alert(`현재 ${remaining}장만 더 추가할 수 있습니다.`);
+      return;
+    }
+
+    elements.characterImageInput.disabled = true;
+    setSaveStatus("캐릭터 PNG 저장 중…");
+    const storedIds = [];
+    try {
+      const nextMetadata = [];
+      for (const file of files) {
+        const sanitized = await sanitizePng(file, "캐릭터 PNG");
+        const id = createImageId();
+        const updatedAt = new Date().toISOString();
+        const record = {
+          id,
+          role: "character-image",
+          ownerId: character.id,
+          name: file.name || "character.png",
+          type: "image/png",
+          size: sanitized.blob.size,
+          width: sanitized.width,
+          height: sanitized.height,
+          updatedAt,
+          blob: sanitized.blob
+        };
+        await putImageRecord(record);
+        storedIds.push(id);
+        characterImageBlobs.set(id, sanitized.blob);
+        characterImagePreviewUrls.set(id, URL.createObjectURL(sanitized.blob));
+        nextMetadata.push({
+          id,
+          name: record.name,
+          type: record.type,
+          size: record.size,
+          width: record.width,
+          height: record.height,
+          updatedAt
+        });
+      }
+      character.images.push(...nextMetadata);
+      renderCharacterEditor();
+      renderWorldEditor();
+      renderCharacterPreview();
+      renderWorldPreview();
+      saveProjectToStorage();
+      setSaveStatus(`캐릭터 PNG ${nextMetadata.length}개가 브라우저에 저장됨`);
+    } catch (error) {
+      for (const id of storedIds) {
+        releaseCharacterImageObjectUrl(id);
+        try { await deleteImageRecord(id); } catch (cleanupError) { console.error(cleanupError); }
+      }
+      console.error(error);
+      window.alert(error.message || "캐릭터 이미지를 처리하지 못했습니다.");
+      setSaveStatus("캐릭터 PNG 저장 실패");
+    } finally {
+      elements.characterImageInput.disabled = false;
+    }
+  }
+
+  async function handleCharacterImageAction(button) {
+    const character = getSelectedCharacter();
+    const item = button.closest("[data-character-image-index]");
+    if (!character || !item) return;
+    const index = Number(item.dataset.characterImageIndex);
+    if (!Number.isInteger(index) || !character.images[index]) return;
+
+    if (button.hasAttribute("data-delete-character-image")) {
+      const [image] = character.images.splice(index, 1);
+      const metadata = getCharacterImageMetadata(image);
+      if (metadata?.id) {
+        releaseCharacterImageObjectUrl(metadata.id);
+        try { await deleteImageRecord(metadata.id); } catch (error) { console.error(error); }
+      }
+    } else {
+      const direction = button.dataset.moveCharacterImage === "up" ? -1 : 1;
+      const target = index + direction;
+      if (target < 0 || target >= character.images.length) return;
+      const [image] = character.images.splice(index, 1);
+      character.images.splice(target, 0, image);
+    }
+
+    renderCharacterEditor();
+    renderWorldEditor();
+    renderCharacterPreview();
+    renderWorldPreview();
+    saveProjectToStorage();
   }
 
   function renderWorldList() {
@@ -1157,6 +2118,8 @@
     }
 
     renderWorldCharacterLinks();
+    renderCharacterEditor();
+    renderCharacterPreview();
     renderWorldPreview();
     scheduleAutosave();
   }
@@ -1344,13 +2307,13 @@
         : `<span class="world-character-face-fallback" aria-hidden="true">${escapeHtml(String(character.name || "?").slice(0, 1))}</span>`;
 
       return `
-        <article class="world-character-button">
+        <button class="world-character-button" type="button" data-preview-character="${escapeHtml(character.id)}">
           ${face}
           <span>
             <strong>${escapeHtml(character.name || "이름 없는 캐릭터")}</strong>
             <small>${escapeHtml(character.subtitle || "")}</small>
           </span>
-        </article>
+        </button>
       `;
     }).join("");
 
@@ -1375,6 +2338,8 @@
     world.description = bioTextToArray(elements.worldDescriptionInput.value);
 
     renderWorldList();
+    renderCharacterWorldOptions();
+    renderCharacterPreview();
     renderWorldPreview();
     scheduleAutosave();
   }
@@ -1387,7 +2352,9 @@
       worldPreviewExpanded = true;
     }
     renderWorldEditor();
+    renderCharacterEditor();
     renderWorldPreview();
+    renderCharacterPreview();
     scheduleAutosave();
     elements.worldNameInput.focus();
   }
@@ -1430,7 +2397,9 @@
     }
 
     renderWorldEditor();
+    renderCharacterEditor();
     renderWorldPreview();
+    renderCharacterPreview();
     saveProjectToStorage();
   }
 
@@ -1534,6 +2503,36 @@
     renderWorldEditor();
     renderWorldPreview();
     return missingWorldImageIds.size;
+  }
+
+
+  async function restoreCharacterImagesFromDatabase() {
+    releaseAllCharacterImageObjectUrls();
+
+    for (const character of project.characters) {
+      for (const image of character.images || []) {
+        const metadata = getCharacterImageMetadata(image);
+        if (!metadata?.id) continue;
+        try {
+          const record = await getImageRecord(metadata.id);
+          if (!record?.blob || record.blob.type !== "image/png") {
+            missingCharacterImageIds.add(metadata.id);
+            continue;
+          }
+          characterImageBlobs.set(metadata.id, record.blob);
+          characterImagePreviewUrls.set(metadata.id, URL.createObjectURL(record.blob));
+        } catch (error) {
+          console.error(error);
+          missingCharacterImageIds.add(metadata.id);
+        }
+      }
+    }
+
+    renderCharacterEditor();
+    renderWorldEditor();
+    renderCharacterPreview();
+    renderWorldPreview();
+    return missingCharacterImageIds.size;
   }
 
   async function handleWorldImageSelection() {
@@ -1713,6 +2712,7 @@
 
     renderAvatarPreview();
     renderWorldPreview();
+    renderCharacterPreview();
 
     document.title = `${siteTitle} | 포트폴리오 생성기`;
   }
@@ -1938,17 +2938,22 @@
     project = normalizeProject(nextProject);
     releaseAvatarObjectUrl();
     releaseAllWorldImageObjectUrls();
+    releaseAllCharacterImageObjectUrls();
     avatarRestoreMissing = false;
     selectedWorldId = project.worlds[0]?.id || "";
+    selectedCharacterId = project.characters[0]?.id || "";
     worldPreviewExpanded = false;
+    characterPreviewExpanded = false;
     populateFieldsFromProject();
     renderSocialLinks();
     renderWorldEditor();
+    renderCharacterEditor();
     renderPreview();
 
     if (!restoreImages) return false;
     const avatarRestored = await restoreAvatarFromDatabase();
     await restoreWorldImagesFromDatabase();
+    await restoreCharacterImagesFromDatabase();
     return avatarRestored;
   }
 
@@ -1986,7 +2991,10 @@
       saveProjectToStorage();
       const storedImageCount =
         (getAvatarMetadata() ? 1 : 0) +
-        project.worlds.filter((world) => getWorldImageMetadata(world)).length;
+        project.worlds.filter((world) => getWorldImageMetadata(world)).length +
+        project.characters.reduce((count, character) =>
+          count + (character.images || []).filter(getCharacterImageMetadata).length,
+        0);
       setSaveStatus(
         storedImageCount > 0
           ? `프로젝트 JSON 저장됨 · PNG ${storedImageCount}개는 이 브라우저에 유지됨`
@@ -2018,11 +3026,13 @@
       saveProjectToStorage();
 
       const missingWorldCount = missingWorldImageIds.size;
+      const missingCharacterCount = missingCharacterImageIds.size;
 
-      if ((getAvatarMetadata() && !restoredAvatar) || missingWorldCount > 0) {
+      if ((getAvatarMetadata() && !restoredAvatar) || missingWorldCount > 0 || missingCharacterCount > 0) {
         const missingImages = [];
         if (getAvatarMetadata() && !restoredAvatar) missingImages.push("프로필 PNG");
         if (missingWorldCount > 0) missingImages.push(`세계관 PNG ${missingWorldCount}개`);
+        if (missingCharacterCount > 0) missingImages.push(`캐릭터 PNG ${missingCharacterCount}개`);
         setSaveStatus(
           `프로젝트 불러옴 · ${missingImages.join(" · ")}를 다시 선택해 주세요`
         );
@@ -2038,7 +3048,7 @@
 
   async function resetProject() {
     const confirmed = window.confirm(
-      "현재 입력한 제작자 프로필과 세계관, 자동 저장 데이터와 저장된 PNG를 모두 초기화할까요?"
+      "현재 입력한 제작자 프로필과 세계관, 캐릭터, 자동 저장 데이터와 저장된 PNG를 모두 초기화할까요?"
     );
 
     if (!confirmed) return;
@@ -2046,6 +3056,7 @@
     clearStoredProject();
     releaseAvatarObjectUrl();
     releaseAllWorldImageObjectUrls();
+    releaseAllCharacterImageObjectUrls();
     avatarRestoreMissing = false;
 
     try {
@@ -2061,6 +3072,119 @@
     setSaveStatus("입력, 자동 저장 데이터와 PNG가 초기화됨");
   }
 
+
+
+  elements.addCharacterButton.addEventListener("click", addCharacter);
+
+  elements.characterEditorList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-select-character]");
+    if (!button) return;
+    selectedCharacterId = button.dataset.selectCharacter;
+    renderCharacterEditor();
+  });
+
+  elements.characterForm.addEventListener("input", (event) => {
+    const target = event.target;
+    if (target === elements.characterImageInput) return;
+    if (target.matches("[data-character-genre]")) {
+      toggleCharacterGenre(target);
+      return;
+    }
+    if (target.matches("[data-character-platform-toggle], [data-character-platform-url]")) {
+      updateCharacterPlatform(target);
+      return;
+    }
+    if (target.matches("[data-character-content-field]")) {
+      updateCharacterContentFromInput(target);
+      return;
+    }
+    syncCharacterFromFields();
+  });
+
+  elements.characterImageInput.addEventListener("change", handleCharacterImageSelection);
+  elements.characterImageList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-delete-character-image], [data-move-character-image]");
+    if (!button) return;
+    handleCharacterImageAction(button);
+  });
+  elements.addCharacterContentButton.addEventListener("click", addCharacterContent);
+  elements.characterContentList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-delete-character-content], [data-move-character-content]");
+    if (!button) return;
+    handleCharacterContentAction(button);
+  });
+  elements.moveCharacterUpButton.addEventListener("click", () => moveSelectedCharacter(-1));
+  elements.moveCharacterDownButton.addEventListener("click", () => moveSelectedCharacter(1));
+  elements.deleteCharacterButton.addEventListener("click", deleteSelectedCharacter);
+
+  function handleCharacterPreviewClick(event) {
+    const imageButton = event.target.closest("[data-character-preview-image]");
+    if (imageButton) {
+      elements.characterPreviewMainImage.src = imageButton.dataset.characterPreviewImage;
+      elements.characterPreviewMainImage.alt = imageButton.dataset.characterPreviewAlt;
+      elements.characterPreviewThumbnails.querySelectorAll(".character-preview-thumbnail")
+        .forEach((button) => button.classList.remove("is-active"));
+      imageButton.classList.add("is-active");
+      return true;
+    }
+
+    const characterButton = event.target.closest("[data-preview-character]");
+    if (characterButton) {
+      openCharacterPreview(
+        project.characters.find((character) => character.id === characterButton.dataset.previewCharacter)
+      );
+      return true;
+    }
+    return false;
+  }
+
+  elements.previewFeaturedGrid.addEventListener("click", handleCharacterPreviewClick);
+  elements.previewCharacterGrid.addEventListener("click", handleCharacterPreviewClick);
+  elements.worldPreviewCharacterList.addEventListener("click", handleCharacterPreviewClick);
+  elements.characterPreviewThumbnails.addEventListener("click", handleCharacterPreviewClick);
+
+  elements.previewCharacterToggle.addEventListener("click", () => {
+    characterPreviewExpanded = !characterPreviewExpanded;
+    updateCharacterPreviewLimit();
+  });
+
+  elements.characterPreviewModalClose.addEventListener("click", closeCharacterPreview);
+  elements.characterPreviewModal.addEventListener("click", (event) => {
+    if (event.target === elements.characterPreviewModal) closeCharacterPreview();
+  });
+  elements.characterPreviewModal.addEventListener("close", () => {
+    document.body.classList.remove("character-preview-modal-open");
+  });
+  elements.characterPreviewWorldButton.addEventListener("click", (event) => {
+    const worldId = event.currentTarget.dataset.previewWorld;
+    if (!worldId) return;
+    closeCharacterPreview();
+    openWorldPreview(project.worlds.find((world) => world.id === worldId));
+  });
+
+  let platformRailDrag = null;
+  elements.characterPreviewPlatforms.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
+    platformRailDrag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      scrollLeft: elements.characterPreviewPlatforms.scrollLeft
+    };
+    elements.characterPreviewPlatforms.setPointerCapture(event.pointerId);
+    elements.characterPreviewPlatforms.classList.add("is-dragging");
+  });
+  elements.characterPreviewPlatforms.addEventListener("pointermove", (event) => {
+    if (!platformRailDrag || platformRailDrag.pointerId !== event.pointerId) return;
+    elements.characterPreviewPlatforms.scrollLeft =
+      platformRailDrag.scrollLeft - (event.clientX - platformRailDrag.startX);
+  });
+  function stopPlatformRailDrag(event) {
+    if (!platformRailDrag || platformRailDrag.pointerId !== event.pointerId) return;
+    platformRailDrag = null;
+    elements.characterPreviewPlatforms.classList.remove("is-dragging");
+  }
+  elements.characterPreviewPlatforms.addEventListener("pointerup", stopPlatformRailDrag);
+  elements.characterPreviewPlatforms.addEventListener("pointercancel", stopPlatformRailDrag);
 
   elements.addWorldButton.addEventListener("click", addWorld);
 
@@ -2114,7 +3238,10 @@
     updateWorldPreviewLimit();
   });
 
-  window.addEventListener("resize", updateWorldPreviewLimit);
+  window.addEventListener("resize", () => {
+    updateWorldPreviewLimit();
+    updateCharacterPreviewLimit();
+  });
 
   elements.worldPreviewModalClose.addEventListener("click", closeWorldPreview);
   elements.worldPreviewModal.addEventListener("click", (event) => {
@@ -2178,15 +3305,18 @@
 
     releaseAvatarObjectUrl();
     releaseAllWorldImageObjectUrls();
+    releaseAllCharacterImageObjectUrls();
   });
 
   async function initialize() {
     loadProjectFromStorage();
     renderServiceOptions();
     selectedWorldId = project.worlds[0]?.id || "";
+    selectedCharacterId = project.characters[0]?.id || "";
     populateFieldsFromProject();
     renderSocialLinks();
     renderWorldEditor();
+    renderCharacterEditor();
     renderPreview();
 
     const avatarMetadata = getAvatarMetadata();
@@ -2194,6 +3324,7 @@
       ? await restoreAvatarFromDatabase()
       : false;
     const missingWorldCount = await restoreWorldImagesFromDatabase();
+    const missingCharacterCount = await restoreCharacterImagesFromDatabase();
 
     if (autosaveRestoreError) {
       setSaveStatus("자동 저장 복구 실패");
@@ -2203,10 +3334,11 @@
       return;
     }
 
-    if ((avatarMetadata && !restoredAvatar) || missingWorldCount > 0) {
+    if ((avatarMetadata && !restoredAvatar) || missingWorldCount > 0 || missingCharacterCount > 0) {
       const messages = [];
       if (avatarMetadata && !restoredAvatar) messages.push("프로필 PNG");
       if (missingWorldCount > 0) messages.push(`세계관 PNG ${missingWorldCount}개`);
+      if (missingCharacterCount > 0) messages.push(`캐릭터 PNG ${missingCharacterCount}개`);
       setSaveStatus(
         `${restoredAutosave ? "이전 자동 저장 복구됨 · " : ""}${messages.join(" · ")}를 다시 선택해 주세요`
       );
