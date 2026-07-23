@@ -24,7 +24,10 @@
   };
 
   const emptyProject = window.EMPTY_PROJECT || EMPTY_FALLBACK;
-  const adminCatalog = window.ADMIN_CATALOG || ADMIN_FALLBACK;
+  const adminCatalog =
+    window.ADMIN_CATALOG ||
+    (typeof ADMIN_CATALOG !== "undefined" ? ADMIN_CATALOG : null) ||
+    ADMIN_FALLBACK;
 
   const project = JSON.parse(JSON.stringify(emptyProject));
 
@@ -47,7 +50,7 @@
 
   const ADMIN_ASSET_BASE = "../template/images/";
 
-  let creatorAvatarFile = null;
+  let creatorAvatarBlob = null;
   let creatorAvatarPreviewUrl = "";
 
   const elements = {
@@ -81,7 +84,6 @@
     previewAvatarImage: document.querySelector("#previewAvatarImage"),
     previewAvatarFallback: document.querySelector("#previewAvatarFallback"),
 
-    projectJsonPreview: document.querySelector("#projectJsonPreview"),
     saveStatus: document.querySelector("#saveStatus")
   };
 
@@ -134,11 +136,17 @@
   function renderServiceOptions() {
     if (services.length === 0) {
       elements.socialServiceSelect.innerHTML =
-        '<option value="">등록된 서비스가 없습니다</option>';
+        '<option value="">서비스 목록을 불러오지 못했습니다</option>';
       elements.socialServiceSelect.disabled = true;
       elements.addSocialLinkButton.disabled = true;
+      showSocialError(
+        "admin-catalog.js의 profileLinkServices 항목을 확인해 주세요."
+      );
       return;
     }
+
+    elements.socialServiceSelect.disabled = false;
+    elements.addSocialLinkButton.disabled = false;
 
     elements.socialServiceSelect.innerHTML = services
       .map((service) => (
@@ -278,9 +286,9 @@
     elements.previewAvatarFallback.hidden = hasPreview;
     elements.removeAvatarButton.hidden = !hasPreview;
 
-    elements.previewAvatarImage.alt = project.creator.name
-      ? `${project.creator.name} 프로필 이미지`
-      : "제작자 프로필 이미지";
+    elements.previewAvatarImage.alt = "";
+    elements.previewAvatarImage.removeAttribute("title");
+    elements.avatarEditorPreview.removeAttribute("title");
   }
 
   function renderPreview() {
@@ -334,15 +342,6 @@
 
     renderAvatarPreview();
 
-    const serializableProject = JSON.parse(JSON.stringify(project));
-    if (creatorAvatarFile) {
-      serializableProject.creator.avatar =
-        `[선택된 파일: ${creatorAvatarFile.name}]`;
-    }
-
-    elements.projectJsonPreview.textContent =
-      JSON.stringify(serializableProject, null, 2);
-
     document.title = `${siteTitle} | 포트폴리오 생성기`;
   }
 
@@ -357,7 +356,45 @@
       bioArrayToText(project.creator.bio);
   }
 
-  function handleAvatarSelection() {
+  async function sanitizePng(file) {
+    const sourceUrl = URL.createObjectURL(file);
+
+    try {
+      const image = new Image();
+      image.decoding = "async";
+
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(
+          new Error("PNG 이미지를 읽을 수 없습니다.")
+        );
+        image.src = sourceUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+
+      const context = canvas.getContext("2d", { alpha: true });
+
+      if (!context) {
+        throw new Error("이미지 변환 기능을 사용할 수 없습니다.");
+      }
+
+      context.drawImage(image, 0, 0);
+
+      return await new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("PNG 변환에 실패했습니다."));
+        }, "image/png");
+      });
+    } finally {
+      URL.revokeObjectURL(sourceUrl);
+    }
+  }
+
+  async function handleAvatarSelection() {
     const file = elements.avatarInput.files?.[0] || null;
 
     if (!file) return;
@@ -368,15 +405,23 @@
       return;
     }
 
-    if (creatorAvatarPreviewUrl) {
-      URL.revokeObjectURL(creatorAvatarPreviewUrl);
+    try {
+      const sanitizedBlob = await sanitizePng(file);
+
+      if (creatorAvatarPreviewUrl) {
+        URL.revokeObjectURL(creatorAvatarPreviewUrl);
+      }
+
+      creatorAvatarBlob = sanitizedBlob;
+      creatorAvatarPreviewUrl = URL.createObjectURL(sanitizedBlob);
+      elements.avatarInput.value = "";
+
+      renderPreview();
+      markChanged();
+    } catch (error) {
+      elements.avatarInput.value = "";
+      window.alert(error.message || "이미지를 처리하지 못했습니다.");
     }
-
-    creatorAvatarFile = file;
-    creatorAvatarPreviewUrl = URL.createObjectURL(file);
-
-    renderPreview();
-    markChanged();
   }
 
   function removeAvatar() {
@@ -384,7 +429,7 @@
       URL.revokeObjectURL(creatorAvatarPreviewUrl);
     }
 
-    creatorAvatarFile = null;
+    creatorAvatarBlob = null;
     creatorAvatarPreviewUrl = "";
     elements.avatarInput.value = "";
 

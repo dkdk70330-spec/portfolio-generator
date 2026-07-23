@@ -466,31 +466,6 @@ textarea:focus {
   font-weight: 850;
 }
 
-.data-preview {
-  margin-top: .8rem;
-  border: 1px solid var(--line);
-  border-radius: 15px;
-  background: var(--surface-2);
-}
-
-.data-preview summary {
-  padding: .8rem 1rem;
-  cursor: pointer;
-  font-size: .82rem;
-  font-weight: 800;
-}
-
-.data-preview pre {
-  max-height: 300px;
-  margin: 0;
-  padding: 1rem;
-  overflow: auto;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: .72rem;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
 
 [hidden] {
   display: none !important;
