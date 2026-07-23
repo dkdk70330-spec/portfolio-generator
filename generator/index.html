@@ -14,8 +14,20 @@
       <p>캐릭터와 링크 정보를 입력하면 오른쪽 미리보기에 즉시 반영됩니다.</p>
     </div>
 
-    <div class="header-actions" aria-label="프로젝트 관리">
-      <details class="backup-menu" id="backupMenu">
+	<div class="header-actions" aria-label="프로젝트 관리">
+  		<button
+			id="netlifyGuideButton"
+			class="secondary-button guide-help-button"
+			type="button"
+			aria-haspopup="dialog"
+			aria-controls="netlifyGuideDialog"
+			aria-label="Netlify 업로드 안내 열기"
+			title="Netlify 업로드 안내"
+		>
+			?
+		</button>
+
+  <details class="backup-menu" id="backupMenu">
         <summary class="secondary-button">백업</summary>
         <div class="backup-menu-panel" aria-label="백업 형식 선택">
           <button id="downloadTextBackupButton" type="button">
@@ -484,7 +496,7 @@
               </span>
             </label>
 
-            <details class="character-genre-editor editor-fold" aria-labelledby="characterGenresTitle" open>
+            <details class="character-genre-editor editor-fold" aria-labelledby="characterGenresTitle">
               <summary class="editor-fold-summary">
                 <span>
                   <strong class="character-field-label" id="characterGenresTitle">장르</strong>
@@ -708,6 +720,89 @@
     </section>
   </main>
 
+<dialog
+  class="guide-dialog"
+  id="netlifyGuideDialog"
+  aria-labelledby="netlifyGuideTitle"
+>
+  <div class="guide-dialog-shell">
+    <header class="guide-dialog-header">
+      <div>
+        <p class="eyebrow">PUBLISH GUIDE</p>
+        <h2 id="netlifyGuideTitle">Netlify에 사이트 올리기</h2>
+      </div>
+
+      <button
+        class="guide-dialog-close"
+        id="netlifyGuideClose"
+        type="button"
+        aria-label="업로드 안내 닫기"
+      >
+        ×
+      </button>
+    </header>
+
+    <ol class="guide-step-list">
+      <li>
+        <strong>배포 ZIP 저장</strong>
+        <p>
+          상단의 <b>백업</b>을 누르고
+          <b>Netlify 배포 ZIP</b>을 선택하세요.
+        </p>
+      </li>
+
+      <li>
+        <strong>Netlify Drop 열기</strong>
+        <p>
+          Netlify 계정으로 로그인한 뒤 아래 버튼으로
+          배포 화면을 여세요.
+        </p>
+      </li>
+
+      <li>
+        <strong>ZIP 업로드</strong>
+        <p>
+          저장된 Netlify 배포 ZIP을 업로드 영역에
+          끌어놓으세요.
+        </p>
+      </li>
+
+      <li>
+        <strong>사이트 주소 확인</strong>
+        <p>
+          배포가 끝나면 발급된
+          <b>netlify.app</b> 주소에서 사이트를 확인하세요.
+        </p>
+      </li>
+
+      <li>
+        <strong>사이트 업데이트</strong>
+        <p>
+          내용을 수정한 뒤 새로운 배포 ZIP을 만들고,
+          기존 Netlify 사이트의 배포 화면에 다시 올리세요.
+        </p>
+      </li>
+    </ol>
+
+    <div class="guide-dialog-note">
+      <strong>ZIP 업로드가 되지 않을 때</strong>
+      <p>
+        ZIP의 압축을 풀고,
+        <code>index.html</code>이 포함된 폴더를 zip파일 대신
+        업로드하세요.
+      </p>
+    </div>
+
+    <a
+      class="primary-button guide-dialog-link"
+      href="https://app.netlify.com/drop"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Netlify Drop 열기 ↗
+    </a>
+  </div>
+</dialog>
 
   <dialog class="filter-picker" id="previewCharacterFilterPicker" aria-labelledby="previewCharacterFilterPickerTitle">
     <div class="filter-picker-shell">

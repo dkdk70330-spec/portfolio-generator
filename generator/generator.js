@@ -147,10 +147,17 @@ function normalizeGenreId(value) {
   let restoredAutosave = false;
   let autosaveRestoreError = "";
 
-  const elements = {
-    profileForm: document.querySelector("#profileForm"),
-    backupMenu: document.querySelector("#backupMenu"),
-    downloadTextBackupButton: document.querySelector("#downloadTextBackupButton"),
+const elements = {
+  profileForm: document.querySelector("#profileForm"),
+
+  netlifyGuideButton:
+    document.querySelector("#netlifyGuideButton"),
+  netlifyGuideDialog:
+    document.querySelector("#netlifyGuideDialog"),
+  netlifyGuideClose:
+    document.querySelector("#netlifyGuideClose"),
+
+  backupMenu: document.querySelector("#backupMenu"),    downloadTextBackupButton: document.querySelector("#downloadTextBackupButton"),
     downloadFullBackupButton: document.querySelector("#downloadFullBackupButton"),
     importProjectInput: document.querySelector("#importProjectInput"),
     resetProjectButton: document.querySelector("#resetProjectButton"),
@@ -7360,7 +7367,36 @@ elements.worldPreviewSoundtrack.addEventListener(
     "click",
     removeCreatorBackground
   );
+function openNetlifyGuide() {
+  if (!elements.netlifyGuideDialog.open) {
+    elements.netlifyGuideDialog.showModal();
+  }
+}
 
+function closeNetlifyGuide() {
+  if (elements.netlifyGuideDialog.open) {
+    elements.netlifyGuideDialog.close();
+  }
+}
+
+elements.netlifyGuideButton.addEventListener(
+  "click",
+  openNetlifyGuide
+);
+
+elements.netlifyGuideClose.addEventListener(
+  "click",
+  closeNetlifyGuide
+);
+
+elements.netlifyGuideDialog.addEventListener(
+  "click",
+  (event) => {
+    if (event.target === elements.netlifyGuideDialog) {
+      closeNetlifyGuide();
+    }
+  }
+);
   elements.downloadTextBackupButton.addEventListener(
     "click",
     downloadTextBackup
