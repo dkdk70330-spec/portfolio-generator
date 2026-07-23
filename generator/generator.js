@@ -3336,6 +3336,7 @@
       project.site.themeColor,
       DEFAULT_THEME_COLOR
     );
+    const themeInk = contrastTextColor(themeColor);
     const targets = [
       elements.previewCanvas,
       elements.worldPreviewModal,
@@ -3345,36 +3346,47 @@
 
     targets.forEach((target) => {
       if (!target) return;
+
       target.style.setProperty("--text", textColor);
+      target.style.setProperty(
+        "--muted",
+        `color-mix(in srgb, ${themeColor} 28%, #aaa8b4)`
+      );
+
       target.style.setProperty("--theme", themeColor);
       target.style.setProperty("--violet", themeColor);
+      target.style.setProperty("--accent", themeColor);
+      target.style.setProperty("--accent-ink", themeInk);
+
       target.style.setProperty(
         "--bg",
-        `color-mix(in srgb, ${themeColor} 8%, #0b0b0f)`
+        `color-mix(in srgb, ${themeColor} 14%, #08080d)`
       );
       target.style.setProperty(
         "--surface",
-        `color-mix(in srgb, ${themeColor} 10%, #121219)`
+        `color-mix(in srgb, ${themeColor} 20%, #101018)`
       );
       target.style.setProperty(
         "--surface-2",
-        `color-mix(in srgb, ${themeColor} 14%, #191923)`
+        `color-mix(in srgb, ${themeColor} 27%, #151520)`
       );
       target.style.setProperty(
         "--surface-3",
-        `color-mix(in srgb, ${themeColor} 19%, #20202c)`
+        `color-mix(in srgb, ${themeColor} 35%, #1b1b29)`
       );
+
       target.style.setProperty(
         "--line",
-        `color-mix(in srgb, ${themeColor} 24%, rgba(255,255,255,.08))`
+        `color-mix(in srgb, ${themeColor} 40%, rgba(255,255,255,.08))`
       );
       target.style.setProperty(
         "--line-strong",
-        `color-mix(in srgb, ${themeColor} 42%, rgba(255,255,255,.14))`
+        `color-mix(in srgb, ${themeColor} 64%, rgba(255,255,255,.14))`
       );
+
       target.style.setProperty(
         "--shadow",
-        `0 24px 80px color-mix(in srgb, ${themeColor} 18%, rgba(0,0,0,.62))`
+        `0 24px 80px color-mix(in srgb, ${themeColor} 30%, rgba(0,0,0,.66))`
       );
     });
   }
