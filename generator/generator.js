@@ -301,7 +301,8 @@
         section.title,
         `worlds[${worldIndex}].sections[${sectionIndex}].title`
       ),
-      content
+      content,
+      collapsible: section.collapsible === true
     };
   }
 
@@ -552,7 +553,8 @@
     return {
       id: createEntityId("world-section"),
       title: "",
-      content: []
+      content: [],
+      collapsible: false
     };
   }
 
@@ -1042,43 +1044,45 @@
     }
 
     elements.worldSectionList.innerHTML = world.sections.map((section, index) => `
-      <details
+      <article
         class="world-section-editor-item"
         data-world-section-id="${escapeHtml(section.id)}"
-        open
       >
-        <summary class="world-section-editor-summary">
+        <div class="world-section-editor-toolbar">
           <span>추가 정보 ${index + 1}</span>
-          <strong data-world-section-summary-title>
-            ${escapeHtml(section.title || "제목 없음")}
-          </strong>
-        </summary>
-
-        <div class="world-section-editor-body">
-          <div class="world-section-editor-toolbar">
-            <button type="button" data-move-world-section="up" ${index === 0 ? "disabled" : ""}>위로</button>
-            <button type="button" data-move-world-section="down" ${index === world.sections.length - 1 ? "disabled" : ""}>아래로</button>
-            <button type="button" data-delete-world-section>삭제</button>
-          </div>
-          <label>
-            <span>제목</span>
-            <input
-              type="text"
-              value="${escapeHtml(section.title)}"
-              placeholder="예: 세계의 핵심"
-              data-world-section-field="title"
-            >
-          </label>
-          <label>
-            <span>내용</span>
-            <textarea
-              rows="5"
-              placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
-              data-world-section-field="content"
-            >${escapeHtml(bioArrayToText(section.content))}</textarea>
-          </label>
+          <button type="button" data-move-world-section="up" ${index === 0 ? "disabled" : ""}>위로</button>
+          <button type="button" data-move-world-section="down" ${index === world.sections.length - 1 ? "disabled" : ""}>아래로</button>
+          <button type="button" data-delete-world-section>삭제</button>
         </div>
-      </details>
+        <label>
+          <span>제목</span>
+          <input
+            type="text"
+            value="${escapeHtml(section.title)}"
+            placeholder="예: 세계의 핵심"
+            data-world-section-field="title"
+          >
+        </label>
+        <label>
+          <span>내용</span>
+          <textarea
+            rows="5"
+            placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
+            data-world-section-field="content"
+          >${escapeHtml(bioArrayToText(section.content))}</textarea>
+        </label>
+        <label class="world-section-collapsible-option">
+          <input
+            type="checkbox"
+            data-world-section-field="collapsible"
+            ${section.collapsible ? "checked" : ""}
+          >
+          <span>
+            <strong>상세 화면에서 접기 사용</strong>
+            <small>선택하면 상세 화면에서 제목만 보이는 닫힌 상태로 시작합니다.</small>
+          </span>
+        </label>
+      </article>
     `).join("");
   }
 
@@ -1278,12 +1282,24 @@
   }
 
   function worldInfoSectionMarkup(section) {
+    const title = escapeHtml(section.title || "세계관 정보");
+    const content = (section.content || []).map((paragraph) =>
+      `<p>${escapeHtml(paragraph)}</p>`
+    ).join("");
+
+    if (section.collapsible) {
+      return `
+        <details class="world-info-block world-info-block-collapsible">
+          <summary>${title}</summary>
+          <div class="world-info-block-content">${content}</div>
+        </details>
+      `;
+    }
+
     return `
       <article class="world-info-block">
-        <h3>${escapeHtml(section.title || "세계관 정보")}</h3>
-        <div>${(section.content || []).map((paragraph) =>
-          `<p>${escapeHtml(paragraph)}</p>`
-        ).join("")}</div>
+        <h3>${title}</h3>
+        <div>${content}</div>
       </article>
     `;
   }
@@ -1456,14 +1472,10 @@
 
     if (target.dataset.worldSectionField === "title") {
       section.title = target.value.trim();
-      const summaryTitle = item.querySelector(
-        "[data-world-section-summary-title]"
-      );
-      if (summaryTitle) {
-        summaryTitle.textContent = section.title || "제목 없음";
-      }
     } else if (target.dataset.worldSectionField === "content") {
       section.content = bioTextToArray(target.value);
+    } else if (target.dataset.worldSectionField === "collapsible") {
+      section.collapsible = target.checked;
     } else {
       return;
     }

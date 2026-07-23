@@ -834,63 +834,64 @@ textarea:focus {
 }
 
 .world-section-editor-item {
-  overflow: hidden;
-  padding: 0;
+  padding: .8rem;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: color-mix(in srgb, var(--bg) 70%, transparent);
 }
 
-.world-section-editor-summary {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: .65rem;
+.world-section-editor-toolbar {
+  display: flex;
   align-items: center;
-  padding: .75rem .8rem;
-  cursor: pointer;
-  list-style: none;
+  justify-content: flex-end;
+  gap: .45rem;
+  margin-bottom: .6rem;
 }
 
-.world-section-editor-summary::-webkit-details-marker {
-  display: none;
-}
-
-.world-section-editor-summary::after {
-  content: "⌄";
-  color: var(--accent);
-  font-size: 1rem;
-  transition: transform .2s ease;
-}
-
-.world-section-editor-item[open] .world-section-editor-summary::after {
-  transform: rotate(180deg);
-}
-
-.world-section-editor-summary span {
+.world-section-editor-toolbar > span {
+  margin-right: auto;
   color: var(--muted);
   font-size: .68rem;
   font-weight: 800;
 }
 
-.world-section-editor-summary strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: .82rem;
+.world-section-collapsible-option {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .65rem;
+  align-items: start;
+  margin-top: .8rem;
+  padding: .7rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  cursor: pointer;
 }
 
-.world-section-editor-body {
-  padding: .75rem .8rem .8rem;
-  border-top: 1px solid var(--line);
+.world-section-collapsible-option input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: .15rem 0 0;
+  padding: 0;
 }
 
-.world-section-editor-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  gap: .45rem;
-  margin-bottom: .6rem;
+.world-section-collapsible-option > span {
+  color: var(--text);
+}
+
+.world-section-collapsible-option strong,
+.world-section-collapsible-option small {
+  display: block;
+}
+
+.world-section-collapsible-option strong {
+  font-size: .78rem;
+}
+
+.world-section-collapsible-option small {
+  margin-top: .1rem;
+  color: var(--muted);
+  font-size: .68rem;
 }
 
 .world-section-editor-toolbar button {
@@ -1265,6 +1266,44 @@ textarea:focus {
 
 .world-info-block p + p {
   margin-top: .65rem;
+}
+
+.world-info-block-collapsible {
+  padding: 0;
+}
+
+.world-info-block-collapsible summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .8rem;
+  align-items: center;
+  padding: 1rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.world-info-block-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.world-info-block-collapsible summary::after {
+  content: "⌄";
+  color: var(--accent);
+  transition: transform .2s ease;
+}
+
+.world-info-block-collapsible[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.world-info-block-collapsible[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.world-info-block-content {
+  padding: 1rem;
 }
 
 .world-character-section {
