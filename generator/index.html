@@ -15,18 +15,28 @@
     </div>
 
     <div class="header-actions" aria-label="프로젝트 관리">
-      <button id="downloadProjectButton" class="secondary-button" type="button">
-        프로젝트 저장
-      </button>
+      <details class="backup-menu" id="backupMenu">
+        <summary class="secondary-button">백업</summary>
+        <div class="backup-menu-panel" aria-label="백업 형식 선택">
+          <button id="downloadTextBackupButton" type="button">
+            <strong>텍스트 저장</strong>
+            <small>프로젝트 데이터만 JSON으로 저장</small>
+          </button>
+          <button id="downloadFullBackupButton" type="button">
+            <strong>이미지 포함 모두 저장</strong>
+            <small>프로젝트와 저장 이미지를 ZIP으로 저장</small>
+          </button>
+        </div>
+      </details>
 
       <label class="secondary-button import-project-button" for="importProjectInput">
-        프로젝트 불러오기
+        불러오기
       </label>
       <input
         id="importProjectInput"
         class="file-input"
         type="file"
-        accept=".json,application/json"
+        accept=".json,.zip,application/json,application/zip"
       >
 
       <button id="resetProjectButton" class="secondary-button" type="button">
@@ -62,12 +72,29 @@
               placeholder="이 포트폴리오를 소개하는 짧은 문장"
             ></textarea>
           </label>
+
+          <div class="site-color-controls" aria-label="사이트 색상">
+            <label class="site-color-control">
+              <span>글자색</span>
+              <span class="site-color-input-row">
+                <input id="siteTextColorInput" type="color" value="#f4f1ea">
+                <output id="siteTextColorValue" for="siteTextColorInput">#f4f1ea</output>
+              </span>
+            </label>
+            <label class="site-color-control">
+              <span>테마 색</span>
+              <span class="site-color-input-row">
+                <input id="siteThemeColorInput" type="color" value="#d8ff62">
+                <output id="siteThemeColorValue" for="siteThemeColorInput">#d8ff62</output>
+              </span>
+            </label>
+          </div>
         </fieldset>
 
         <fieldset>
           <legend>제작자 프로필</legend>
 
-          <div class="avatar-editor">
+          <div class="avatar-editor image-drop-zone" data-image-drop-target="avatar" tabindex="0" role="group" aria-label="프로필 이미지 업로드 영역">
             <div class="avatar-preview" aria-hidden="true">
               <img id="avatarEditorPreview" alt="" hidden>
               <span id="avatarEditorFallback">✦</span>
@@ -83,6 +110,7 @@
                 type="file"
                 accept="image/png"
               >
+              <p class="image-input-hint">파일 선택 · 끌어놓기 · 이미지 영역 선택 후 Ctrl+V</p>
               <p
                 id="avatarStorageStatus"
                 class="field-help"
@@ -207,7 +235,7 @@
               </button>
             </div>
 
-            <div class="world-image-editor">
+            <div class="world-image-editor image-drop-zone" data-image-drop-target="world" tabindex="0" role="group" aria-label="세계관 이미지 업로드 영역">
               <div class="world-image-editor-preview" aria-hidden="true">
                 <img id="worldImageEditorPreview" alt="" hidden>
                 <span id="worldImageEditorFallback">WORLD</span>
@@ -223,6 +251,7 @@
                   type="file"
                   accept="image/png"
                 >
+                <p class="image-input-hint">파일 선택 · 끌어놓기 · 이미지 영역 선택 후 Ctrl+V</p>
                 <p
                   id="worldImageStorageStatus"
                   class="field-help"
@@ -274,37 +303,41 @@
               ></textarea>
             </label>
 
-            <section
-              class="world-character-link-editor"
+            <details
+              class="world-character-link-editor editor-fold"
               aria-labelledby="worldCharacterLinkTitle"
             >
-              <div class="subsection-heading">
-                <div>
-                  <span class="field-label" id="worldCharacterLinkTitle">연결 캐릭터</span>
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="field-label" id="worldCharacterLinkTitle">연결 캐릭터</strong>
                   <small>현재 세계관에 포함할 캐릭터를 선택합니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div id="worldCharacterLinkList" class="world-character-link-list">
+                  <p class="empty-message">등록된 캐릭터가 없습니다.</p>
                 </div>
               </div>
+            </details>
 
-              <div id="worldCharacterLinkList" class="world-character-link-list">
-                <p class="empty-message">등록된 캐릭터가 없습니다.</p>
-              </div>
-            </section>
-
-            <section class="world-section-editor" aria-labelledby="worldSectionsTitle">
-              <div class="subsection-heading">
-                <div>
-                  <span class="field-label" id="worldSectionsTitle">추가 정보</span>
+            <details class="world-section-editor editor-fold" aria-labelledby="worldSectionsTitle">
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="field-label" id="worldSectionsTitle">추가 정보</strong>
                   <small>세계의 핵심, 주요 갈등처럼 상세창에 표시할 내용을 추가합니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div class="editor-fold-action-row">
+                  <button id="addWorldSectionButton" class="secondary-button" type="button">항목 추가</button>
                 </div>
-                <button id="addWorldSectionButton" class="secondary-button" type="button">
-                  항목 추가
-                </button>
+                <div id="worldSectionList" class="world-section-editor-list">
+                  <p class="empty-message">추가 정보가 없습니다.</p>
+                </div>
               </div>
-
-              <div id="worldSectionList" class="world-section-editor-list">
-                <p class="empty-message">추가 정보가 없습니다.</p>
-              </div>
-            </section>
+            </details>
           </form>
         </div>
       </section>
@@ -339,22 +372,28 @@
               <button id="deleteCharacterButton" class="character-danger-button" type="button">캐릭터 삭제</button>
             </div>
 
-            <section class="character-image-editor" aria-labelledby="characterImagesTitle">
-              <div class="character-subsection-heading">
-                <div>
-                  <span class="character-field-label" id="characterImagesTitle">캐릭터 이미지</span>
+            <details class="character-image-editor editor-fold image-drop-zone" data-image-drop-target="character" tabindex="0" aria-labelledby="characterImagesTitle" open>
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="character-field-label" id="characterImagesTitle">캐릭터 이미지</strong>
                   <small>PNG 이미지를 최대 5장까지 등록할 수 있습니다. 첫 이미지가 대표 이미지입니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div class="editor-fold-action-row">
+                  <label class="file-label" for="characterImageInput">PNG 추가</label>
+                  <input id="characterImageInput" class="file-input" type="file" accept="image/png" multiple>
                 </div>
-                <label class="file-label" for="characterImageInput">PNG 추가</label>
-                <input id="characterImageInput" class="file-input" type="file" accept="image/png" multiple>
+                <p class="image-input-hint">파일 선택 · 끌어놓기 · 이미지 영역 선택 후 Ctrl+V</p>
+                <p id="characterImageStorageStatus" class="field-help" role="status" aria-live="polite">
+                  PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다. 이미지당 최대 10MB.
+                </p>
+                <div id="characterImageList" class="character-image-list">
+                  <p class="empty-message">등록된 이미지가 없습니다.</p>
+                </div>
               </div>
-              <p id="characterImageStorageStatus" class="field-help" role="status" aria-live="polite">
-                PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다. 이미지당 최대 10MB.
-              </p>
-              <div id="characterImageList" class="character-image-list">
-                <p class="empty-message">등록된 이미지가 없습니다.</p>
-              </div>
-            </section>
+            </details>
 
             <label>
               <span>캐릭터 이름</span>
@@ -379,15 +418,18 @@
               </span>
             </label>
 
-            <section class="character-genre-editor" aria-labelledby="characterGenresTitle">
-              <div class="character-subsection-heading">
-                <div>
-                  <span class="character-field-label" id="characterGenresTitle">장르</span>
+            <details class="character-genre-editor editor-fold" aria-labelledby="characterGenresTitle" open>
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="character-field-label" id="characterGenresTitle">장르</strong>
                   <small>관리자 카탈로그에 등록된 장르에서 선택합니다.</small>
-                </div>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div id="characterGenreList" class="character-option-grid"></div>
               </div>
-              <div id="characterGenreList" class="character-option-grid"></div>
-            </section>
+            </details>
 
             <label>
               <span>태그</span>
@@ -400,28 +442,36 @@
               <textarea id="characterDescriptionInput" rows="7" placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."></textarea>
             </label>
 
-            <section class="character-platform-editor" aria-labelledby="characterPlatformsTitle">
-              <div class="character-subsection-heading">
-                <div>
-                  <span class="character-field-label" id="characterPlatformsTitle">플랫폼</span>
+            <details class="character-platform-editor editor-fold" aria-labelledby="characterPlatformsTitle">
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="character-field-label" id="characterPlatformsTitle">플랫폼</strong>
                   <small>플랫폼을 선택하고 캐릭터 페이지 주소를 입력합니다.</small>
-                </div>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div id="characterPlatformList" class="character-platform-editor-list"></div>
               </div>
-              <div id="characterPlatformList" class="character-platform-editor-list"></div>
-            </section>
+            </details>
 
-            <section class="character-content-editor" aria-labelledby="characterContentsTitle">
-              <div class="character-subsection-heading">
-                <div>
-                  <span class="character-field-label" id="characterContentsTitle">추가 콘텐츠</span>
+            <details class="character-content-editor editor-fold" aria-labelledby="characterContentsTitle">
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="character-field-label" id="characterContentsTitle">추가 콘텐츠</strong>
                   <small>제작 비하인드, 과거, 비밀 설정처럼 상세창에 표시할 내용을 추가합니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div class="editor-fold-action-row">
+                  <button id="addCharacterContentButton" class="secondary-button" type="button">항목 추가</button>
                 </div>
-                <button id="addCharacterContentButton" class="secondary-button" type="button">항목 추가</button>
+                <div id="characterContentList" class="character-content-editor-list">
+                  <p class="empty-message">추가 콘텐츠가 없습니다.</p>
+                </div>
               </div>
-              <div id="characterContentList" class="character-content-editor-list">
-                <p class="empty-message">추가 콘텐츠가 없습니다.</p>
-              </div>
-            </section>
+            </details>
           </form>
         </div>
       </section>
@@ -433,9 +483,16 @@
           <p class="eyebrow">LIVE PREVIEW</p>
           <h2 id="previewTitle">미리보기</h2>
         </div>
+        <label class="preview-width-control" for="previewWidthInput">
+          <span>미리보기 폭</span>
+          <input id="previewWidthInput" type="range" min="380" max="760" step="10" value="620">
+          <output id="previewWidthOutput" for="previewWidthInput">620px</output>
+        </label>
         <span id="saveStatus" class="save-status" role="status" aria-live="polite">자동 저장 준비 중</span>
       </div>
 
+      <div class="preview-viewport" id="previewViewport">
+        <div class="preview-canvas" id="previewCanvas">
       <article class="portfolio-preview">
         <header class="preview-brand">
           <span class="preview-brand-mark" aria-hidden="true">✦</span>
@@ -454,6 +511,11 @@
             <p id="previewCreatorHandle" class="preview-handle"></p>
             <div id="previewCreatorBio" class="preview-bio"></div>
             <div id="previewCreatorLinks" class="preview-social-links"></div>
+            <div class="hero-stats" aria-label="아카이브 요약">
+              <div><strong id="previewCharacterCount">0</strong><span>캐릭터</span></div>
+              <div><strong id="previewWorldCount">0</strong><span>세계관</span></div>
+              <div><strong id="previewGenreCount">0</strong><span>장르</span></div>
+            </div>
           </div>
         </div>
       </article>
@@ -499,11 +561,40 @@
       <section class="stardust-character-preview character-archive-preview" id="previewCharacterSection" aria-labelledby="previewCharacterTitle">
         <div class="character-preview-heading character-archive-heading">
           <div>
-            <p class="eyebrow">CHARACTER ARCHIVE</p>
+            <p class="eyebrow">FULL ARCHIVE</p>
             <h2 id="previewCharacterTitle">캐릭터 아카이브</h2>
           </div>
-          <p>등록한 캐릭터를 한곳에서 확인합니다.</p>
+          <p id="previewCharacterResultSummary" aria-live="polite">총 0명 중 0명 표시</p>
         </div>
+
+        <div class="controls" aria-label="캐릭터 검색 및 필터">
+          <label class="search-box">
+            <span class="sr-only">캐릭터 검색</span>
+            <span aria-hidden="true">⌕</span>
+            <input
+              id="previewCharacterSearchInput"
+              type="search"
+              placeholder="이름, 소개, 태그, 세계관으로 검색"
+              autocomplete="off"
+            >
+          </label>
+
+          <div class="filter-row">
+            <div class="filter-group" aria-labelledby="previewGenreFilterLabel">
+              <span class="filter-label" id="previewGenreFilterLabel">장르</span>
+              <div class="chip-list" id="previewGenreFilters"></div>
+            </div>
+            <div class="filter-group" aria-labelledby="previewPlatformFilterLabel">
+              <span class="filter-label" id="previewPlatformFilterLabel">플랫폼</span>
+              <div class="chip-list" id="previewPlatformFilters"></div>
+            </div>
+            <div class="filter-group filter-group--world" aria-labelledby="previewWorldFilterLabel">
+              <span class="filter-label" id="previewWorldFilterLabel">세계관</span>
+              <div class="chip-list" id="previewWorldFilters"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="character-preview-grid" id="previewCharacterGrid"></div>
         <div class="character-archive-toggle-wrap" id="previewCharacterToggleWrap" hidden>
           <button class="character-archive-toggle" id="previewCharacterToggle" type="button" aria-controls="previewCharacterGrid" aria-expanded="false">
@@ -511,11 +602,51 @@
             <b aria-hidden="true">↓</b>
           </button>
         </div>
-        <p id="previewCharacterEmpty" class="character-preview-empty">아직 등록된 캐릭터가 없습니다.</p>
+        <div class="empty-state" id="previewCharacterEmpty" hidden>
+          <span>◇</span>
+          <h3>조건에 맞는 캐릭터가 없어요.</h3>
+          <p>검색어나 필터를 조금 느슨하게 풀어보세요.</p>
+          <button class="primary-button" id="previewCharacterResetFilters" type="button">필터 초기화</button>
+        </div>
       </section>
+        </div>
+      </div>
     </section>
   </main>
 
+
+  <dialog class="filter-picker" id="previewCharacterFilterPicker" aria-labelledby="previewCharacterFilterPickerTitle">
+    <div class="filter-picker-shell">
+      <header class="filter-picker-header">
+        <div>
+          <p class="eyebrow">FILTER</p>
+          <h2 id="previewCharacterFilterPickerTitle">필터 선택</h2>
+          <p class="filter-picker-hint">여러 항목을 동시에 선택할 수 있습니다.</p>
+        </div>
+        <button
+          class="filter-picker-close"
+          id="previewCharacterFilterPickerClose"
+          type="button"
+          aria-label="필터 선택 닫기"
+        >×</button>
+      </header>
+
+      <label class="filter-picker-search">
+        <span aria-hidden="true">⌕</span>
+        <input
+          id="previewCharacterFilterPickerSearch"
+          type="search"
+          placeholder="목록에서 검색"
+          autocomplete="off"
+        >
+      </label>
+
+      <div class="filter-picker-options" id="previewCharacterFilterPickerOptions"></div>
+      <p class="filter-picker-empty" id="previewCharacterFilterPickerEmpty" hidden>
+        일치하는 항목이 없습니다.
+      </p>
+    </div>
+  </dialog>
 
   <dialog class="character-preview-modal" id="characterPreviewModal" aria-labelledby="characterPreviewModalTitle">
     <div class="character-preview-modal-shell">

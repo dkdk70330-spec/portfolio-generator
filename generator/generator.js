@@ -5,7 +5,9 @@
     version: 1,
     site: {
       title: "",
-      description: ""
+      description: "",
+      textColor: "#f4f1ea",
+      themeColor: "#d8ff62"
     },
     creator: {
       avatar: "",
@@ -34,6 +36,14 @@
   const CURRENT_PROJECT_VERSION = Number(emptyProject.version) || 1;
   const STORAGE_KEY = `portfolio-generator:project:v${CURRENT_PROJECT_VERSION}`;
   const AUTOSAVE_DELAY = 450;
+  const PREVIEW_WIDTH_STORAGE_KEY = "portfolio-generator:preview-width";
+  const PREVIEW_WIDTH_MIN = 380;
+  const PREVIEW_WIDTH_MAX = 760;
+  const PREVIEW_WIDTH_DEFAULT = 620;
+  const DEFAULT_TEXT_COLOR = "#f4f1ea";
+  const DEFAULT_THEME_COLOR = "#d8ff62";
+  const FULL_BACKUP_FORMAT = "portfolio-generator-full-backup";
+  const FULL_BACKUP_VERSION = 1;
   const ADMIN_ASSET_BASE = "../template/images/";
 
   const IMAGE_DB_NAME = "portfolio-generator-images";
@@ -68,6 +78,15 @@
   let worldPreviewExpanded = false;
   let selectedCharacterId = "";
   let characterPreviewExpanded = false;
+  const characterPreviewFilterState = {
+    query: "",
+    genre: new Set(),
+    platform: new Set(),
+    world: new Set()
+  };
+  const CHARACTER_FILTER_PREVIEW_LIMIT = 4;
+  let activeCharacterFilterPickerGroup = null;
+  let characterFilterPickerQuery = "";
   const worldImageBlobs = new Map();
   const worldImagePreviewUrls = new Map();
   const missingWorldImageIds = new Set();
@@ -76,17 +95,24 @@
   const missingCharacterImageIds = new Set();
   let imageDatabasePromise = null;
   let autosaveTimer = 0;
+  let activeImageDropTarget = null;
   let restoredAutosave = false;
   let autosaveRestoreError = "";
 
   const elements = {
     profileForm: document.querySelector("#profileForm"),
-    downloadProjectButton: document.querySelector("#downloadProjectButton"),
+    backupMenu: document.querySelector("#backupMenu"),
+    downloadTextBackupButton: document.querySelector("#downloadTextBackupButton"),
+    downloadFullBackupButton: document.querySelector("#downloadFullBackupButton"),
     importProjectInput: document.querySelector("#importProjectInput"),
     resetProjectButton: document.querySelector("#resetProjectButton"),
 
     siteTitleInput: document.querySelector("#siteTitleInput"),
     siteDescriptionInput: document.querySelector("#siteDescriptionInput"),
+    siteTextColorInput: document.querySelector("#siteTextColorInput"),
+    siteTextColorValue: document.querySelector("#siteTextColorValue"),
+    siteThemeColorInput: document.querySelector("#siteThemeColorInput"),
+    siteThemeColorValue: document.querySelector("#siteThemeColorValue"),
     creatorNameInput: document.querySelector("#creatorNameInput"),
     creatorHandleInput: document.querySelector("#creatorHandleInput"),
     creatorFallbackInput: document.querySelector("#creatorFallbackInput"),
@@ -153,6 +179,12 @@
     previewCreatorLinks: document.querySelector("#previewCreatorLinks"),
     previewAvatarImage: document.querySelector("#previewAvatarImage"),
     previewAvatarFallback: document.querySelector("#previewAvatarFallback"),
+    previewCharacterCount: document.querySelector("#previewCharacterCount"),
+    previewWorldCount: document.querySelector("#previewWorldCount"),
+    previewGenreCount: document.querySelector("#previewGenreCount"),
+    previewWidthInput: document.querySelector("#previewWidthInput"),
+    previewWidthOutput: document.querySelector("#previewWidthOutput"),
+    previewCanvas: document.querySelector("#previewCanvas"),
 
     previewWorldSection: document.querySelector("#previewWorldSection"),
     previewWorldGrid: document.querySelector("#previewWorldGrid"),
@@ -178,6 +210,18 @@
     previewCharacterToggleWrap: document.querySelector("#previewCharacterToggleWrap"),
     previewCharacterToggle: document.querySelector("#previewCharacterToggle"),
     previewCharacterEmpty: document.querySelector("#previewCharacterEmpty"),
+    previewCharacterResultSummary: document.querySelector("#previewCharacterResultSummary"),
+    previewCharacterSearchInput: document.querySelector("#previewCharacterSearchInput"),
+    previewGenreFilters: document.querySelector("#previewGenreFilters"),
+    previewPlatformFilters: document.querySelector("#previewPlatformFilters"),
+    previewWorldFilters: document.querySelector("#previewWorldFilters"),
+    previewCharacterResetFilters: document.querySelector("#previewCharacterResetFilters"),
+    previewCharacterFilterPicker: document.querySelector("#previewCharacterFilterPicker"),
+    previewCharacterFilterPickerTitle: document.querySelector("#previewCharacterFilterPickerTitle"),
+    previewCharacterFilterPickerClose: document.querySelector("#previewCharacterFilterPickerClose"),
+    previewCharacterFilterPickerSearch: document.querySelector("#previewCharacterFilterPickerSearch"),
+    previewCharacterFilterPickerOptions: document.querySelector("#previewCharacterFilterPickerOptions"),
+    previewCharacterFilterPickerEmpty: document.querySelector("#previewCharacterFilterPickerEmpty"),
     characterPreviewModal: document.querySelector("#characterPreviewModal"),
     characterPreviewModalClose: document.querySelector("#characterPreviewModalClose"),
     characterPreviewModalTitle: document.querySelector("#characterPreviewModalTitle"),
@@ -196,7 +240,8 @@
     characterPreviewContentSection: document.querySelector("#characterPreviewContentSection"),
     characterPreviewContents: document.querySelector("#characterPreviewContents"),
 
-    saveStatus: document.querySelector("#saveStatus")
+    saveStatus: document.querySelector("#saveStatus"),
+    imageDropZones: [...document.querySelectorAll("[data-image-drop-target]")]
   };
 
   function cloneJson(value) {
@@ -542,6 +587,20 @@
     };
   }
 
+  function normalizeHexColor(value, fallback) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return /^#[0-9a-f]{6}$/.test(normalized) ? normalized : fallback;
+  }
+
+  function contrastTextColor(hexColor) {
+    const hex = normalizeHexColor(hexColor, DEFAULT_THEME_COLOR).slice(1);
+    const red = Number.parseInt(hex.slice(0, 2), 16);
+    const green = Number.parseInt(hex.slice(2, 4), 16);
+    const blue = Number.parseInt(hex.slice(4, 6), 16);
+    const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+    return luminance > 0.58 ? "#15190a" : "#ffffff";
+  }
+
   function normalizeProject(rawProject) {
     if (!isPlainObject(rawProject)) {
       throw new Error("프로젝트 JSON의 최상위 값은 객체여야 합니다.");
@@ -646,7 +705,9 @@
         ...(base.site || {}),
         ...cloneJson(rawSite),
         title: normalizeString(rawSite.title, "site.title"),
-        description: normalizeString(rawSite.description, "site.description")
+        description: normalizeString(rawSite.description, "site.description"),
+        textColor: normalizeHexColor(rawSite.textColor, DEFAULT_TEXT_COLOR),
+        themeColor: normalizeHexColor(rawSite.themeColor, DEFAULT_THEME_COLOR)
       },
       creator: {
         ...(base.creator || {}),
@@ -959,6 +1020,23 @@
     });
   }
 
+  async function getAllImageRecords() {
+    const database = await openImageDatabase();
+
+    return await new Promise((resolve, reject) => {
+      const transaction = database.transaction(IMAGE_STORE_NAME, "readonly");
+      const request = transaction.objectStore(IMAGE_STORE_NAME).getAll();
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(
+        request.error || new Error("저장된 이미지 목록을 읽지 못했습니다.")
+      );
+      transaction.onabort = () => reject(
+        transaction.error || new Error("이미지 목록 읽기 작업이 중단되었습니다.")
+      );
+    });
+  }
+
   async function putImageRecord(record) {
     const database = await openImageDatabase();
 
@@ -1008,6 +1086,25 @@
       );
       transaction.onabort = () => reject(
         transaction.error || new Error("이미지 초기화 작업이 중단되었습니다.")
+      );
+    });
+  }
+
+  async function replaceAllImageRecords(records) {
+    const database = await openImageDatabase();
+
+    return await new Promise((resolve, reject) => {
+      const transaction = database.transaction(IMAGE_STORE_NAME, "readwrite");
+      const store = transaction.objectStore(IMAGE_STORE_NAME);
+      store.clear();
+      records.forEach((record) => store.put(record));
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(
+        transaction.error || new Error("백업 이미지를 복구하지 못했습니다.")
+      );
+      transaction.onabort = () => reject(
+        transaction.error || new Error("백업 이미지 복구 작업이 중단되었습니다.")
       );
     });
   }
@@ -1073,6 +1170,16 @@
   function syncProjectFromFields() {
     project.site.title = elements.siteTitleInput.value.trim();
     project.site.description = elements.siteDescriptionInput.value.trim();
+    project.site.textColor = normalizeHexColor(
+      elements.siteTextColorInput.value,
+      DEFAULT_TEXT_COLOR
+    );
+    project.site.themeColor = normalizeHexColor(
+      elements.siteThemeColorInput.value,
+      DEFAULT_THEME_COLOR
+    );
+    elements.siteTextColorValue.value = project.site.textColor;
+    elements.siteThemeColorValue.value = project.site.themeColor;
 
     project.creator.name = elements.creatorNameInput.value.trim();
     project.creator.handle = elements.creatorHandleInput.value.trim();
@@ -1545,6 +1652,402 @@
     `;
   }
 
+  function characterPreviewUsageEntries(values) {
+    const counts = new Map();
+
+    values.forEach((value) => {
+      const normalized = String(value || "").trim();
+      if (!normalized) return;
+      counts.set(normalized, (counts.get(normalized) || 0) + 1);
+    });
+
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"));
+  }
+
+  function characterPreviewFilterData() {
+    const genreUsage = characterPreviewUsageEntries(
+      project.characters.flatMap((character) => character.genres || [])
+    );
+
+    const platformUsage = characterPreviewUsageEntries(
+      project.characters.flatMap((character) =>
+        (character.platforms || []).map((link) => link.id)
+      )
+    );
+
+    const worldUsage = characterPreviewUsageEntries(
+      project.characters
+        .map((character) => character.worldId)
+        .filter(Boolean)
+    );
+
+    const usedWorlds = worldUsage
+      .map(([id, count]) => {
+        const world = project.worlds.find((item) => item.id === id);
+        return world
+          ? {
+              id,
+              label: world.name || "이름 없는 세계관",
+              count
+            }
+          : null;
+      })
+      .filter(Boolean);
+
+    const independentCount = project.characters.filter(
+      (character) => !character.worldId
+    ).length;
+
+    return {
+      genreUsage,
+      platformUsage,
+      usedWorlds,
+      independentCount
+    };
+  }
+
+  function characterPreviewFilterOptions(group) {
+    const {
+      genreUsage,
+      platformUsage,
+      usedWorlds,
+      independentCount
+    } = characterPreviewFilterData();
+
+    if (group === "genre") {
+      return [
+        {
+          label: "전체",
+          value: "전체",
+          count: project.characters.length
+        },
+        ...genreUsage.map(([name, count]) => ({
+          label: name,
+          value: name,
+          count
+        }))
+      ];
+    }
+
+    if (group === "platform") {
+      return [
+        {
+          label: "전체",
+          value: "전체",
+          count: project.characters.length
+        },
+        ...platformUsage.map(([id, count]) => {
+          const platform = platformCatalog.get(id);
+          return {
+            label: platform?.name || id,
+            value: id,
+            count
+          };
+        })
+      ];
+    }
+
+    const worlds = usedWorlds.map((world) => ({
+      label: world.label,
+      value: world.id,
+      count: world.count
+    }));
+
+    if (independentCount > 0) {
+      worlds.push({
+        label: "독립 캐릭터",
+        value: "__independent__",
+        count: independentCount
+      });
+    }
+
+    return [
+      {
+        label: "전체",
+        value: "전체",
+        count: project.characters.length
+      },
+      ...worlds
+    ];
+  }
+
+  function selectedCharacterPreviewFilters(group) {
+    return characterPreviewFilterState[group];
+  }
+
+  function isCharacterPreviewFilterSelected(group, value) {
+    const selected = selectedCharacterPreviewFilters(group);
+    return value === "전체"
+      ? selected.size === 0
+      : selected.has(value);
+  }
+
+  function pruneCharacterPreviewFilters() {
+    for (const group of ["genre", "platform", "world"]) {
+      const valid = new Set(
+        characterPreviewFilterOptions(group)
+          .slice(1)
+          .map((option) => option.value)
+      );
+      const selected = selectedCharacterPreviewFilters(group);
+
+      for (const value of [...selected]) {
+        if (!valid.has(value)) selected.delete(value);
+      }
+    }
+  }
+
+  function toggleCharacterPreviewFilter(group, value) {
+    const selected = selectedCharacterPreviewFilters(group);
+    if (!selected) return;
+
+    if (value === "전체") {
+      selected.clear();
+      return;
+    }
+
+    if (selected.has(value)) selected.delete(value);
+    else selected.add(value);
+  }
+
+  function characterPreviewFilterButton(
+    label,
+    group,
+    active,
+    value = label,
+    count = null,
+    picker = false
+  ) {
+    const countMarkup = picker && Number.isFinite(count)
+      ? `<small>${count}</small>`
+      : "";
+
+    return `
+      <button
+        class="filter-chip ${picker ? "filter-chip--picker" : ""} ${active ? "active" : ""}"
+        type="button"
+        aria-pressed="${active}"
+        data-character-filter-group="${group}"
+        data-character-filter-value="${escapeHtml(value)}"
+      >
+        <span>${escapeHtml(label)}</span>
+        ${countMarkup}
+      </button>
+    `;
+  }
+
+  function compactCharacterPreviewFilterOptions(group) {
+    const options = characterPreviewFilterOptions(group);
+    const allOption = options[0];
+    const remaining = options.slice(1);
+    const selected = selectedCharacterPreviewFilters(group);
+
+    // 원본 로직: 선택된 항목은 기본 행 밖으로 밀려나지 않는다.
+    const visible = remaining.filter((option) =>
+      selected.has(option.value)
+    );
+
+    for (const option of remaining) {
+      if (visible.length >= CHARACTER_FILTER_PREVIEW_LIMIT) break;
+      if (!visible.some((item) => item.value === option.value)) {
+        visible.push(option);
+      }
+    }
+
+    return {
+      visible: [allOption, ...visible],
+      hiddenCount: Math.max(0, remaining.length - visible.length)
+    };
+  }
+
+  function renderCharacterPreviewFilterRow(container, group) {
+    const { visible, hiddenCount } =
+      compactCharacterPreviewFilterOptions(group);
+
+    container.innerHTML = visible
+      .map((option) =>
+        characterPreviewFilterButton(
+          option.label,
+          group,
+          isCharacterPreviewFilterSelected(group, option.value),
+          option.value
+        )
+      )
+      .join("");
+
+    if (hiddenCount > 0) {
+      container.insertAdjacentHTML(
+        "beforeend",
+        `
+          <button
+            class="filter-more"
+            type="button"
+            data-character-filter-more="${group}"
+            aria-haspopup="dialog"
+          >
+            더보기 <b>+${hiddenCount}</b>
+          </button>
+        `
+      );
+    }
+  }
+
+  function renderCharacterPreviewFilters() {
+    pruneCharacterPreviewFilters();
+    renderCharacterPreviewFilterRow(
+      elements.previewGenreFilters,
+      "genre"
+    );
+    renderCharacterPreviewFilterRow(
+      elements.previewPlatformFilters,
+      "platform"
+    );
+    renderCharacterPreviewFilterRow(
+      elements.previewWorldFilters,
+      "world"
+    );
+  }
+
+  function characterPreviewFilterPickerLabel(group) {
+    if (group === "genre") return "장르 선택";
+    if (group === "platform") return "플랫폼 선택";
+    return "세계관 선택";
+  }
+
+  function renderCharacterPreviewFilterPicker() {
+    if (!activeCharacterFilterPickerGroup) return;
+
+    const normalized =
+      characterFilterPickerQuery.trim().toLocaleLowerCase("ko");
+    const options = characterPreviewFilterOptions(
+      activeCharacterFilterPickerGroup
+    ).filter((option) =>
+      !normalized ||
+      option.label.toLocaleLowerCase("ko").includes(normalized)
+    );
+
+    elements.previewCharacterFilterPickerOptions.innerHTML = options
+      .map((option) =>
+        characterPreviewFilterButton(
+          option.label,
+          activeCharacterFilterPickerGroup,
+          isCharacterPreviewFilterSelected(
+            activeCharacterFilterPickerGroup,
+            option.value
+          ),
+          option.value,
+          option.count,
+          true
+        )
+      )
+      .join("");
+
+    elements.previewCharacterFilterPickerEmpty.hidden =
+      options.length !== 0;
+  }
+
+  function openCharacterPreviewFilterPicker(group) {
+    activeCharacterFilterPickerGroup = group;
+    characterFilterPickerQuery = "";
+
+    const label = characterPreviewFilterPickerLabel(group);
+    elements.previewCharacterFilterPickerTitle.textContent = label;
+    elements.previewCharacterFilterPickerSearch.value = "";
+    elements.previewCharacterFilterPickerSearch.placeholder =
+      `${label.replace(" 선택", "")} 검색`;
+
+    renderCharacterPreviewFilterPicker();
+    elements.previewCharacterFilterPicker.showModal();
+    document.body.classList.add("character-filter-picker-open");
+
+    requestAnimationFrame(() =>
+      elements.previewCharacterFilterPickerSearch.focus()
+    );
+  }
+
+  function closeCharacterPreviewFilterPicker() {
+    if (elements.previewCharacterFilterPicker.open) {
+      elements.previewCharacterFilterPicker.close();
+    }
+
+    activeCharacterFilterPickerGroup = null;
+    characterFilterPickerQuery = "";
+    document.body.classList.remove("character-filter-picker-open");
+  }
+
+  function hasActiveCharacterPreviewFilters() {
+    return Boolean(
+      characterPreviewFilterState.query.trim() ||
+      characterPreviewFilterState.genre.size > 0 ||
+      characterPreviewFilterState.platform.size > 0 ||
+      characterPreviewFilterState.world.size > 0
+    );
+  }
+
+  function filteredCharacterPreviewCharacters() {
+    const normalizedQuery =
+      characterPreviewFilterState.query.trim().toLocaleLowerCase("ko");
+
+    return project.characters.filter((character) => {
+      const world = project.worlds.find(
+        (item) => item.id === character.worldId
+      );
+
+      const searchable = [
+        character.name,
+        character.subtitle,
+        ...(character.description || []),
+        ...(character.genres || []),
+        ...(character.tags || []),
+        ...(character.platforms || []).map((link) => {
+          const platform = platformCatalog.get(link.id);
+          return platform?.name || link.id;
+        }),
+        world?.name || "",
+        world?.subtitle || "",
+        ...(world?.tags || [])
+      ]
+        .join(" ")
+        .toLocaleLowerCase("ko");
+
+      const queryMatch =
+        !normalizedQuery || searchable.includes(normalizedQuery);
+
+      const genreMatch =
+        characterPreviewFilterState.genre.size === 0 ||
+        (character.genres || []).some((genre) =>
+          characterPreviewFilterState.genre.has(genre)
+        );
+
+      const platformMatch =
+        characterPreviewFilterState.platform.size === 0 ||
+        (character.platforms || []).some((link) =>
+          characterPreviewFilterState.platform.has(link.id)
+        );
+
+      const worldMatch =
+        characterPreviewFilterState.world.size === 0 ||
+        [...characterPreviewFilterState.world].some((worldId) =>
+          worldId === "__independent__"
+            ? !character.worldId
+            : character.worldId === worldId
+        );
+
+      // 원본 규칙: 같은 분류 안에서는 OR, 서로 다른 분류 사이에서는 AND.
+      return queryMatch && genreMatch && platformMatch && worldMatch;
+    });
+  }
+
+  function resetCharacterPreviewFilters() {
+    characterPreviewFilterState.query = "";
+    characterPreviewFilterState.genre.clear();
+    characterPreviewFilterState.platform.clear();
+    characterPreviewFilterState.world.clear();
+    elements.previewCharacterSearchInput.value = "";
+    renderCharacterPreview();
+  }
+
   function previewCharacterColumnCount() {
     const template = getComputedStyle(elements.previewCharacterGrid).gridTemplateColumns;
     if (!template || template === "none") return 1;
@@ -1554,20 +2057,38 @@
   function updateCharacterPreviewLimit() {
     const cards = [...elements.previewCharacterGrid.children];
     const visibleLimit = previewCharacterColumnCount() * 2;
-    const canCollapse = cards.length > visibleLimit;
-    const expanded = characterPreviewExpanded || !canCollapse;
+    const forceExpanded = hasActiveCharacterPreviewFilters();
+    const canCollapse = !forceExpanded && cards.length > visibleLimit;
+    const expanded =
+      forceExpanded || characterPreviewExpanded || !canCollapse;
+
     cards.forEach((card, index) => {
       card.hidden = !expanded && index >= visibleLimit;
     });
+
     elements.previewCharacterToggleWrap.hidden = !canCollapse;
-    elements.previewCharacterToggle.setAttribute("aria-expanded", String(expanded));
-    elements.previewCharacterToggle.classList.toggle("is-expanded", expanded);
+    elements.previewCharacterToggle.setAttribute(
+      "aria-expanded",
+      String(expanded)
+    );
+    elements.previewCharacterToggle.classList.toggle(
+      "is-expanded",
+      expanded
+    );
+
     const hiddenCount = Math.max(0, cards.length - visibleLimit);
-    const label = elements.previewCharacterToggle.querySelector("span");
-    if (label) label.textContent = expanded ? "캐릭터 접기" : `캐릭터 더보기 +${hiddenCount}`;
+    const label =
+      elements.previewCharacterToggle.querySelector("span");
+
+    if (label) {
+      label.textContent = expanded
+        ? "캐릭터 접기"
+        : `캐릭터 더보기 +${hiddenCount}`;
+    }
   }
 
   function renderCharacterPreview() {
+    renderArchiveCounts();
     const featured = [
       ...project.characters.filter((character) => character.featured),
       ...project.characters.filter((character) => !character.featured)
@@ -1577,15 +2098,34 @@
 
     elements.previewFeaturedSection.hidden = featured.length === 0;
     elements.previewFeaturedGrid.innerHTML = featured
-      .map((character) => characterCardMarkup(character, true)).join("");
+      .map((character) => characterCardMarkup(character, true))
+      .join("");
 
-    const hasCharacters = project.characters.length > 0;
+    renderCharacterPreviewFilters();
+
+    const characters = filteredCharacterPreviewCharacters();
+    const hasCharacters = characters.length > 0;
+
     elements.previewCharacterGrid.innerHTML = hasCharacters
-      ? project.characters.map((character) => characterCardMarkup(character)).join("")
+      ? characters
+          .map((character) => characterCardMarkup(character))
+          .join("")
       : "";
+
+    elements.previewCharacterResultSummary.textContent =
+      `총 ${project.characters.length}명 중 ${characters.length}명 표시`;
     elements.previewCharacterEmpty.hidden = hasCharacters;
-    if (!hasCharacters) characterPreviewExpanded = false;
+    elements.previewCharacterGrid.hidden = !hasCharacters;
+
+    if (project.characters.length === 0) {
+      characterPreviewExpanded = false;
+    }
+
     updateCharacterPreviewLimit();
+
+    if (elements.previewCharacterFilterPicker.open) {
+      renderCharacterPreviewFilterPicker();
+    }
   }
 
   function characterContentMarkup(item) {
@@ -1866,18 +2406,17 @@
     scheduleAutosave();
   }
 
-  async function handleCharacterImageSelection() {
+  async function addCharacterImageFiles(files) {
     const character = getSelectedCharacter();
-    const files = [...(elements.characterImageInput.files || [])];
-    elements.characterImageInput.value = "";
-    if (!character || files.length === 0) return;
+    const candidates = [...(files || [])].filter(Boolean);
+    if (!character || candidates.length === 0) return;
 
     const remaining = 5 - character.images.length;
     if (remaining <= 0) {
       window.alert("캐릭터 이미지는 최대 5장까지 등록할 수 있습니다.");
       return;
     }
-    if (files.length > remaining) {
+    if (candidates.length > remaining) {
       window.alert(`현재 ${remaining}장만 더 추가할 수 있습니다.`);
       return;
     }
@@ -1887,7 +2426,7 @@
     const storedIds = [];
     try {
       const nextMetadata = [];
-      for (const file of files) {
+      for (const file of candidates) {
         const sanitized = await sanitizePng(file, "캐릭터 PNG");
         const id = createImageId();
         const updatedAt = new Date().toISOString();
@@ -1935,6 +2474,12 @@
     } finally {
       elements.characterImageInput.disabled = false;
     }
+  }
+
+  async function handleCharacterImageSelection() {
+    const files = [...(elements.characterImageInput.files || [])];
+    elements.characterImageInput.value = "";
+    await addCharacterImageFiles(files);
   }
 
   async function handleCharacterImageAction(button) {
@@ -2232,6 +2777,7 @@
   }
 
   function renderWorldPreview() {
+    renderArchiveCounts();
     const hasWorlds = project.worlds.length > 0;
     elements.previewWorldGrid.hidden = !hasWorlds;
     elements.previewWorldEmpty.hidden = hasWorlds;
@@ -2535,9 +3081,8 @@
     return missingCharacterImageIds.size;
   }
 
-  async function handleWorldImageSelection() {
+  async function storeWorldImageFile(file) {
     const world = getSelectedWorld();
-    const file = elements.worldImageInput.files?.[0] || null;
     if (!world || !file) return;
 
     elements.worldImageInput.disabled = true;
@@ -2598,6 +3143,12 @@
     } finally {
       elements.worldImageInput.disabled = false;
     }
+  }
+
+  async function handleWorldImageSelection() {
+    const file = elements.worldImageInput.files?.[0] || null;
+    elements.worldImageInput.value = "";
+    await storeWorldImageFile(file);
   }
 
   async function removeWorldImage() {
@@ -2661,7 +3212,82 @@
     updateAvatarStorageStatus();
   }
 
+  function applyPreviewTheme() {
+    const textColor = normalizeHexColor(
+      project.site.textColor,
+      DEFAULT_TEXT_COLOR
+    );
+    const themeColor = normalizeHexColor(
+      project.site.themeColor,
+      DEFAULT_THEME_COLOR
+    );
+    const themeInk = contrastTextColor(themeColor);
+    const targets = [
+      elements.previewCanvas,
+      elements.worldPreviewModal,
+      elements.characterPreviewModal,
+      elements.previewCharacterFilterPicker
+    ];
+
+    targets.forEach((target) => {
+      if (!target) return;
+      target.style.setProperty("--text", textColor);
+      target.style.setProperty("--accent", themeColor);
+      target.style.setProperty("--accent-ink", themeInk);
+    });
+  }
+
+  function renderArchiveCounts() {
+    const genres = new Set(
+      project.characters.flatMap((character) => character.genres || [])
+    );
+    elements.previewCharacterCount.textContent = project.characters.length;
+    elements.previewWorldCount.textContent = project.worlds.length;
+    elements.previewGenreCount.textContent = genres.size;
+  }
+
+  function applyPreviewWidth(value, persist = true) {
+    const normalized = Math.min(
+      PREVIEW_WIDTH_MAX,
+      Math.max(PREVIEW_WIDTH_MIN, Number(value) || PREVIEW_WIDTH_DEFAULT)
+    );
+    document.documentElement.style.setProperty(
+      "--preview-panel-width",
+      `${normalized}px`
+    );
+    elements.previewWidthInput.value = String(normalized);
+    elements.previewWidthOutput.value = `${normalized}px`;
+    if (persist) {
+      try {
+        window.localStorage.setItem(
+          PREVIEW_WIDTH_STORAGE_KEY,
+          String(normalized)
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    requestAnimationFrame(() => {
+      updateWorldPreviewLimit();
+      updateCharacterPreviewLimit();
+    });
+  }
+
+  function restorePreviewWidth() {
+    let stored = PREVIEW_WIDTH_DEFAULT;
+    try {
+      stored = Number(
+        window.localStorage.getItem(PREVIEW_WIDTH_STORAGE_KEY)
+      ) || PREVIEW_WIDTH_DEFAULT;
+    } catch (error) {
+      console.error(error);
+    }
+    applyPreviewWidth(stored, false);
+  }
+
   function renderPreview() {
+    applyPreviewTheme();
+    renderArchiveCounts();
     const siteTitle = project.site.title || "사이트 제목";
     const creatorName = project.creator.name || "제작자 이름";
 
@@ -2720,6 +3346,16 @@
   function populateFieldsFromProject() {
     elements.siteTitleInput.value = project.site.title || "";
     elements.siteDescriptionInput.value = project.site.description || "";
+    elements.siteTextColorInput.value = normalizeHexColor(
+      project.site.textColor,
+      DEFAULT_TEXT_COLOR
+    );
+    elements.siteThemeColorInput.value = normalizeHexColor(
+      project.site.themeColor,
+      DEFAULT_THEME_COLOR
+    );
+    elements.siteTextColorValue.value = elements.siteTextColorInput.value;
+    elements.siteThemeColorValue.value = elements.siteThemeColorInput.value;
     elements.creatorNameInput.value = project.creator.name || "";
     elements.creatorHandleInput.value = project.creator.handle || "";
     elements.creatorFallbackInput.value =
@@ -2849,9 +3485,7 @@
     }
   }
 
-  async function handleAvatarSelection() {
-    const file = elements.avatarInput.files?.[0] || null;
-
+  async function storeAvatarFile(file) {
     if (!file) return;
 
     elements.avatarInput.disabled = true;
@@ -2912,6 +3546,12 @@
     }
   }
 
+  async function handleAvatarSelection() {
+    const file = elements.avatarInput.files?.[0] || null;
+    elements.avatarInput.value = "";
+    await storeAvatarFile(file);
+  }
+
   async function removeAvatar() {
     const metadata = getAvatarMetadata();
 
@@ -2932,6 +3572,100 @@
     }
 
     setSaveStatus("프로필 PNG가 제거됨");
+  }
+
+  function setActiveImageDropTarget(zone) {
+    elements.imageDropZones.forEach((item) => {
+      item.classList.toggle("is-image-target-active", item === zone);
+    });
+    activeImageDropTarget = zone?.dataset.imageDropTarget || null;
+  }
+
+  function clipboardImageFiles(event) {
+    return [...(event.clipboardData?.items || [])]
+      .filter((item) => item.kind === "file" && item.type === "image/png")
+      .map((item) => item.getAsFile())
+      .filter(Boolean);
+  }
+
+  function droppedPngFiles(dataTransfer) {
+    return [...(dataTransfer?.files || [])].filter((file) =>
+      file.type === "image/png" || file.name.toLowerCase().endsWith(".png")
+    );
+  }
+
+  async function routeImageFiles(target, files) {
+    const candidates = [...(files || [])].filter(Boolean);
+    if (candidates.length === 0) {
+      window.alert("PNG 이미지 파일을 찾지 못했습니다.");
+      return;
+    }
+
+    if (target === "avatar") {
+      await storeAvatarFile(candidates[0]);
+      return;
+    }
+    if (target === "world") {
+      if (!getSelectedWorld()) {
+        window.alert("먼저 세계관을 선택해 주세요.");
+        return;
+      }
+      await storeWorldImageFile(candidates[0]);
+      return;
+    }
+    if (target === "character") {
+      if (!getSelectedCharacter()) {
+        window.alert("먼저 캐릭터를 선택해 주세요.");
+        return;
+      }
+      await addCharacterImageFiles(candidates);
+    }
+  }
+
+  function initializeImageDropZones() {
+    elements.imageDropZones.forEach((zone) => {
+      zone.addEventListener("focus", () => setActiveImageDropTarget(zone));
+      zone.addEventListener("click", () => setActiveImageDropTarget(zone));
+      zone.addEventListener("dragenter", (event) => {
+        event.preventDefault();
+        setActiveImageDropTarget(zone);
+        zone.classList.add("is-drag-over");
+      });
+      zone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        zone.classList.add("is-drag-over");
+      });
+      zone.addEventListener("dragleave", (event) => {
+        if (!zone.contains(event.relatedTarget)) {
+          zone.classList.remove("is-drag-over");
+        }
+      });
+      zone.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        zone.classList.remove("is-drag-over");
+        setActiveImageDropTarget(zone);
+        await routeImageFiles(
+          zone.dataset.imageDropTarget,
+          droppedPngFiles(event.dataTransfer)
+        );
+      });
+    });
+
+    document.addEventListener("paste", async (event) => {
+      if (!activeImageDropTarget) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable
+      ) return;
+
+      const files = clipboardImageFiles(event);
+      if (files.length === 0) return;
+      event.preventDefault();
+      await routeImageFiles(activeImageDropTarget, files);
+    });
   }
 
   async function replaceCurrentProject(nextProject, restoreImages = true) {
@@ -2957,91 +3691,432 @@
     return avatarRestored;
   }
 
-  function buildDownloadFilename() {
-    const baseName = (project.site.title || "portfolio-project")
+  function buildBackupBaseName() {
+    return (project.site.title || "portfolio-project")
       .trim()
       .replace(/[\\/:*?"<>|]+/g, "-")
       .replace(/\s+/g, "-")
       .replace(/^-+|-+$/g, "")
-      .slice(0, 80);
-
-    return `${baseName || "portfolio-project"}.json`;
+      .slice(0, 80) || "portfolio-project";
   }
 
-  function downloadProject() {
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  function createCrc32Table() {
+    const table = new Uint32Array(256);
+    for (let index = 0; index < 256; index += 1) {
+      let value = index;
+      for (let bit = 0; bit < 8; bit += 1) {
+        value = value & 1
+          ? 0xedb88320 ^ (value >>> 1)
+          : value >>> 1;
+      }
+      table[index] = value >>> 0;
+    }
+    return table;
+  }
+
+  const ZIP_CRC32_TABLE = createCrc32Table();
+
+  function crc32(bytes) {
+    let crc = 0xffffffff;
+    for (const byte of bytes) {
+      crc = ZIP_CRC32_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function zipDateTime(date = new Date()) {
+    const year = Math.max(1980, date.getFullYear());
+    const time =
+      (date.getHours() << 11) |
+      (date.getMinutes() << 5) |
+      Math.floor(date.getSeconds() / 2);
+    const day =
+      ((year - 1980) << 9) |
+      ((date.getMonth() + 1) << 5) |
+      date.getDate();
+    return { time, day };
+  }
+
+  function concatUint8Arrays(parts) {
+    const length = parts.reduce((sum, part) => sum + part.length, 0);
+    const output = new Uint8Array(length);
+    let offset = 0;
+    for (const part of parts) {
+      output.set(part, offset);
+      offset += part.length;
+    }
+    return output;
+  }
+
+  async function createStoredZip(entries) {
+    const encoder = new TextEncoder();
+    const localParts = [];
+    const centralParts = [];
+    let localOffset = 0;
+    const { time, day } = zipDateTime();
+
+    for (const entry of entries) {
+      const nameBytes = encoder.encode(entry.name);
+      const dataBytes = entry.data instanceof Uint8Array
+        ? entry.data
+        : new Uint8Array(await entry.data.arrayBuffer());
+      const checksum = crc32(dataBytes);
+
+      const localHeader = new Uint8Array(30 + nameBytes.length);
+      const localView = new DataView(localHeader.buffer);
+      localView.setUint32(0, 0x04034b50, true);
+      localView.setUint16(4, 20, true);
+      localView.setUint16(6, 0x0800, true);
+      localView.setUint16(8, 0, true);
+      localView.setUint16(10, time, true);
+      localView.setUint16(12, day, true);
+      localView.setUint32(14, checksum, true);
+      localView.setUint32(18, dataBytes.length, true);
+      localView.setUint32(22, dataBytes.length, true);
+      localView.setUint16(26, nameBytes.length, true);
+      localView.setUint16(28, 0, true);
+      localHeader.set(nameBytes, 30);
+      localParts.push(localHeader, dataBytes);
+
+      const centralHeader = new Uint8Array(46 + nameBytes.length);
+      const centralView = new DataView(centralHeader.buffer);
+      centralView.setUint32(0, 0x02014b50, true);
+      centralView.setUint16(4, 20, true);
+      centralView.setUint16(6, 20, true);
+      centralView.setUint16(8, 0x0800, true);
+      centralView.setUint16(10, 0, true);
+      centralView.setUint16(12, time, true);
+      centralView.setUint16(14, day, true);
+      centralView.setUint32(16, checksum, true);
+      centralView.setUint32(20, dataBytes.length, true);
+      centralView.setUint32(24, dataBytes.length, true);
+      centralView.setUint16(28, nameBytes.length, true);
+      centralView.setUint16(30, 0, true);
+      centralView.setUint16(32, 0, true);
+      centralView.setUint16(34, 0, true);
+      centralView.setUint16(36, 0, true);
+      centralView.setUint32(38, 0, true);
+      centralView.setUint32(42, localOffset, true);
+      centralHeader.set(nameBytes, 46);
+      centralParts.push(centralHeader);
+
+      localOffset += localHeader.length + dataBytes.length;
+    }
+
+    const centralDirectory = concatUint8Arrays(centralParts);
+    const end = new Uint8Array(22);
+    const endView = new DataView(end.buffer);
+    endView.setUint32(0, 0x06054b50, true);
+    endView.setUint16(4, 0, true);
+    endView.setUint16(6, 0, true);
+    endView.setUint16(8, entries.length, true);
+    endView.setUint16(10, entries.length, true);
+    endView.setUint32(12, centralDirectory.length, true);
+    endView.setUint32(16, localOffset, true);
+    endView.setUint16(20, 0, true);
+
+    return new Blob(
+      [...localParts, centralDirectory, end],
+      { type: "application/zip" }
+    );
+  }
+
+  function findZipEnd(bytes) {
+    const minimum = Math.max(0, bytes.length - 65557);
+    for (let offset = bytes.length - 22; offset >= minimum; offset -= 1) {
+      if (
+        bytes[offset] === 0x50 &&
+        bytes[offset + 1] === 0x4b &&
+        bytes[offset + 2] === 0x05 &&
+        bytes[offset + 3] === 0x06
+      ) return offset;
+    }
+    return -1;
+  }
+
+  async function inflateRaw(bytes) {
+    if (typeof DecompressionStream !== "function") {
+      throw new Error("이 브라우저에서는 압축된 ZIP을 읽을 수 없습니다.");
+    }
+    const stream = new Blob([bytes])
+      .stream()
+      .pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  async function readZipEntries(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const endOffset = findZipEnd(bytes);
+    if (endOffset < 0) throw new Error("올바른 ZIP 백업 파일이 아닙니다.");
+
+    const entryCount = view.getUint16(endOffset + 10, true);
+    let offset = view.getUint32(endOffset + 16, true);
+    const decoder = new TextDecoder("utf-8");
+    const entries = new Map();
+
+    for (let index = 0; index < entryCount; index += 1) {
+      if (view.getUint32(offset, true) !== 0x02014b50) {
+        throw new Error("ZIP 중앙 목록이 손상되었습니다.");
+      }
+      const method = view.getUint16(offset + 10, true);
+      const compressedSize = view.getUint32(offset + 20, true);
+      const uncompressedSize = view.getUint32(offset + 24, true);
+      const nameLength = view.getUint16(offset + 28, true);
+      const extraLength = view.getUint16(offset + 30, true);
+      const commentLength = view.getUint16(offset + 32, true);
+      const localHeaderOffset = view.getUint32(offset + 42, true);
+      const name = decoder.decode(bytes.slice(offset + 46, offset + 46 + nameLength));
+
+      if (view.getUint32(localHeaderOffset, true) !== 0x04034b50) {
+        throw new Error(`ZIP의 ${name} 항목이 손상되었습니다.`);
+      }
+      const localNameLength = view.getUint16(localHeaderOffset + 26, true);
+      const localExtraLength = view.getUint16(localHeaderOffset + 28, true);
+      const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+      const compressed = bytes.slice(dataStart, dataStart + compressedSize);
+      let data;
+
+      if (method === 0) data = compressed;
+      else if (method === 8) data = await inflateRaw(compressed);
+      else throw new Error(`지원하지 않는 ZIP 압축 방식입니다: ${method}`);
+
+      if (data.length !== uncompressedSize) {
+        throw new Error(`ZIP의 ${name} 파일 크기가 올바르지 않습니다.`);
+      }
+      entries.set(name, data);
+      offset += 46 + nameLength + extraLength + commentLength;
+    }
+
+    return entries;
+  }
+
+  function projectImageMetadata() {
+    const items = [];
+    const avatar = getAvatarMetadata();
+    if (avatar) items.push({ ...avatar, role: "creator-avatar", ownerId: "creator" });
+
+    project.worlds.forEach((world) => {
+      const image = getWorldImageMetadata(world);
+      if (image) items.push({ ...image, role: "world-cover", ownerId: world.id });
+    });
+
+    project.characters.forEach((character) => {
+      (character.images || []).forEach((image) => {
+        const metadata = getCharacterImageMetadata(image);
+        if (metadata) items.push({ ...metadata, role: "character-image", ownerId: character.id });
+      });
+    });
+    return items;
+  }
+
+  function downloadTextBackup() {
     window.clearTimeout(autosaveTimer);
     autosaveTimer = 0;
-
     try {
       const normalizedProject = normalizeProject(project);
       const blob = new Blob(
         [JSON.stringify(normalizedProject, null, 2)],
         { type: "application/json;charset=utf-8" }
       );
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-
-      anchor.href = url;
-      anchor.download = buildDownloadFilename();
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-
+      downloadBlob(blob, `${buildBackupBaseName()}.json`);
       saveProjectToStorage();
-      const storedImageCount =
-        (getAvatarMetadata() ? 1 : 0) +
-        project.worlds.filter((world) => getWorldImageMetadata(world)).length +
-        project.characters.reduce((count, character) =>
-          count + (character.images || []).filter(getCharacterImageMetadata).length,
-        0);
-      setSaveStatus(
-        storedImageCount > 0
-          ? `프로젝트 JSON 저장됨 · PNG ${storedImageCount}개는 이 브라우저에 유지됨`
-          : "프로젝트 JSON 저장됨"
-      );
+      setSaveStatus("텍스트 백업 JSON 저장됨");
+      elements.backupMenu.open = false;
     } catch (error) {
       console.error(error);
-      window.alert(error.message || "프로젝트를 저장하지 못했습니다.");
-      setSaveStatus("프로젝트 저장 실패");
+      window.alert(error.message || "텍스트 백업을 저장하지 못했습니다.");
+      setSaveStatus("텍스트 백업 실패");
     }
+  }
+
+  async function downloadFullBackup() {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = 0;
+    elements.downloadFullBackupButton.disabled = true;
+    setSaveStatus("이미지 포함 백업 생성 중…");
+
+    try {
+      const normalizedProject = normalizeProject(project);
+      const metadata = projectImageMetadata();
+      const records = new Map(
+        (await getAllImageRecords()).map((record) => [record.id, record])
+      );
+      const manifestImages = [];
+      const entries = [
+        {
+          name: "project.json",
+          data: new TextEncoder().encode(
+            JSON.stringify(normalizedProject, null, 2)
+          )
+        }
+      ];
+      const missing = [];
+
+      for (const image of metadata) {
+        const record = records.get(image.id);
+        if (!record?.blob) {
+          missing.push(image.name || image.id);
+          continue;
+        }
+        const path = `images/${image.id}.png`;
+        entries.push({ name: path, data: record.blob });
+        manifestImages.push({
+          id: image.id,
+          path,
+          role: image.role,
+          ownerId: image.ownerId,
+          name: image.name,
+          type: "image/png",
+          size: record.blob.size,
+          width: image.width || record.width || 0,
+          height: image.height || record.height || 0,
+          updatedAt: image.updatedAt || record.updatedAt || ""
+        });
+      }
+
+      if (missing.length > 0) {
+        throw new Error(
+          `브라우저 저장소에서 찾을 수 없는 이미지가 있습니다: ${missing.join(", ")}`
+        );
+      }
+
+      const manifest = {
+        format: FULL_BACKUP_FORMAT,
+        version: FULL_BACKUP_VERSION,
+        projectVersion: CURRENT_PROJECT_VERSION,
+        createdAt: new Date().toISOString(),
+        images: manifestImages
+      };
+      entries.push({
+        name: "backup-manifest.json",
+        data: new TextEncoder().encode(JSON.stringify(manifest, null, 2))
+      });
+
+      const zip = await createStoredZip(entries);
+      downloadBlob(zip, `${buildBackupBaseName()}-full-backup.zip`);
+      saveProjectToStorage();
+      setSaveStatus(`이미지 포함 백업 저장됨 · PNG ${manifestImages.length}개`);
+      elements.backupMenu.open = false;
+    } catch (error) {
+      console.error(error);
+      window.alert(error.message || "이미지 포함 백업을 저장하지 못했습니다.");
+      setSaveStatus("이미지 포함 백업 실패");
+    } finally {
+      elements.downloadFullBackupButton.disabled = false;
+    }
+  }
+
+  async function importJsonBackup(file) {
+    const text = await file.text();
+    const nextProject = normalizeProject(JSON.parse(text));
+    const confirmed = window.confirm(
+      "현재 입력 내용을 불러온 텍스트 프로젝트로 교체할까요? 이미지 파일은 현재 브라우저 저장소에 같은 ID가 있을 때만 연결됩니다."
+    );
+    if (!confirmed) return;
+
+    const restoredAvatar = await replaceCurrentProject(nextProject);
+    saveProjectToStorage();
+    const missingWorldCount = missingWorldImageIds.size;
+    const missingCharacterCount = missingCharacterImageIds.size;
+
+    if ((getAvatarMetadata() && !restoredAvatar) || missingWorldCount > 0 || missingCharacterCount > 0) {
+      const missingImages = [];
+      if (getAvatarMetadata() && !restoredAvatar) missingImages.push("프로필 PNG");
+      if (missingWorldCount > 0) missingImages.push(`세계관 PNG ${missingWorldCount}개`);
+      if (missingCharacterCount > 0) missingImages.push(`캐릭터 PNG ${missingCharacterCount}개`);
+      setSaveStatus(`텍스트 프로젝트 불러옴 · ${missingImages.join(" · ")}를 다시 선택해 주세요`);
+    } else {
+      setSaveStatus("텍스트 프로젝트 불러오기 완료");
+    }
+  }
+
+  async function importFullBackup(file) {
+    const entries = await readZipEntries(file);
+    const projectBytes = entries.get("project.json");
+    const manifestBytes = entries.get("backup-manifest.json");
+    if (!projectBytes || !manifestBytes) {
+      throw new Error("생성기에서 만든 이미지 포함 백업 ZIP이 아닙니다.");
+    }
+
+    const decoder = new TextDecoder("utf-8");
+    const nextProject = normalizeProject(
+      JSON.parse(decoder.decode(projectBytes))
+    );
+    const manifest = JSON.parse(decoder.decode(manifestBytes));
+    if (
+      manifest.format !== FULL_BACKUP_FORMAT ||
+      Number(manifest.version) !== FULL_BACKUP_VERSION ||
+      !Array.isArray(manifest.images)
+    ) {
+      throw new Error("지원하지 않는 전체 백업 형식입니다.");
+    }
+
+    if (Number(manifest.projectVersion) !== CURRENT_PROJECT_VERSION) {
+      throw new Error("현재 생성기에서 지원하지 않는 프로젝트 버전입니다.");
+    }
+
+    const restoredRecords = [];
+    for (const image of manifest.images) {
+      const data = entries.get(image.path);
+      if (!data) throw new Error(`백업 이미지가 없습니다: ${image.path}`);
+      const blob = new Blob([data], { type: "image/png" });
+      await validatePngFile(blob, image.name || "백업 PNG");
+      restoredRecords.push({
+        id: image.id,
+        role: image.role,
+        ownerId: image.ownerId,
+        name: image.name || `${image.id}.png`,
+        type: "image/png",
+        size: blob.size,
+        width: Number(image.width) || 0,
+        height: Number(image.height) || 0,
+        updatedAt: image.updatedAt || new Date().toISOString(),
+        blob
+      });
+    }
+
+    const confirmed = window.confirm(
+      `현재 프로젝트를 이미지 포함 백업으로 교체할까요? PNG ${manifest.images.length}개가 함께 복구됩니다.`
+    );
+    if (!confirmed) return;
+
+    await replaceAllImageRecords(restoredRecords);
+    clearStoredProject();
+    releaseAvatarObjectUrl();
+    releaseAllWorldImageObjectUrls();
+    releaseAllCharacterImageObjectUrls();
+    await replaceCurrentProject(nextProject, true);
+    saveProjectToStorage();
+    setSaveStatus(`이미지 포함 백업 불러오기 완료 · PNG ${manifest.images.length}개`);
   }
 
   async function importProjectFile() {
     const file = elements.importProjectInput.files?.[0] || null;
     elements.importProjectInput.value = "";
-
     if (!file) return;
 
     try {
-      const text = await file.text();
-      const nextProject = normalizeProject(JSON.parse(text));
-      const confirmed = window.confirm(
-        "현재 입력 내용을 불러온 프로젝트로 교체할까요?"
-      );
-
-      if (!confirmed) return;
-
-      const restoredAvatar = await replaceCurrentProject(nextProject);
-      saveProjectToStorage();
-
-      const missingWorldCount = missingWorldImageIds.size;
-      const missingCharacterCount = missingCharacterImageIds.size;
-
-      if ((getAvatarMetadata() && !restoredAvatar) || missingWorldCount > 0 || missingCharacterCount > 0) {
-        const missingImages = [];
-        if (getAvatarMetadata() && !restoredAvatar) missingImages.push("프로필 PNG");
-        if (missingWorldCount > 0) missingImages.push(`세계관 PNG ${missingWorldCount}개`);
-        if (missingCharacterCount > 0) missingImages.push(`캐릭터 PNG ${missingCharacterCount}개`);
-        setSaveStatus(
-          `프로젝트 불러옴 · ${missingImages.join(" · ")}를 다시 선택해 주세요`
-        );
+      const lowerName = file.name.toLowerCase();
+      if (lowerName.endsWith(".zip") || file.type === "application/zip") {
+        await importFullBackup(file);
       } else {
-        setSaveStatus("프로젝트 불러오기 완료");
+        await importJsonBackup(file);
       }
     } catch (error) {
       console.error(error);
-      window.alert(error.message || "프로젝트 JSON을 불러오지 못했습니다.");
+      window.alert(error.message || "프로젝트를 불러오지 못했습니다.");
       setSaveStatus("프로젝트 불러오기 실패");
     }
   }
@@ -3142,6 +4217,98 @@
   elements.previewCharacterGrid.addEventListener("click", handleCharacterPreviewClick);
   elements.worldPreviewCharacterList.addEventListener("click", handleCharacterPreviewClick);
   elements.characterPreviewThumbnails.addEventListener("click", handleCharacterPreviewClick);
+
+  elements.previewCharacterSection.addEventListener(
+    "click",
+    (event) => {
+      const moreButton = event.target.closest(
+        "[data-character-filter-more]"
+      );
+
+      if (moreButton) {
+        openCharacterPreviewFilterPicker(
+          moreButton.dataset.characterFilterMore
+        );
+        return;
+      }
+
+      const filterButton = event.target.closest(
+        "[data-character-filter-group]"
+      );
+
+      if (!filterButton) return;
+
+      toggleCharacterPreviewFilter(
+        filterButton.dataset.characterFilterGroup,
+        filterButton.dataset.characterFilterValue
+      );
+      renderCharacterPreview();
+    }
+  );
+
+  elements.previewCharacterFilterPickerOptions.addEventListener(
+    "click",
+    (event) => {
+      const filterButton = event.target.closest(
+        "[data-character-filter-group]"
+      );
+
+      if (!filterButton) return;
+
+      toggleCharacterPreviewFilter(
+        filterButton.dataset.characterFilterGroup,
+        filterButton.dataset.characterFilterValue
+      );
+      renderCharacterPreview();
+      renderCharacterPreviewFilterPicker();
+    }
+  );
+
+  elements.previewCharacterSearchInput.addEventListener(
+    "input",
+    (event) => {
+      characterPreviewFilterState.query = event.target.value;
+      renderCharacterPreview();
+    }
+  );
+
+  elements.previewCharacterResetFilters.addEventListener(
+    "click",
+    resetCharacterPreviewFilters
+  );
+
+  elements.previewCharacterFilterPickerSearch.addEventListener(
+    "input",
+    (event) => {
+      characterFilterPickerQuery = event.target.value;
+      renderCharacterPreviewFilterPicker();
+    }
+  );
+
+  elements.previewCharacterFilterPickerClose.addEventListener(
+    "click",
+    closeCharacterPreviewFilterPicker
+  );
+
+  elements.previewCharacterFilterPicker.addEventListener(
+    "click",
+    (event) => {
+      if (event.target === elements.previewCharacterFilterPicker) {
+        closeCharacterPreviewFilterPicker();
+      }
+    }
+  );
+
+  elements.previewCharacterFilterPicker.addEventListener(
+    "close",
+    () => {
+      activeCharacterFilterPickerGroup = null;
+      characterFilterPickerQuery = "";
+      document.body.classList.remove(
+        "character-filter-picker-open"
+      );
+    }
+  );
 
   elements.previewCharacterToggle.addEventListener("click", () => {
     characterPreviewExpanded = !characterPreviewExpanded;
@@ -3283,15 +4450,24 @@
     removeAvatar
   );
 
-  elements.downloadProjectButton.addEventListener(
+  elements.downloadTextBackupButton.addEventListener(
     "click",
-    downloadProject
+    downloadTextBackup
+  );
+
+  elements.downloadFullBackupButton.addEventListener(
+    "click",
+    downloadFullBackup
   );
 
   elements.importProjectInput.addEventListener(
     "change",
     importProjectFile
   );
+
+  elements.previewWidthInput.addEventListener("input", (event) => {
+    applyPreviewWidth(event.target.value);
+  });
 
   elements.resetProjectButton.addEventListener(
     "click",
@@ -3309,6 +4485,8 @@
   });
 
   async function initialize() {
+    restorePreviewWidth();
+    initializeImageDropZones();
     loadProjectFromStorage();
     renderServiceOptions();
     selectedWorldId = project.worlds[0]?.id || "";
