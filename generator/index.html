@@ -14,9 +14,25 @@
       <p>사이트와 제작자 정보를 입력하면 오른쪽 미리보기에 즉시 반영됩니다.</p>
     </div>
 
-    <button id="resetProjectButton" class="secondary-button" type="button">
-      입력 초기화
-    </button>
+    <div class="header-actions" aria-label="프로젝트 관리">
+      <button id="downloadProjectButton" class="secondary-button" type="button">
+        프로젝트 저장
+      </button>
+
+      <label class="secondary-button import-project-button" for="importProjectInput">
+        프로젝트 불러오기
+      </label>
+      <input
+        id="importProjectInput"
+        class="file-input"
+        type="file"
+        accept=".json,application/json"
+      >
+
+      <button id="resetProjectButton" class="secondary-button" type="button">
+        입력 초기화
+      </button>
+    </div>
   </header>
 
   <main class="generator-layout">
@@ -67,8 +83,14 @@
                 type="file"
                 accept="image/png"
               >
-              <p class="field-help">
-                현재 단계에서는 브라우저 미리보기에만 사용됩니다.
+              <p
+                id="avatarStorageStatus"
+                class="field-help"
+                role="status"
+                aria-live="polite"
+              >
+                PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다.
+                최대 10MB.
               </p>
               <button id="removeAvatarButton" class="text-button" type="button" hidden>
                 이미지 제거
@@ -156,7 +178,7 @@
           <p class="eyebrow">LIVE PREVIEW</p>
           <h2 id="previewTitle">미리보기</h2>
         </div>
-        <span id="saveStatus" class="save-status">입력 대기 중</span>
+        <span id="saveStatus" class="save-status" role="status" aria-live="polite">자동 저장 준비 중</span>
       </div>
 
       <article class="portfolio-preview">
