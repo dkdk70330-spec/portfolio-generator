@@ -2724,19 +2724,16 @@ body.character-filter-picker-open { overflow: hidden; }
 /* =================================================
    캐릭터 일괄 등록
    ================================================= */
-
-/* 캐릭터 편집 제목 오른쪽 버튼 묶음 */
 .character-editor-main-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.55rem;
+  gap: .55rem;
 }
 
-/* 일괄 등록 dialog 본체 */
 .character-bulk-dialog {
-  width: min(820px, calc(100% - 24px));
+  width: min(940px, calc(100% - 24px));
   max-height: calc(100dvh - 24px);
   padding: 0;
   margin: auto;
@@ -2748,23 +2745,19 @@ body.character-filter-picker-open { overflow: hidden; }
   box-shadow: var(--shadow);
 }
 
-/* dialog 바깥의 어두운 배경 */
 .character-bulk-dialog::backdrop {
-  background: rgba(5, 5, 8, 0.82);
+  background: rgba(5, 5, 8, .82);
   backdrop-filter: blur(10px);
 }
 
-/* dialog 안쪽 전체 영역 */
 .character-bulk-dialog-shell {
   display: grid;
   gap: 1rem;
-  width: 100%;
   max-height: calc(100dvh - 24px);
-  padding: clamp(1.1rem, 3vw, 1.7rem);
+  padding: clamp(1rem, 3vw, 1.6rem);
   overflow-y: auto;
 }
 
-/* dialog 제목과 닫기 버튼 */
 .character-bulk-dialog-header {
   display: flex;
   align-items: flex-start;
@@ -2772,141 +2765,221 @@ body.character-filter-picker-open { overflow: hidden; }
   gap: 1rem;
 }
 
-.character-bulk-dialog-header h2 {
+.character-bulk-dialog-header h2,
+.character-bulk-dialog-header p {
   margin: 0;
-  letter-spacing: -0.04em;
 }
 
-.character-bulk-dialog-header .eyebrow {
-  margin-bottom: 0.25rem;
+.character-bulk-dialog-header h2 {
+  letter-spacing: -.045em;
 }
 
-/* 스프레드시트 붙여넣기 입력창 */
-#characterBulkImportInput {
-  width: 100%;
-  min-height: 240px;
-  resize: vertical;
-  white-space: pre;
-  overflow: auto;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 0.75rem;
-  line-height: 1.55;
-}
-
-/* 등록 결과 미리보기 전체 */
-.character-bulk-preview {
-  min-height: 100px;
-  padding: 0.85rem;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: color-mix(
-    in srgb,
-    var(--surface-2) 76%,
-    transparent
-  );
-}
-
-/* 등록 가능 인원과 오류 개수 */
-.character-bulk-summary {
-  margin: 0 0 0.75rem;
+.character-bulk-dialog-header > div > p:last-child {
+  margin-top: .35rem;
   color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 850;
+  font-size: .76rem;
 }
 
-/* 오류 목록 */
-.character-bulk-error-list {
-  margin-bottom: 0.85rem;
-  padding: 0.75rem;
-  border: 1px solid color-mix(
-    in srgb,
-    var(--danger) 55%,
-    var(--line)
-  );
-  border-radius: 13px;
-  background: color-mix(
-    in srgb,
-    var(--danger) 8%,
-    transparent
-  );
-}
-
-.character-bulk-error-list strong {
-  display: block;
-  color: var(--danger);
-  font-size: 0.78rem;
-}
-
-.character-bulk-error-list ul {
-  margin: 0.45rem 0 0;
-  padding-left: 1.25rem;
-}
-
-.character-bulk-error-list li {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.character-bulk-error-list li + li {
-  margin-top: 0.25rem;
-}
-
-/* 캐릭터 결과 목록 */
-.character-bulk-preview-list {
-  display: grid;
-  gap: 0.5rem;
-}
-
-/* 캐릭터 결과 한 줄 */
-.character-bulk-preview-item {
-  min-width: 0;
-  display: grid;
-  grid-template-columns:
-    minmax(120px, 0.8fr)
-    minmax(130px, 1fr)
-    minmax(150px, 1.2fr);
-  gap: 0.7rem;
+.character-bulk-toolbar,
+.character-bulk-paste-actions,
+.character-bulk-dialog-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
   align-items: center;
-  padding: 0.7rem;
+}
+
+.character-bulk-toolbar {
+  padding: .75rem;
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+}
+
+.character-bulk-toolbar .text-button {
+  margin-left: auto;
+}
+
+.character-bulk-row-list {
+  display: grid;
+  gap: .8rem;
+}
+
+.character-bulk-row {
+  padding: .9rem;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+}
+
+.character-bulk-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .8rem;
+}
+
+.character-bulk-row-header strong {
+  font-size: .82rem;
+}
+
+.character-bulk-primary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.character-bulk-primary-grid label {
+  margin: 0;
+}
+
+.character-bulk-primary-grid label > span b {
+  color: var(--danger);
+}
+
+.character-bulk-description-field {
+  grid-column: 1 / -1;
+}
+
+.character-bulk-description-field textarea {
+  min-height: 92px;
+}
+
+.character-bulk-platform-panel {
+  margin-top: .8rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
   background: var(--bg);
 }
 
-.character-bulk-preview-item strong,
-.character-bulk-preview-item span,
-.character-bulk-preview-item small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.character-bulk-preview-item strong {
-  font-size: 0.8rem;
-}
-
-.character-bulk-preview-item span {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.character-bulk-preview-item small {
-  color: var(--accent);
-  font-size: 0.67rem;
-}
-
-/* dialog 아래쪽 버튼 */
-.character-bulk-dialog-actions {
+.character-bulk-platform-panel > summary {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.55rem;
-  padding-top: 0.85rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .7rem .8rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.character-bulk-platform-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.character-bulk-platform-panel > summary strong,
+.character-bulk-platform-panel > summary small {
+  display: block;
+}
+
+.character-bulk-platform-panel > summary strong {
+  font-size: .77rem;
+}
+
+.character-bulk-platform-panel > summary small {
+  color: var(--muted);
+  font-size: .66rem;
+}
+
+.character-bulk-platform-panel > summary > b {
+  color: var(--accent);
+  transition: transform .18s ease;
+}
+
+.character-bulk-platform-panel[open] > summary > b {
+  transform: rotate(180deg);
+}
+
+.character-bulk-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .6rem;
+  padding: .8rem;
   border-top: 1px solid var(--line);
 }
 
-/* 모바일 */
+.character-bulk-platform-field {
+  margin: 0;
+}
+
+.character-bulk-paste-panel {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+
+.character-bulk-paste-panel > summary {
+  padding: .75rem .85rem;
+  cursor: pointer;
+  font-size: .77rem;
+  font-weight: 850;
+}
+
+.character-bulk-paste-body {
+  padding: 0 .85rem .85rem;
+}
+
+#characterBulkPasteInput {
+  min-height: 150px;
+  white-space: pre;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .72rem;
+}
+
+.character-bulk-paste-actions {
+  justify-content: flex-end;
+  margin-top: .65rem;
+}
+
+.character-bulk-field-error {
+  margin-top: .25rem;
+  color: var(--danger);
+  font-size: .66rem;
+}
+
+.character-bulk-row input.is-invalid,
+.character-bulk-row textarea.is-invalid {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent);
+}
+
+.character-bulk-global-error {
+  margin: 0;
+  padding: .7rem .8rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.character-bulk-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: .9rem;
+  border-top: 1px solid var(--line);
+}
+
+.character-bulk-count {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .character-bulk-primary-grid,
+  .character-bulk-platform-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .character-bulk-description-field {
+    grid-column: auto;
+  }
+}
+
 @media (max-width: 620px) {
   .character-editor-main-actions {
     width: 100%;
@@ -2921,14 +2994,13 @@ body.character-filter-picker-open { overflow: hidden; }
   .character-bulk-dialog {
     width: 100%;
     max-width: none;
-    max-height: 92dvh;
+    max-height: 94dvh;
     margin: auto 0 0;
     border-radius: 24px 24px 0 0;
   }
 
   .character-bulk-dialog-shell {
-    width: 100%;
-    max-height: 92dvh;
+    max-height: 94dvh;
     padding: 1rem;
   }
 
@@ -2936,21 +3008,92 @@ body.character-filter-picker-open { overflow: hidden; }
     align-items: center;
   }
 
-  #characterBulkImportInput {
-    min-height: 210px;
-  }
-
-  .character-bulk-preview-item {
-    grid-template-columns: 1fr;
-    gap: 0.2rem;
+  .character-bulk-toolbar .text-button {
+    width: 100%;
+    margin-left: 0;
+    text-align: left;
   }
 
   .character-bulk-dialog-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .character-bulk-dialog-actions > div {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
 
   .character-bulk-dialog-actions button {
     width: 100%;
+  }
+}
+
+
+
+.character-bulk-image-field {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .65rem;
+  align-items: center;
+  padding: .75rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 13px;
+  background: var(--bg);
+}
+
+.character-bulk-image-field > div:first-child strong,
+.character-bulk-image-field > div:first-child small {
+  display: block;
+}
+
+.character-bulk-image-field > div:first-child strong {
+  font-size: .76rem;
+}
+
+.character-bulk-image-field > div:first-child small {
+  color: var(--muted);
+  font-size: .65rem;
+}
+
+.character-bulk-image-selection,
+.character-bulk-image-field > .character-bulk-field-error {
+  grid-column: 1 / -1;
+}
+
+.character-bulk-image-file-list {
+  display: grid;
+  gap: .35rem;
+}
+
+.character-bulk-image-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .45rem .55rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.character-bulk-image-file span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: .68rem;
+}
+
+@media (max-width: 620px) {
+  .character-bulk-image-field {
+    grid-template-columns: 1fr;
+  }
+
+  .character-bulk-image-field .file-label {
+    width: 100%;
+    justify-content: center;
   }
 }

@@ -69,19 +69,17 @@
     platformOptions.map((platform) => [platform.id, platform])
   );
 
-// 캐릭터 일괄등록 기능 매핑 시작
-const BULK_CHARACTER_PLATFORM_COLUMNS = {
-  블룸: "bloom",
-  로판: "rofan",
-  로플: "rplay",
-  케덕: "caveduck",
-  멜팅: "melting",
-  위프: "whif",
-  제타: "zeta",
-  티팟: "tpat",
-  팅글: "tingle"
-};
-// 캐릭터 일괄등록 기능 매핑 끝
+  const BULK_CHARACTER_PLATFORM_COLUMNS = [
+    { id: "bloom", name: "블룸" },
+    { id: "rofan", name: "로판" },
+    { id: "rplay", name: "로플" },
+    { id: "caveduck", name: "케덕" },
+    { id: "melting", name: "멜팅" },
+    { id: "whif", name: "위프" },
+    { id: "zeta", name: "제타" },
+    { id: "tpat", name: "티팟" },
+    { id: "tingle", name: "팅글" }
+  ];
 const genreOptions = Array.isArray(adminCatalog.genres)
   ? adminCatalog.genres
       .filter(
@@ -229,6 +227,19 @@ const elements = {
     worldSectionList: document.querySelector("#worldSectionList"),
 
     addCharacterButton: document.querySelector("#addCharacterButton"),
+    openCharacterBulkImportButton: document.querySelector("#openCharacterBulkImportButton"),
+    characterBulkImportDialog: document.querySelector("#characterBulkImportDialog"),
+    closeCharacterBulkImportButton: document.querySelector("#closeCharacterBulkImportButton"),
+    cancelCharacterBulkImportButton: document.querySelector("#cancelCharacterBulkImportButton"),
+    addCharacterBulkRowButton: document.querySelector("#addCharacterBulkRowButton"),
+    addFiveCharacterBulkRowsButton: document.querySelector("#addFiveCharacterBulkRowsButton"),
+    removeEmptyCharacterBulkRowsButton: document.querySelector("#removeEmptyCharacterBulkRowsButton"),
+    characterBulkRowList: document.querySelector("#characterBulkRowList"),
+    characterBulkPasteInput: document.querySelector("#characterBulkPasteInput"),
+    applyCharacterBulkPasteButton: document.querySelector("#applyCharacterBulkPasteButton"),
+    characterBulkImportError: document.querySelector("#characterBulkImportError"),
+    characterBulkImportCount: document.querySelector("#characterBulkImportCount"),
+    confirmCharacterBulkImportButton: document.querySelector("#confirmCharacterBulkImportButton"),
     characterEditorList: document.querySelector("#characterEditorList"),
     characterEditorEmpty: document.querySelector("#characterEditorEmpty"),
     characterForm: document.querySelector("#characterForm"),
@@ -250,31 +261,6 @@ const elements = {
     characterPlatformList: document.querySelector("#characterPlatformList"),
     addCharacterContentButton: document.querySelector("#addCharacterContentButton"),
     characterContentList: document.querySelector("#characterContentList"),
-// 캐릭터 일괄등록 기능 선택자 추가 시작
-openCharacterBulkImportButton:
-  document.querySelector("#openCharacterBulkImportButton"),
-
-characterBulkImportDialog:
-  document.querySelector("#characterBulkImportDialog"),
-
-closeCharacterBulkImportButton:
-  document.querySelector("#closeCharacterBulkImportButton"),
-
-characterBulkImportInput:
-  document.querySelector("#characterBulkImportInput"),
-
-characterBulkImportError:
-  document.querySelector("#characterBulkImportError"),
-
-characterBulkImportPreview:
-  document.querySelector("#characterBulkImportPreview"),
-
-previewCharacterBulkImportButton:
-  document.querySelector("#previewCharacterBulkImportButton"),
-
-confirmCharacterBulkImportButton:
-  document.querySelector("#confirmCharacterBulkImportButton"),
-// 캐릭터 일괄등록 기능 선택자 추가 끝
 
     previewSiteTitle: document.querySelector("#previewSiteTitle"),
     previewSiteDescription: document.querySelector("#previewSiteDescription"),
@@ -1126,20 +1112,359 @@ confirmCharacterBulkImportButton:
     };
   }
 
-// 캐릭터 일괄 등록 기능 추가 시작
-  const BULK_CHARACTER_FIELD_ALIASES = {
-    캐릭터이름: "name",
-    캐릭터명: "name",
-    이름: "name",
-    부제: "subtitle",
-    캐릭터부제: "subtitle",
-    태그: "tags",
-    캐릭터소개: "description",
-    소개: "description",
-    설명: "description"
-  };
 
-  function normalizeBulkHeader(value) {
+  const CHARACTER_BULK_HEADER_ALIASES = new Map([
+    ["캐릭터이름", "name"],
+    ["캐릭터명", "name"],
+    ["이름", "name"],
+    ["부제", "subtitle"],
+    ["캐릭터부제", "subtitle"],
+    ["태그", "tags"],
+    ["캐릭터소개", "description"],
+    ["소개", "description"],
+    ["설명", "description"]
+  ]);
+
+  let characterBulkDraftRows = [];
+
+  function createCharacterBulkDraft(source = {}) {
+    const sourcePlatforms = isPlainObject(source.platforms)
+      ? source.platforms
+      : {};
+    const platforms = {};
+
+    BULK_CHARACTER_PLATFORM_COLUMNS.forEach(({ id }) => {
+      platforms[id] = String(sourcePlatforms[id] || "");
+    });
+
+    return {
+      id: createEntityId("character-bulk"),
+      name: String(source.name || ""),
+      subtitle: String(source.subtitle || ""),
+      tags: String(source.tags || ""),
+      description: String(source.description || ""),
+      images: Array.isArray(source.images) ? source.images.filter(Boolean).slice(0, 5) : [],
+      platforms
+    };
+  }
+
+  function isCharacterBulkDraftEmpty(row) {
+    return !row.name.trim() &&
+      !row.subtitle.trim() &&
+      !row.tags.trim() &&
+      !row.description.trim() &&
+      row.images.length === 0 &&
+      !Object.values(row.platforms).some((url) => String(url || "").trim());
+  }
+
+  function activeCharacterBulkDraftRows() {
+    return characterBulkDraftRows.filter((row) => !isCharacterBulkDraftEmpty(row));
+  }
+
+  function setCharacterBulkImportError(message) {
+    elements.characterBulkImportError.textContent = message || "";
+    elements.characterBulkImportError.hidden = !message;
+  }
+
+  function updateCharacterBulkImportCount() {
+    const count = activeCharacterBulkDraftRows().length;
+    elements.characterBulkImportCount.textContent = `입력된 캐릭터 ${count}명`;
+  }
+
+  function characterBulkPlatformCount(row) {
+    return Object.values(row.platforms)
+      .filter((url) => String(url || "").trim())
+      .length;
+  }
+
+  function characterBulkPlatformMarkup(row) {
+    return BULK_CHARACTER_PLATFORM_COLUMNS.map(({ id, name }) => `
+      <label class="character-bulk-platform-field">
+        <span>${escapeHtml(name)}</span>
+        <input
+          type="url"
+          inputmode="url"
+          data-character-bulk-platform="${escapeHtml(id)}"
+          value="${escapeHtml(row.platforms[id] || "")}"
+          placeholder="https://..."
+          aria-label="${escapeHtml(name)} 캐릭터 주소"
+        >
+        <small class="character-bulk-field-error" data-character-bulk-platform-error="${escapeHtml(id)}" hidden></small>
+      </label>
+    `).join("");
+  }
+
+  function characterBulkImageMarkup(row) {
+    if (row.images.length === 0) {
+      return '<p class="empty-message">선택한 PNG가 없습니다.</p>';
+    }
+
+    return `
+      <div class="character-bulk-image-file-list">
+        ${row.images.map((file, index) => `
+          <div class="character-bulk-image-file">
+            <span>${escapeHtml(file.name || `character-${index + 1}.png`)}</span>
+            <button
+              class="text-button"
+              type="button"
+              data-delete-character-bulk-image="${index}"
+            >제거</button>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderCharacterBulkDraftRows() {
+    if (characterBulkDraftRows.length === 0) {
+      characterBulkDraftRows.push(createCharacterBulkDraft());
+    }
+
+    elements.characterBulkRowList.innerHTML = characterBulkDraftRows
+      .map((row, index) => {
+        const platformCount = characterBulkPlatformCount(row);
+
+        return `
+          <article class="character-bulk-row" data-character-bulk-row-id="${escapeHtml(row.id)}">
+            <header class="character-bulk-row-header">
+              <strong>캐릭터 ${index + 1}</strong>
+              <button class="text-button" type="button" data-delete-character-bulk-row>이 행 삭제</button>
+            </header>
+
+            <div class="character-bulk-primary-grid">
+              <label>
+                <span>캐릭터 이름 <b aria-hidden="true">*</b></span>
+                <input
+                  type="text"
+                  data-character-bulk-field="name"
+                  value="${escapeHtml(row.name)}"
+                  placeholder="예: 리안"
+                >
+                <small class="character-bulk-field-error" data-character-bulk-error="name" hidden></small>
+              </label>
+
+              <label>
+                <span>부제</span>
+                <input
+                  type="text"
+                  data-character-bulk-field="subtitle"
+                  value="${escapeHtml(row.subtitle)}"
+                  placeholder="예: 황실의 검"
+                >
+              </label>
+
+              <label>
+                <span>태그</span>
+                <input
+                  type="text"
+                  data-character-bulk-field="tags"
+                  value="${escapeHtml(row.tags)}"
+                  placeholder="기사, 판타지, 집착"
+                >
+                <small class="field-help">쉼표로 구분합니다.</small>
+              </label>
+
+              <label class="character-bulk-description-field">
+                <span>캐릭터 소개</span>
+                <textarea
+                  rows="4"
+                  data-character-bulk-field="description"
+                  placeholder="캐릭터 소개를 입력하세요."
+                >${escapeHtml(row.description)}</textarea>
+              </label>
+
+              <div class="character-bulk-image-field">
+                <div>
+                  <strong>캐릭터 PNG</strong>
+                  <small>최대 5장 · 첫 이미지가 대표 이미지</small>
+                </div>
+                <label class="file-label" for="characterBulkImages-${escapeHtml(row.id)}">PNG 선택</label>
+                <input
+                  id="characterBulkImages-${escapeHtml(row.id)}"
+                  class="file-input"
+                  type="file"
+                  accept="image/png"
+                  multiple
+                  data-character-bulk-images
+                >
+                <div class="character-bulk-image-selection">
+                  ${characterBulkImageMarkup(row)}
+                </div>
+                <small class="character-bulk-field-error" data-character-bulk-error="images" hidden></small>
+              </div>
+            </div>
+
+            <details class="character-bulk-platform-panel">
+              <summary>
+                <span>
+                  <strong>플랫폼 링크</strong>
+                  <small data-character-bulk-platform-summary>${platformCount > 0 ? `${platformCount}개 입력됨` : "필요한 플랫폼만 입력"}</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="character-bulk-platform-grid">
+                ${characterBulkPlatformMarkup(row)}
+              </div>
+            </details>
+          </article>
+        `;
+      })
+      .join("");
+
+    updateCharacterBulkImportCount();
+  }
+
+  function resetCharacterBulkDraftRows(count = 3) {
+    characterBulkDraftRows = Array.from(
+      { length: Math.max(1, count) },
+      () => createCharacterBulkDraft()
+    );
+    setCharacterBulkImportError("");
+    renderCharacterBulkDraftRows();
+  }
+
+  function getCharacterBulkDraftRow(rowId) {
+    return characterBulkDraftRows.find((row) => row.id === rowId) || null;
+  }
+
+  function getCharacterBulkRowElement(rowId) {
+    return [...elements.characterBulkRowList.querySelectorAll("[data-character-bulk-row-id]")]
+      .find((item) => item.dataset.characterBulkRowId === rowId) || null;
+  }
+
+  function clearCharacterBulkTargetError(target) {
+    target.classList.remove("is-invalid");
+    const card = target.closest("[data-character-bulk-row-id]");
+    if (!card) return;
+
+    let error = null;
+    if (target.dataset.characterBulkField) {
+      error = card.querySelector(
+        `[data-character-bulk-error="${target.dataset.characterBulkField}"]`
+      );
+    } else if (target.dataset.characterBulkPlatform) {
+      error = card.querySelector(
+        `[data-character-bulk-platform-error="${target.dataset.characterBulkPlatform}"]`
+      );
+    }
+
+    if (error) {
+      error.textContent = "";
+      error.hidden = true;
+    }
+  }
+
+  function updateCharacterBulkPlatformSummary(card, row) {
+    const summary = card.querySelector("[data-character-bulk-platform-summary]");
+    if (!summary) return;
+    const count = characterBulkPlatformCount(row);
+    summary.textContent = count > 0 ? `${count}개 입력됨` : "필요한 플랫폼만 입력";
+  }
+
+  function handleCharacterBulkRowInput(event) {
+    const target = event.target;
+    const card = target.closest("[data-character-bulk-row-id]");
+    if (!card) return;
+
+    const row = getCharacterBulkDraftRow(card.dataset.characterBulkRowId);
+    if (!row) return;
+
+    if (target.dataset.characterBulkField) {
+      row[target.dataset.characterBulkField] = target.value;
+    } else if (target.dataset.characterBulkPlatform) {
+      row.platforms[target.dataset.characterBulkPlatform] = target.value;
+      updateCharacterBulkPlatformSummary(card, row);
+    } else {
+      return;
+    }
+
+    clearCharacterBulkTargetError(target);
+    setCharacterBulkImportError("");
+    updateCharacterBulkImportCount();
+  }
+
+  function handleCharacterBulkImageSelection(event) {
+    const input = event.target.closest("[data-character-bulk-images]");
+    if (!input) return;
+
+    const card = input.closest("[data-character-bulk-row-id]");
+    const row = card ? getCharacterBulkDraftRow(card.dataset.characterBulkRowId) : null;
+    if (!row) return;
+
+    const selected = [...(input.files || [])].filter(Boolean);
+    input.value = "";
+    const available = Math.max(0, 5 - row.images.length);
+
+    if (selected.length > available) {
+      markCharacterBulkFieldError(
+        row.id,
+        "images",
+        `이미지는 최대 5장입니다. 현재 ${available}장만 더 선택할 수 있습니다.`
+      );
+      return;
+    }
+
+    const invalidFile = selected.find((file) => file.type && file.type !== "image/png");
+    if (invalidFile) {
+      markCharacterBulkFieldError(row.id, "images", "PNG 파일만 선택할 수 있습니다.");
+      return;
+    }
+
+    row.images.push(...selected);
+    renderCharacterBulkDraftRows();
+  }
+
+  function deleteCharacterBulkImage(button) {
+    const card = button.closest("[data-character-bulk-row-id]");
+    const row = card ? getCharacterBulkDraftRow(card.dataset.characterBulkRowId) : null;
+    const index = Number(button.dataset.deleteCharacterBulkImage);
+    if (!row || !Number.isInteger(index) || !row.images[index]) return;
+
+    row.images.splice(index, 1);
+    renderCharacterBulkDraftRows();
+  }
+
+  function addCharacterBulkRows(count) {
+    const amount = Math.max(1, Number(count) || 1);
+    for (let index = 0; index < amount; index += 1) {
+      characterBulkDraftRows.push(createCharacterBulkDraft());
+    }
+    renderCharacterBulkDraftRows();
+
+    const cards = elements.characterBulkRowList.querySelectorAll("[data-character-bulk-row-id]");
+    const lastCard = cards[cards.length - amount];
+    lastCard?.scrollIntoView({ behavior: "smooth", block: "center" });
+    lastCard?.querySelector('[data-character-bulk-field="name"]')?.focus();
+  }
+
+  function deleteCharacterBulkRow(button) {
+    const card = button.closest("[data-character-bulk-row-id]");
+    if (!card) return;
+
+    characterBulkDraftRows = characterBulkDraftRows.filter(
+      (row) => row.id !== card.dataset.characterBulkRowId
+    );
+
+    if (characterBulkDraftRows.length === 0) {
+      characterBulkDraftRows.push(createCharacterBulkDraft());
+    }
+
+    renderCharacterBulkDraftRows();
+  }
+
+  function removeEmptyCharacterBulkRows() {
+    characterBulkDraftRows = characterBulkDraftRows.filter(
+      (row) => !isCharacterBulkDraftEmpty(row)
+    );
+
+    if (characterBulkDraftRows.length === 0) {
+      characterBulkDraftRows.push(createCharacterBulkDraft());
+    }
+
+    renderCharacterBulkDraftRows();
+  }
+
+  function normalizeCharacterBulkHeader(value) {
     return String(value || "")
       .replace(/^\uFEFF/, "")
       .trim()
@@ -1147,10 +1472,9 @@ confirmCharacterBulkImportButton:
       .toLowerCase();
   }
 
-  function parseBulkTsv(source) {
+  function parseCharacterBulkTsv(source) {
     const text = String(source || "").replace(/\r\n?/g, "\n");
     const rows = [];
-
     let row = [];
     let cell = "";
     let quoted = false;
@@ -1166,7 +1490,6 @@ confirmCharacterBulkImportButton:
         } else {
           quoted = !quoted;
         }
-
         continue;
       }
 
@@ -1179,7 +1502,6 @@ confirmCharacterBulkImportButton:
       if (character === "\n" && !quoted) {
         row.push(cell);
         rows.push(row);
-
         row = [];
         cell = "";
         continue;
@@ -1196,15 +1518,89 @@ confirmCharacterBulkImportButton:
     );
   }
 
-  function normalizeBulkCharacterUrl(value) {
-    const source = String(value || "").trim();
-
-    if (!source) {
-      return {
-        url: "",
-        error: ""
-      };
+  function parseCharacterBulkPaste(source) {
+    const rows = parseCharacterBulkTsv(source);
+    if (rows.length === 0) {
+      return { rows: [], error: "붙여넣은 내용이 없습니다." };
     }
+
+    const platformHeaderMap = new Map(
+      BULK_CHARACTER_PLATFORM_COLUMNS.map(({ id, name }) => [normalizeCharacterBulkHeader(name), id])
+    );
+    const normalizedFirstRow = rows[0].map(normalizeCharacterBulkHeader);
+    const hasHeader = normalizedFirstRow.some(
+      (header) => CHARACTER_BULK_HEADER_ALIASES.has(header) || platformHeaderMap.has(header)
+    );
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+    const fieldIndexes = { name: 0, subtitle: 1, tags: 2, description: 3 };
+    const platformIndexes = new Map(
+      BULK_CHARACTER_PLATFORM_COLUMNS.map(({ id }, index) => [id, index + 4])
+    );
+
+    if (hasHeader) {
+      Object.keys(fieldIndexes).forEach((key) => { fieldIndexes[key] = undefined; });
+      platformIndexes.clear();
+
+      normalizedFirstRow.forEach((header, index) => {
+        const field = CHARACTER_BULK_HEADER_ALIASES.get(header);
+        if (field && fieldIndexes[field] === undefined) {
+          fieldIndexes[field] = index;
+        }
+        const platformId = platformHeaderMap.get(header);
+        if (platformId && !platformIndexes.has(platformId)) {
+          platformIndexes.set(platformId, index);
+        }
+      });
+
+      if (fieldIndexes.name === undefined) {
+        return { rows: [], error: '제목 행에 "캐릭터 이름", "캐릭터명" 또는 "이름" 열이 필요합니다.' };
+      }
+    }
+
+    const drafts = dataRows.map((cells) => {
+      const valueAt = (index) => Number.isInteger(index) ? String(cells[index] || "") : "";
+      const platforms = {};
+      platformIndexes.forEach((columnIndex, platformId) => {
+        platforms[platformId] = valueAt(columnIndex).trim();
+      });
+
+      return createCharacterBulkDraft({
+        name: valueAt(fieldIndexes.name).trim(),
+        subtitle: valueAt(fieldIndexes.subtitle).trim(),
+        tags: valueAt(fieldIndexes.tags).trim(),
+        description: valueAt(fieldIndexes.description).trim(),
+        platforms
+      });
+    }).filter((row) => !isCharacterBulkDraftEmpty(row));
+
+    if (drafts.length === 0) {
+      return { rows: [], error: "붙여넣은 내용에서 캐릭터 행을 찾지 못했습니다." };
+    }
+
+    return { rows: drafts, error: "" };
+  }
+
+  function applyCharacterBulkPaste() {
+    const parsed = parseCharacterBulkPaste(elements.characterBulkPasteInput.value);
+    if (parsed.error) {
+      setCharacterBulkImportError(parsed.error);
+      return;
+    }
+
+    characterBulkDraftRows = [
+      ...characterBulkDraftRows.filter((row) => !isCharacterBulkDraftEmpty(row)),
+      ...parsed.rows
+    ];
+
+    elements.characterBulkPasteInput.value = "";
+    setCharacterBulkImportError("");
+    renderCharacterBulkDraftRows();
+    elements.characterBulkRowList.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function normalizeCharacterBulkUrl(value) {
+    const source = String(value || "").trim();
+    if (!source) return { url: "", error: "" };
 
     const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(source)
       ? source
@@ -1212,241 +1608,120 @@ confirmCharacterBulkImportButton:
 
     try {
       const url = new URL(candidate);
-
-      if (!["http:", "https:"].includes(url.protocol)) {
-        return {
-          url: "",
-          error: "http 또는 https 주소만 사용할 수 있습니다."
-        };
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        return { url: "", error: "http 또는 https 주소만 사용할 수 있습니다." };
       }
-
-      return {
-        url: url.href,
-        error: ""
-      };
+      return { url: url.href, error: "" };
     } catch {
-      return {
-        url: "",
-        error: "주소 형식이 올바르지 않습니다."
-      };
+      return { url: "", error: "주소 형식이 올바르지 않습니다." };
     }
   }
 
-  function bulkCell(row, index) {
-    return Number.isInteger(index)
-      ? String(row[index] || "")
-      : "";
+  function clearAllCharacterBulkErrors() {
+    elements.characterBulkRowList.querySelectorAll(".is-invalid")
+      .forEach((input) => input.classList.remove("is-invalid"));
+    elements.characterBulkRowList.querySelectorAll(".character-bulk-field-error")
+      .forEach((error) => {
+        error.textContent = "";
+        error.hidden = true;
+      });
+    setCharacterBulkImportError("");
   }
 
-  function parseCharacterBulkImport(source) {
-    const rows = parseBulkTsv(source);
+  function markCharacterBulkFieldError(rowId, field, message, platform = false) {
+    const card = getCharacterBulkRowElement(rowId);
+    if (!card) return;
 
-    const result = {
-      characters: [],
-      errors: []
-    };
+    const inputSelector = platform
+      ? `[data-character-bulk-platform="${field}"]`
+      : `[data-character-bulk-field="${field}"]`;
+    const errorSelector = platform
+      ? `[data-character-bulk-platform-error="${field}"]`
+      : `[data-character-bulk-error="${field}"]`;
+    const input = card.querySelector(inputSelector);
+    const error = card.querySelector(errorSelector);
+
+    input?.classList.add("is-invalid");
+    if (error) {
+      error.textContent = message;
+      error.hidden = false;
+    }
+  }
+
+  function buildCharactersFromBulkDraft() {
+    clearAllCharacterBulkErrors();
+    const rows = activeCharacterBulkDraftRows();
+    const characters = [];
+    const entries = [];
+    let errorCount = 0;
 
     if (rows.length === 0) {
-      result.errors.push("붙여넣은 내용이 없습니다.");
-      return result;
+      setCharacterBulkImportError("등록할 캐릭터를 한 명 이상 입력해 주세요.");
+      return { characters: [], entries: [], errorCount: 1 };
     }
 
-    const headers = rows[0].map(normalizeBulkHeader);
-    const fieldIndexes = {};
-    const platformIndexes = {};
-
-    headers.forEach((header, index) => {
-      const fieldName = BULK_CHARACTER_FIELD_ALIASES[header];
-
-      if (
-        fieldName &&
-        fieldIndexes[fieldName] === undefined
-      ) {
-        fieldIndexes[fieldName] = index;
-      }
-
-      Object.entries(BULK_CHARACTER_PLATFORM_COLUMNS).forEach(
-        ([columnName, platformId]) => {
-          if (
-            header === normalizeBulkHeader(columnName) &&
-            platformIndexes[platformId] === undefined
-          ) {
-            platformIndexes[platformId] = index;
-          }
-        }
-      );
-    });
-
-    if (fieldIndexes.name === undefined) {
-      result.errors.push(
-        '첫 행에 "캐릭터 이름", "캐릭터명" 또는 "이름" 열이 필요합니다.'
-      );
-
-      return result;
-    }
-
-    rows.slice(1).forEach((row, rowIndex) => {
-      const spreadsheetRowNumber = rowIndex + 2;
-      const name = bulkCell(row, fieldIndexes.name).trim();
-
+    rows.forEach((row) => {
+      const name = row.name.trim();
       if (!name) {
-        result.errors.push(
-          `${spreadsheetRowNumber}행: 캐릭터 이름이 비어 있습니다.`
-        );
-
-        return;
+        markCharacterBulkFieldError(row.id, "name", "캐릭터 이름을 입력해 주세요.");
+        errorCount += 1;
       }
+
+      const normalizedPlatforms = [];
+      BULK_CHARACTER_PLATFORM_COLUMNS.forEach(({ id, name: platformName }) => {
+        const rawUrl = String(row.platforms[id] || "").trim();
+        if (!rawUrl) return;
+
+        const normalized = normalizeCharacterBulkUrl(rawUrl);
+        if (normalized.error) {
+          markCharacterBulkFieldError(
+            row.id,
+            id,
+            `${platformName}: ${normalized.error}`,
+            true
+          );
+          errorCount += 1;
+          return;
+        }
+
+        normalizedPlatforms.push({ id, url: normalized.url });
+      });
+
+      if (!name) return;
 
       const character = createCharacter();
-
       character.name = name;
-
-      character.subtitle = bulkCell(
-        row,
-        fieldIndexes.subtitle
-      ).trim();
-
-      character.tags = splitTags(
-        bulkCell(row, fieldIndexes.tags)
-      );
-
-      character.description = bioTextToArray(
-        bulkCell(row, fieldIndexes.description)
-      );
-
-      const seenUrls = new Set();
-
-      Object.entries(platformIndexes).forEach(
-        ([platformId, columnIndex]) => {
-          const rawUrl = bulkCell(
-            row,
-            columnIndex
-          ).trim();
-
-          if (!rawUrl) return;
-
-          const normalized =
-            normalizeBulkCharacterUrl(rawUrl);
-
-          if (normalized.error) {
-            const platformName =
-              platformCatalog.get(platformId)?.name ||
-              platformId;
-
-            result.errors.push(
-              `${spreadsheetRowNumber}행 ${platformName}: ${normalized.error}`
-            );
-
-            return;
-          }
-
-          if (seenUrls.has(normalized.url)) return;
-
-          seenUrls.add(normalized.url);
-
-          character.platforms.push({
-            id: platformId,
-            url: normalized.url
-          });
-        }
-      );
-
-      result.characters.push(character);
+      character.subtitle = row.subtitle.trim();
+      character.tags = splitTags(row.tags);
+      character.description = bioTextToArray(row.description);
+      character.platforms = normalizedPlatforms;
+      characters.push(character);
+      entries.push({ character, images: [...row.images] });
     });
 
-    return result;
-  }
+    if (errorCount > 0) {
+      setCharacterBulkImportError(`수정할 입력이 ${errorCount}개 있습니다. 빨간 표시를 확인해 주세요.`);
+      elements.characterBulkRowList.querySelector(".is-invalid")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
 
-  function setCharacterBulkImportError(message) {
-    elements.characterBulkImportError.textContent =
-      message || "";
-
-    elements.characterBulkImportError.hidden =
-      !message;
-  }
-
-  function renderCharacterBulkImportPreview(result) {
-    const errorMarkup = result.errors.length
-      ? `
-        <div class="character-bulk-error-list">
-          <strong>확인할 항목</strong>
-          <ul>
-            ${result.errors
-              .map(
-                (message) =>
-                  `<li>${escapeHtml(message)}</li>`
-              )
-              .join("")}
-          </ul>
-        </div>
-      `
-      : "";
-
-    const characterMarkup =
-      result.characters.length > 0
-        ? result.characters
-            .map((character) => {
-              const platforms =
-                character.platforms.length > 0
-                  ? character.platforms
-                      .map(
-                        (link) =>
-                          platformCatalog.get(link.id)
-                            ?.name || link.id
-                      )
-                      .join(", ")
-                  : "플랫폼 링크 없음";
-
-              return `
-                <article class="character-bulk-preview-item">
-                  <strong>${escapeHtml(
-                    character.name
-                  )}</strong>
-
-                  <span>${escapeHtml(
-                    character.subtitle || "부제 없음"
-                  )}</span>
-
-                  <small>${escapeHtml(
-                    platforms
-                  )}</small>
-                </article>
-              `;
-            })
-            .join("")
-        : `
-          <p class="empty-message">
-            등록 가능한 캐릭터가 없습니다.
-          </p>
-        `;
-
-    elements.characterBulkImportPreview.innerHTML = `
-      <p class="character-bulk-summary">
-        등록 가능 ${result.characters.length}명 ·
-        오류 ${result.errors.length}건
-      </p>
-
-      ${errorMarkup}
-
-      <div class="character-bulk-preview-list">
-        ${characterMarkup}
-      </div>
-    `;
+    return { characters, entries, errorCount };
   }
 
   function openCharacterBulkImportDialog() {
-    setCharacterBulkImportError("");
-
-    elements.characterBulkImportPreview.innerHTML = `
-      <p class="empty-message">
-        내용 확인을 누르면 등록 결과를 미리 볼 수 있습니다.
-      </p>
-    `;
+    if (characterBulkDraftRows.length === 0) {
+      resetCharacterBulkDraftRows(3);
+    } else {
+      renderCharacterBulkDraftRows();
+    }
 
     elements.characterBulkImportDialog.showModal();
-
     window.requestAnimationFrame(() => {
-      elements.characterBulkImportInput.focus();
+      elements.characterBulkRowList
+        .querySelector('[data-character-bulk-field="name"]')
+        ?.focus();
     });
   }
 
@@ -1456,75 +1731,43 @@ confirmCharacterBulkImportButton:
     }
   }
 
-  function previewCharacterBulkImport() {
-    const result = parseCharacterBulkImport(
-      elements.characterBulkImportInput.value
-    );
+  async function confirmCharacterBulkImport() {
+    const result = buildCharactersFromBulkDraft();
+    if (result.errorCount > 0 || result.characters.length === 0) return;
 
-    renderCharacterBulkImportPreview(result);
+    const originalButtonText = elements.confirmCharacterBulkImportButton.textContent;
+    elements.confirmCharacterBulkImportButton.disabled = true;
+    elements.confirmCharacterBulkImportButton.textContent = "등록 중…";
 
-    setCharacterBulkImportError(
-      result.errors.length
-        ? "오류를 수정한 뒤 등록해 주세요."
-        : ""
-    );
+    try {
+      project.characters.push(...result.characters);
+
+      for (const entry of result.entries) {
+        if (entry.images.length === 0) continue;
+        selectedCharacterId = entry.character.id;
+        await addCharacterImageFiles(entry.images);
+      }
+
+      selectedCharacterId = result.characters[result.characters.length - 1].id;
+
+      if (project.characters.length > previewCharacterColumnCount() * 2) {
+        characterPreviewExpanded = true;
+      }
+
+      renderCharacterEditor();
+      renderWorldEditor();
+      renderCharacterPreview();
+      renderWorldPreview();
+      scheduleAutosave();
+      setSaveStatus(`캐릭터 ${result.characters.length}명이 일괄 등록됨`);
+
+      resetCharacterBulkDraftRows(3);
+      closeCharacterBulkImportDialog();
+    } finally {
+      elements.confirmCharacterBulkImportButton.disabled = false;
+      elements.confirmCharacterBulkImportButton.textContent = originalButtonText;
+    }
   }
-
-  function confirmCharacterBulkImport() {
-    const result = parseCharacterBulkImport(
-      elements.characterBulkImportInput.value
-    );
-
-    renderCharacterBulkImportPreview(result);
-
-    if (result.errors.length > 0) {
-      setCharacterBulkImportError(
-        "오류를 수정한 뒤 등록해 주세요."
-      );
-
-      return;
-    }
-
-    if (result.characters.length === 0) {
-      setCharacterBulkImportError(
-        "등록할 캐릭터가 없습니다."
-      );
-
-      return;
-    }
-
-    project.characters.push(...result.characters);
-
-    selectedCharacterId =
-      result.characters[
-        result.characters.length - 1
-      ].id;
-
-    if (
-      project.characters.length >
-      previewCharacterColumnCount() * 2
-    ) {
-      characterPreviewExpanded = true;
-    }
-
-    renderCharacterEditor();
-    renderWorldEditor();
-    renderCharacterPreview();
-    renderWorldPreview();
-
-    scheduleAutosave();
-
-    setSaveStatus(
-      `캐릭터 ${result.characters.length}명이 일괄 등록됨`
-    );
-
-    elements.characterBulkImportInput.value = "";
-    elements.characterBulkImportPreview.innerHTML = "";
-
-    setCharacterBulkImportError("");
-    closeCharacterBulkImportDialog();
-  }
-// 캐릭터 일괄 등록 기능 추가 끝
 
   function createMusicTrack() {
     return {
@@ -7610,54 +7853,40 @@ elements.characterPreviewModalTags.innerHTML = [
   }
 
 
-// 캐릭터 일괄 등록 버튼 이벤트 연결 시작
-  // 일괄 등록창 열기
-  elements.openCharacterBulkImportButton.addEventListener(
-    "click",
-    openCharacterBulkImportDialog
-  );
 
-  // 일괄 등록창 닫기
-  elements.closeCharacterBulkImportButton.addEventListener(
-    "click",
-    closeCharacterBulkImportDialog
-  );
-
-  // 붙여넣은 내용 미리 확인
-  elements.previewCharacterBulkImportButton.addEventListener(
-    "click",
-    previewCharacterBulkImport
-  );
-
-  // 실제 캐릭터 등록
-  elements.confirmCharacterBulkImportButton.addEventListener(
-    "click",
-    confirmCharacterBulkImport
-  );
-// 캐릭터 일괄 등록 버튼 이벤트 연결 끝
-
-  // 기존 새 캐릭터 버튼
-  elements.addCharacterButton.addEventListener(
-    "click",
-    addCharacter
-  );
-
-  // 기존 캐릭터 목록 클릭 이벤트
-  elements.characterEditorList.addEventListener(
-    "click",
-    (event) => {
-      const button = event.target.closest(
-        "[data-select-character]"
-      );
-
-      if (!button) return;
-
-      selectedCharacterId =
-        button.dataset.selectCharacter;
-
-      renderCharacterEditor();
+  elements.openCharacterBulkImportButton.addEventListener("click", openCharacterBulkImportDialog);
+  elements.closeCharacterBulkImportButton.addEventListener("click", closeCharacterBulkImportDialog);
+  elements.cancelCharacterBulkImportButton.addEventListener("click", closeCharacterBulkImportDialog);
+  elements.addCharacterBulkRowButton.addEventListener("click", () => addCharacterBulkRows(1));
+  elements.addFiveCharacterBulkRowsButton.addEventListener("click", () => addCharacterBulkRows(5));
+  elements.removeEmptyCharacterBulkRowsButton.addEventListener("click", removeEmptyCharacterBulkRows);
+  elements.applyCharacterBulkPasteButton.addEventListener("click", applyCharacterBulkPaste);
+  elements.confirmCharacterBulkImportButton.addEventListener("click", confirmCharacterBulkImport);
+  elements.characterBulkRowList.addEventListener("input", handleCharacterBulkRowInput);
+  elements.characterBulkRowList.addEventListener("change", handleCharacterBulkImageSelection);
+  elements.characterBulkRowList.addEventListener("click", (event) => {
+    const deleteRowButton = event.target.closest("[data-delete-character-bulk-row]");
+    if (deleteRowButton) {
+      deleteCharacterBulkRow(deleteRowButton);
+      return;
     }
-  );
+
+    const deleteImageButton = event.target.closest("[data-delete-character-bulk-image]");
+    if (deleteImageButton) deleteCharacterBulkImage(deleteImageButton);
+  });
+  elements.characterBulkImportDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeCharacterBulkImportDialog();
+  });
+
+  elements.addCharacterButton.addEventListener("click", addCharacter);
+
+  elements.characterEditorList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-select-character]");
+    if (!button) return;
+    selectedCharacterId = button.dataset.selectCharacter;
+    renderCharacterEditor();
+  });
 
   elements.characterForm.addEventListener("input", (event) => {
     const target = event.target;

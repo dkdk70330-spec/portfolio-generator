@@ -503,23 +503,14 @@
         </summary>
         <div class="major-editor-fold-body">
           <section class="character-editor-section" aria-labelledby="characterEditorTitle">
-<div class="major-editor-action-row">
-  <p class="eyebrow">CHARACTERS</p>
+            <div class="major-editor-action-row">
+              <p class="eyebrow">CHARACTERS</p>
+              <div class="character-editor-main-actions">
+                <button id="openCharacterBulkImportButton" class="secondary-button" type="button">일괄 등록</button>
+                <button id="addCharacterButton" class="primary-button" type="button">새 캐릭터</button>
+              </div>
+            </div>
 
-  <div class="character-editor-main-actions">
-    <button
-      id="openCharacterBulkImportButton"
-      class="secondary-button"
-      type="button"
-    >
-      일괄 등록
-    </button>
-
-    <button id="addCharacterButton" class="primary-button" type="button">
-      새 캐릭터
-    </button>
-  </div>
-</div>
         <div class="character-editor-layout">
           <aside class="character-editor-sidebar" aria-label="캐릭터 목록">
             <div id="characterEditorList" class="character-editor-list">
@@ -609,37 +600,6 @@
               <textarea id="characterDescriptionInput" rows="7" placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."></textarea>
             </label>
 
-            <details class="character-platform-editor editor-fold" aria-labelledby="characterPlatformsTitle">
-              <summary class="editor-fold-summary">
-                <span>
-                  <strong class="character-field-label" id="characterPlatformsTitle">플랫폼</strong>
-                  <small>플랫폼을 선택하고 캐릭터 페이지 주소를 입력합니다.</small>
-                </span>
-                <b aria-hidden="true">⌄</b>
-              </summary>
-              <div class="editor-fold-body">
-                <div id="characterPlatformList" class="character-platform-editor-list"></div>
-              </div>
-            </details>
-
-<details class="character-content-editor editor-fold" aria-labelledby="characterContentsTitle">
-              <summary class="editor-fold-summary">
-                <span>
-                  <strong class="character-field-label" id="characterContentsTitle">추가 콘텐츠</strong>
-                  <small>제작 비하인드, 과거, 비밀 설정처럼 상세창에 표시할 내용을 추가합니다.</small>
-                </span>
-                <b aria-hidden="true">⌄</b>
-              </summary>
-              <div class="editor-fold-body">
-                <div class="editor-fold-action-row">
-                  <button id="addCharacterContentButton" class="secondary-button" type="button">항목 추가</button>
-                </div>
-                <div id="characterContentList" class="character-content-editor-list">
-                  <p class="empty-message">추가 콘텐츠가 없습니다.</p>
-                </div>
-              </div>
-            </details>
-
             <details
               class="character-music-editor music-editor editor-fold"
               aria-labelledby="characterMusicTitle"
@@ -662,7 +622,36 @@
               </div>
             </details>
 
-         
+            <details class="character-platform-editor editor-fold" aria-labelledby="characterPlatformsTitle">
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="character-field-label" id="characterPlatformsTitle">플랫폼</strong>
+                  <small>플랫폼을 선택하고 캐릭터 페이지 주소를 입력합니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div id="characterPlatformList" class="character-platform-editor-list"></div>
+              </div>
+            </details>
+
+            <details class="character-content-editor editor-fold" aria-labelledby="characterContentsTitle">
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="character-field-label" id="characterContentsTitle">추가 콘텐츠</strong>
+                  <small>제작 비하인드, 과거, 비밀 설정처럼 상세창에 표시할 내용을 추가합니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div class="editor-fold-action-row">
+                  <button id="addCharacterContentButton" class="secondary-button" type="button">항목 추가</button>
+                </div>
+                <div id="characterContentList" class="character-content-editor-list">
+                  <p class="empty-message">추가 콘텐츠가 없습니다.</p>
+                </div>
+              </div>
+            </details>
           </form>
         </div>
           </section>
@@ -992,64 +981,55 @@
     </div>
   </dialog>
 
-<dialog id="characterBulkImportDialog" class="character-bulk-dialog">
-  <form method="dialog" class="character-bulk-dialog-shell">
-    <header class="character-bulk-dialog-header">
-      <div>
-        <p class="eyebrow">BULK IMPORT</p>
-        <h2>캐릭터 일괄 등록</h2>
+
+  <!-- 캐릭터 일괄 등록 -->
+  <dialog id="characterBulkImportDialog" class="character-bulk-dialog" aria-labelledby="characterBulkImportTitle">
+    <div class="character-bulk-dialog-shell">
+      <header class="character-bulk-dialog-header">
+        <div>
+          <p class="eyebrow">BULK IMPORT</p>
+          <h2 id="characterBulkImportTitle">캐릭터 일괄 등록</h2>
+          <p>생성기 안에서 여러 캐릭터와 PNG 이미지를 직접 작성하고 한 번에 등록합니다.</p>
+        </div>
+        <button id="closeCharacterBulkImportButton" class="secondary-button" type="button">닫기</button>
+      </header>
+
+      <div class="character-bulk-toolbar" aria-label="일괄 등록 행 관리">
+        <button id="addCharacterBulkRowButton" class="secondary-button" type="button">1명 추가</button>
+        <button id="addFiveCharacterBulkRowsButton" class="secondary-button" type="button">5명 추가</button>
+        <button id="removeEmptyCharacterBulkRowsButton" class="text-button" type="button">빈 입력 삭제</button>
       </div>
 
-      <button
-        id="closeCharacterBulkImportButton"
-        class="secondary-button"
-        type="button"
-      >
-        닫기
-      </button>
-    </header>
+      <div id="characterBulkRowList" class="character-bulk-row-list"></div>
 
-    <p class="field-help">
-      스프레드시트의 제목 행과 캐릭터 행을 복사해 붙여넣으세요.
-    </p>
+      <details class="character-bulk-paste-panel">
+        <summary>엑셀·구글 스프레드시트에서 붙여넣기</summary>
+        <div class="character-bulk-paste-body">
+          <p class="field-help">
+            제목 행은 있어도 되고 없어도 됩니다. 기본 열 순서는 이름, 부제, 태그, 소개, 블룸, 로판, 로플, 케덕, 멜팅, 위프, 제타, 티팟, 팅글입니다.
+          </p>
+          <textarea
+            id="characterBulkPasteInput"
+            rows="7"
+            placeholder="리안&#9;황실의 검&#9;기사, 판타지&#9;황제를 지키는 기사&#9;https://example.com/character"
+          ></textarea>
+          <div class="character-bulk-paste-actions">
+            <button id="applyCharacterBulkPasteButton" class="secondary-button" type="button">붙여넣은 행 추가</button>
+          </div>
+        </div>
+      </details>
 
-    <textarea
-      id="characterBulkImportInput"
-      rows="12"
-      placeholder="캐릭터 이름	부제	태그	캐릭터 소개	블룸	로판	로플	케덕	멜팅	위프	제타	티팟	팅글"
-    ></textarea>
+      <p id="characterBulkImportError" class="form-error character-bulk-global-error" role="alert" hidden></p>
 
-    <p
-      id="characterBulkImportError"
-      class="form-error"
-      role="alert"
-      hidden
-    ></p>
-
-    <div
-      id="characterBulkImportPreview"
-      class="character-bulk-preview"
-    ></div>
-
-    <footer class="character-bulk-dialog-actions">
-      <button
-        id="previewCharacterBulkImportButton"
-        class="secondary-button"
-        type="button"
-      >
-        내용 확인
-      </button>
-
-      <button
-        id="confirmCharacterBulkImportButton"
-        class="primary-button"
-        type="button"
-      >
-        캐릭터 등록
-      </button>
-    </footer>
-  </form>
-</dialog>
+      <footer class="character-bulk-dialog-actions">
+        <span id="characterBulkImportCount" class="character-bulk-count">입력된 캐릭터 0명</span>
+        <div>
+          <button id="cancelCharacterBulkImportButton" class="secondary-button" type="button">취소</button>
+          <button id="confirmCharacterBulkImportButton" class="primary-button" type="button">캐릭터 등록</button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
 
   <script src="../shared/admin-catalog.js"></script>
   <script src="../shared/empty-project.js"></script>
