@@ -137,13 +137,10 @@ function normalizeGenreId(value) {
   let characterPreviewExpanded = false;
   const EDITOR_COLLECTION_PAGE_SIZE = 24;
   let worldEditorSearchQuery = "";
-  let worldEditorViewMode = "grid";
   let worldEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
   let characterEditorSearchQuery = "";
-  let characterEditorViewMode = "grid";
   let characterEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
   let worldCharacterLinkSearchQuery = "";
-  let worldCharacterLinkViewMode = "grid";
   let worldCharacterLinkVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
   const characterPreviewFilterState = {
     query: "",
@@ -216,8 +213,6 @@ const elements = {
 
     addWorldButton: document.querySelector("#addWorldButton"),
     worldEditorSearchInput: document.querySelector("#worldEditorSearchInput"),
-    worldEditorGridViewButton: document.querySelector("#worldEditorGridViewButton"),
-    worldEditorChipViewButton: document.querySelector("#worldEditorChipViewButton"),
     worldEditorResultSummary: document.querySelector("#worldEditorResultSummary"),
     worldEditorMoreButton: document.querySelector("#worldEditorMoreButton"),
     worldEditorList: document.querySelector("#worldEditorList"),
@@ -236,8 +231,6 @@ const elements = {
     worldTagsInput: document.querySelector("#worldTagsInput"),
     worldDescriptionInput: document.querySelector("#worldDescriptionInput"),
     worldCharacterLinkSearchInput: document.querySelector("#worldCharacterLinkSearchInput"),
-    worldCharacterLinkGridViewButton: document.querySelector("#worldCharacterLinkGridViewButton"),
-    worldCharacterLinkChipViewButton: document.querySelector("#worldCharacterLinkChipViewButton"),
     worldCharacterLinkResultSummary: document.querySelector("#worldCharacterLinkResultSummary"),
     worldCharacterLinkMoreButton: document.querySelector("#worldCharacterLinkMoreButton"),
     worldCharacterLinkList: document.querySelector("#worldCharacterLinkList"),
@@ -261,8 +254,6 @@ const elements = {
     characterBulkImportCount: document.querySelector("#characterBulkImportCount"),
     confirmCharacterBulkImportButton: document.querySelector("#confirmCharacterBulkImportButton"),
     characterEditorSearchInput: document.querySelector("#characterEditorSearchInput"),
-    characterEditorGridViewButton: document.querySelector("#characterEditorGridViewButton"),
-    characterEditorChipViewButton: document.querySelector("#characterEditorChipViewButton"),
     characterEditorResultSummary: document.querySelector("#characterEditorResultSummary"),
     characterEditorMoreButton: document.querySelector("#characterEditorMoreButton"),
     characterEditorList: document.querySelector("#characterEditorList"),
@@ -2999,15 +2990,6 @@ const elements = {
     return visible;
   }
 
-  function setEditorCollectionView(list, gridButton, chipButton, mode) {
-    const chipView = mode === "chip";
-    list.classList.toggle("is-grid-view", !chipView);
-    list.classList.toggle("is-chip-view", chipView);
-    gridButton.classList.toggle("is-active", !chipView);
-    chipButton.classList.toggle("is-active", chipView);
-    gridButton.setAttribute("aria-pressed", String(!chipView));
-    chipButton.setAttribute("aria-pressed", String(chipView));
-  }
 
   function updateEditorCollectionSummary({
     summary,
@@ -3051,12 +3033,6 @@ const elements = {
       ({ character }) => character.id
     );
 
-    setEditorCollectionView(
-      elements.characterEditorList,
-      elements.characterEditorGridViewButton,
-      elements.characterEditorChipViewButton,
-      characterEditorViewMode
-    );
 
     updateEditorCollectionSummary({
       summary: elements.characterEditorResultSummary,
@@ -4405,12 +4381,6 @@ elements.characterPreviewModalTags.innerHTML = [
       ({ world }) => world.id
     );
 
-    setEditorCollectionView(
-      elements.worldEditorList,
-      elements.worldEditorGridViewButton,
-      elements.worldEditorChipViewButton,
-      worldEditorViewMode
-    );
 
     updateEditorCollectionSummary({
       summary: elements.worldEditorResultSummary,
@@ -4534,12 +4504,6 @@ elements.characterPreviewModalTags.innerHTML = [
       (character) => character.worldId === world?.id
     ).length;
 
-    setEditorCollectionView(
-      elements.worldCharacterLinkList,
-      elements.worldCharacterLinkGridViewButton,
-      elements.worldCharacterLinkChipViewButton,
-      worldCharacterLinkViewMode
-    );
 
     updateEditorCollectionSummary({
       summary: elements.worldCharacterLinkResultSummary,
@@ -8105,17 +8069,7 @@ elements.characterPreviewModalTags.innerHTML = [
     renderCharacterList();
   });
 
-  elements.characterEditorGridViewButton.addEventListener("click", () => {
-    characterEditorViewMode = "grid";
-    elements.characterEditorList.scrollTop = 0;
-    renderCharacterList();
-  });
 
-  elements.characterEditorChipViewButton.addEventListener("click", () => {
-    characterEditorViewMode = "chip";
-    elements.characterEditorList.scrollTop = 0;
-    renderCharacterList();
-  });
 
   elements.characterEditorMoreButton.addEventListener("click", () => {
     characterEditorVisibleCount += EDITOR_COLLECTION_PAGE_SIZE;
@@ -8408,17 +8362,7 @@ elements.worldPreviewSoundtrack.addEventListener(
     renderWorldList();
   });
 
-  elements.worldEditorGridViewButton.addEventListener("click", () => {
-    worldEditorViewMode = "grid";
-    elements.worldEditorList.scrollTop = 0;
-    renderWorldList();
-  });
 
-  elements.worldEditorChipViewButton.addEventListener("click", () => {
-    worldEditorViewMode = "chip";
-    elements.worldEditorList.scrollTop = 0;
-    renderWorldList();
-  });
 
   elements.worldEditorMoreButton.addEventListener("click", () => {
     worldEditorVisibleCount += EDITOR_COLLECTION_PAGE_SIZE;
@@ -8460,17 +8404,7 @@ elements.worldPreviewSoundtrack.addEventListener(
     renderWorldCharacterLinks();
   });
 
-  elements.worldCharacterLinkGridViewButton.addEventListener("click", () => {
-    worldCharacterLinkViewMode = "grid";
-    elements.worldCharacterLinkList.scrollTop = 0;
-    renderWorldCharacterLinks();
-  });
 
-  elements.worldCharacterLinkChipViewButton.addEventListener("click", () => {
-    worldCharacterLinkViewMode = "chip";
-    elements.worldCharacterLinkList.scrollTop = 0;
-    renderWorldCharacterLinks();
-  });
 
   elements.worldCharacterLinkMoreButton.addEventListener("click", () => {
     worldCharacterLinkVisibleCount += EDITOR_COLLECTION_PAGE_SIZE;

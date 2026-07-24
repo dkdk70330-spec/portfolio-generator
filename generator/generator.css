@@ -3242,7 +3242,7 @@ body.character-filter-picker-open { overflow: hidden; }
 
 .editor-collection-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: .45rem;
   align-items: center;
 }
@@ -3257,35 +3257,6 @@ body.character-filter-picker-open { overflow: hidden; }
   font-size: .72rem;
 }
 
-.editor-collection-view-switch {
-  display: inline-flex;
-  gap: .2rem;
-  padding: .2rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--bg);
-}
-
-.editor-collection-view-button {
-  min-height: 30px;
-  padding: .3rem .55rem;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font-size: .65rem;
-  font-weight: 850;
-}
-
-.editor-collection-view-button.is-active {
-  background: var(--surface-3);
-  color: var(--accent);
-}
-
-.editor-collection-view-button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  outline-offset: 1px;
-}
 
 .editor-collection-summary {
   margin: .45rem 0 .35rem;
@@ -3294,6 +3265,10 @@ body.character-filter-picker-open { overflow: hidden; }
 }
 
 .editor-collection-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: .4rem;
+  align-content: start;
   max-height: 360px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -3314,19 +3289,6 @@ body.character-filter-picker-open { overflow: hidden; }
   background-clip: padding-box;
 }
 
-.editor-collection-list.is-grid-view {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
-  gap: .4rem;
-  align-content: start;
-}
-
-.editor-collection-list.is-chip-view {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-  align-content: flex-start;
-}
 
 .editor-collection-list > .empty-message {
   grid-column: 1 / -1;
@@ -3374,8 +3336,8 @@ body.character-filter-picker-open { overflow: hidden; }
   width: 100%;
 }
 
-.world-editor-list.is-grid-view .world-editor-list-item,
-.character-editor-list.is-grid-view .character-editor-list-item {
+.world-editor-list .world-editor-list-item,
+.character-editor-list .character-editor-list-item {
   grid-template-columns: 36px minmax(0, 1fr) auto;
   gap: .45rem;
   padding: .4rem;
@@ -3383,40 +3345,13 @@ body.character-filter-picker-open { overflow: hidden; }
   background: color-mix(in srgb, var(--bg) 68%, transparent);
 }
 
-.world-editor-list.is-grid-view .world-editor-list-thumb,
-.character-editor-list.is-grid-view .character-editor-list-thumb {
+.world-editor-list .world-editor-list-thumb,
+.character-editor-list .character-editor-list-thumb {
   width: 36px;
   height: 36px;
   border-radius: 9px;
 }
 
-.world-editor-list.is-chip-view .world-editor-list-item,
-.character-editor-list.is-chip-view .character-editor-list-item {
-  display: inline-grid;
-  width: max-content;
-  max-width: 100%;
-  grid-template-columns: 26px minmax(0, auto) auto;
-  flex: 0 0 auto;
-  gap: .35rem;
-  padding: .28rem .45rem;
-  border-color: var(--line);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg) 68%, transparent);
-}
-
-.world-editor-list.is-chip-view .world-editor-list-thumb,
-.character-editor-list.is-chip-view .character-editor-list-thumb {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  font-size: .46rem;
-}
-
-.world-editor-list.is-chip-view .world-editor-list-copy strong,
-.character-editor-list.is-chip-view .character-editor-list-copy strong {
-  max-width: 10rem;
-  font-size: .7rem;
-}
 
 .world-editor-list-item.is-active,
 .character-editor-list-item.is-active {
@@ -3432,37 +3367,9 @@ body.character-filter-picker-open { overflow: hidden; }
 
 .world-character-link-list {
   margin-top: 0;
-}
-
-.world-character-link-list.is-grid-view {
   grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
 }
 
-.world-character-link-list.is-chip-view .world-character-link-item {
-  display: inline-grid;
-  width: max-content;
-  max-width: 100%;
-  grid-template-columns: auto 26px minmax(0, auto);
-  flex: 0 0 auto;
-  gap: .35rem;
-  padding: .28rem .45rem;
-  border-radius: 999px;
-}
-
-.world-character-link-list.is-chip-view .world-character-link-thumb {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-}
-
-.world-character-link-list.is-chip-view .world-character-link-copy strong {
-  max-width: 10rem;
-  font-size: .7rem;
-}
-
-.world-character-link-list.is-chip-view .world-character-link-copy small {
-  display: none;
-}
 
 @media (max-width: 980px) {
   .world-editor-layout,
@@ -3490,10 +3397,6 @@ body.character-filter-picker-open { overflow: hidden; }
     padding-bottom: 0;
   }
 
-  .world-editor-list.is-chip-view,
-  .character-editor-list.is-chip-view {
-    display: flex;
-  }
 
   .world-editor-list-item,
   .character-editor-list-item {
@@ -3506,23 +3409,20 @@ body.character-filter-picker-open { overflow: hidden; }
     grid-template-columns: 1fr;
   }
 
-  .editor-collection-view-switch {
-    width: fit-content;
-  }
 
   .editor-collection-list {
     max-height: 320px;
   }
 
-  .editor-collection-list.is-grid-view,
-  .world-character-link-list.is-grid-view {
+  .editor-collection-list,
+  .world-character-link-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 420px) {
-  .editor-collection-list.is-grid-view,
-  .world-character-link-list.is-grid-view {
+  .editor-collection-list,
+  .world-character-link-list {
     grid-template-columns: 1fr;
   }
 }
