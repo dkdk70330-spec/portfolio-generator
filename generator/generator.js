@@ -135,6 +135,16 @@ function normalizeGenreId(value) {
   let worldPreviewExpanded = false;
   let selectedCharacterId = "";
   let characterPreviewExpanded = false;
+  const EDITOR_COLLECTION_PAGE_SIZE = 24;
+  let worldEditorSearchQuery = "";
+  let worldEditorViewMode = "grid";
+  let worldEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
+  let characterEditorSearchQuery = "";
+  let characterEditorViewMode = "grid";
+  let characterEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
+  let worldCharacterLinkSearchQuery = "";
+  let worldCharacterLinkViewMode = "grid";
+  let worldCharacterLinkVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
   const characterPreviewFilterState = {
     query: "",
     genre: new Set(),
@@ -205,6 +215,11 @@ const elements = {
     socialLinkList: document.querySelector("#socialLinkList"),
 
     addWorldButton: document.querySelector("#addWorldButton"),
+    worldEditorSearchInput: document.querySelector("#worldEditorSearchInput"),
+    worldEditorGridViewButton: document.querySelector("#worldEditorGridViewButton"),
+    worldEditorChipViewButton: document.querySelector("#worldEditorChipViewButton"),
+    worldEditorResultSummary: document.querySelector("#worldEditorResultSummary"),
+    worldEditorMoreButton: document.querySelector("#worldEditorMoreButton"),
     worldEditorList: document.querySelector("#worldEditorList"),
     worldEditorEmpty: document.querySelector("#worldEditorEmpty"),
     worldForm: document.querySelector("#worldForm"),
@@ -220,6 +235,11 @@ const elements = {
     worldSubtitleInput: document.querySelector("#worldSubtitleInput"),
     worldTagsInput: document.querySelector("#worldTagsInput"),
     worldDescriptionInput: document.querySelector("#worldDescriptionInput"),
+    worldCharacterLinkSearchInput: document.querySelector("#worldCharacterLinkSearchInput"),
+    worldCharacterLinkGridViewButton: document.querySelector("#worldCharacterLinkGridViewButton"),
+    worldCharacterLinkChipViewButton: document.querySelector("#worldCharacterLinkChipViewButton"),
+    worldCharacterLinkResultSummary: document.querySelector("#worldCharacterLinkResultSummary"),
+    worldCharacterLinkMoreButton: document.querySelector("#worldCharacterLinkMoreButton"),
     worldCharacterLinkList: document.querySelector("#worldCharacterLinkList"),
     addWorldMusicButton: document.querySelector("#addWorldMusicButton"),
     worldMusicList: document.querySelector("#worldMusicList"),
@@ -240,6 +260,11 @@ const elements = {
     characterBulkImportError: document.querySelector("#characterBulkImportError"),
     characterBulkImportCount: document.querySelector("#characterBulkImportCount"),
     confirmCharacterBulkImportButton: document.querySelector("#confirmCharacterBulkImportButton"),
+    characterEditorSearchInput: document.querySelector("#characterEditorSearchInput"),
+    characterEditorGridViewButton: document.querySelector("#characterEditorGridViewButton"),
+    characterEditorChipViewButton: document.querySelector("#characterEditorChipViewButton"),
+    characterEditorResultSummary: document.querySelector("#characterEditorResultSummary"),
+    characterEditorMoreButton: document.querySelector("#characterEditorMoreButton"),
     characterEditorList: document.querySelector("#characterEditorList"),
     characterEditorEmpty: document.querySelector("#characterEditorEmpty"),
     characterForm: document.querySelector("#characterForm"),
@@ -1749,6 +1774,9 @@ const elements = {
       }
 
       selectedCharacterId = result.characters[result.characters.length - 1].id;
+      characterEditorSearchQuery = "";
+      characterEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
+      elements.characterEditorSearchInput.value = "";
 
       if (project.characters.length > previewCharacterColumnCount() * 2) {
         characterPreviewExpanded = true;
@@ -2942,14 +2970,116 @@ const elements = {
     return character?.name || `새 캐릭터 ${index + 1}`;
   }
 
+  function normalizeEditorCollectionQuery(value) {
+    return String(value || "").trim().toLocaleLowerCase("ko-KR");
+  }
+
+  function matchesEditorCollectionQuery(values, query) {
+    if (!query) return true;
+    return values.some((value) =>
+      String(value || "").toLocaleLowerCase("ko-KR").includes(query)
+    );
+  }
+
+  function visibleEditorCollectionItems(items, visibleCount, selectedId, idSelector) {
+    const visible = items.slice(0, visibleCount);
+    if (!selectedId || visible.some((item) => idSelector(item) === selectedId)) {
+      return visible;
+    }
+
+    const selected = items.find((item) => idSelector(item) === selectedId);
+    if (!selected) return visible;
+
+    if (visible.length >= visibleCount && visible.length > 0) {
+      visible[visible.length - 1] = selected;
+    } else {
+      visible.push(selected);
+    }
+
+    return visible;
+  }
+
+  function setEditorCollectionView(list, gridButton, chipButton, mode) {
+    const chipView = mode === "chip";
+    list.classList.toggle("is-grid-view", !chipView);
+    list.classList.toggle("is-chip-view", chipView);
+    gridButton.classList.toggle("is-active", !chipView);
+    chipButton.classList.toggle("is-active", chipView);
+    gridButton.setAttribute("aria-pressed", String(!chipView));
+    chipButton.setAttribute("aria-pressed", String(chipView));
+  }
+
+  function updateEditorCollectionSummary({
+    summary,
+    moreButton,
+    total,
+    filtered,
+    visible,
+    unit,
+    extra = ""
+  }) {
+    summary.textContent = filtered === total
+      ? `총 ${total}${unit} 중 ${visible}${unit} 표시${extra}`
+      : `검색 결과 ${filtered}${unit} 중 ${visible}${unit} 표시${extra}`;
+
+    const remaining = Math.max(0, filtered - visible);
+    moreButton.hidden = remaining === 0;
+    moreButton.textContent = remaining > 0
+      ? `더보기 +${Math.min(EDITOR_COLLECTION_PAGE_SIZE, remaining)}`
+      : "더보기";
+  }
+
   function renderCharacterList() {
+    const previousScrollTop = elements.characterEditorList.scrollTop;
+    const query = normalizeEditorCollectionQuery(characterEditorSearchQuery);
+    const filteredCharacters = project.characters
+      .map((character, index) => ({ character, index }))
+      .filter(({ character }) => {
+        const world = project.worlds.find((entry) => entry.id === character.worldId);
+        return matchesEditorCollectionQuery([
+          character.name,
+          character.subtitle,
+          (character.tags || []).join(" "),
+          (character.genres || []).map(genreLabel).join(" "),
+          world?.name
+        ], query);
+      });
+    const visibleCharacters = visibleEditorCollectionItems(
+      filteredCharacters,
+      characterEditorVisibleCount,
+      selectedCharacterId,
+      ({ character }) => character.id
+    );
+
+    setEditorCollectionView(
+      elements.characterEditorList,
+      elements.characterEditorGridViewButton,
+      elements.characterEditorChipViewButton,
+      characterEditorViewMode
+    );
+
+    updateEditorCollectionSummary({
+      summary: elements.characterEditorResultSummary,
+      moreButton: elements.characterEditorMoreButton,
+      total: project.characters.length,
+      filtered: filteredCharacters.length,
+      visible: visibleCharacters.length,
+      unit: "명"
+    });
+
     if (project.characters.length === 0) {
       elements.characterEditorList.innerHTML =
         '<p class="empty-message">등록된 캐릭터가 없습니다.</p>';
       return;
     }
 
-    elements.characterEditorList.innerHTML = project.characters.map((character, index) => {
+    if (filteredCharacters.length === 0) {
+      elements.characterEditorList.innerHTML =
+        '<p class="empty-message">검색 결과가 없습니다.</p>';
+      return;
+    }
+
+    elements.characterEditorList.innerHTML = visibleCharacters.map(({ character, index }) => {
       const imageUrl = characterImageUrl(character);
       const thumb = imageUrl
         ? `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
@@ -2960,6 +3090,7 @@ const elements = {
           type="button"
           data-select-character="${escapeHtml(character.id)}"
           aria-pressed="${character.id === selectedCharacterId}"
+          title="${escapeHtml(characterDisplayName(character, index))}"
         >
           <span class="character-editor-list-thumb" aria-hidden="true">${thumb}</span>
           <span class="character-editor-list-copy">
@@ -2969,6 +3100,8 @@ const elements = {
         </button>
       `;
     }).join("");
+
+    elements.characterEditorList.scrollTop = previousScrollTop;
   }
 
   function renderCharacterWorldOptions() {
@@ -4005,6 +4138,9 @@ elements.characterPreviewModalTags.innerHTML = [
     const character = createCharacter();
     project.characters.push(character);
     selectedCharacterId = character.id;
+    characterEditorSearchQuery = "";
+    characterEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
+    elements.characterEditorSearchInput.value = "";
     if (project.characters.length > previewCharacterColumnCount() * 2) {
       characterPreviewExpanded = true;
     }
@@ -4253,17 +4389,56 @@ elements.characterPreviewModalTags.innerHTML = [
   }
 
   function renderWorldList() {
+    const previousScrollTop = elements.worldEditorList.scrollTop;
+    const query = normalizeEditorCollectionQuery(worldEditorSearchQuery);
+    const filteredWorlds = project.worlds
+      .map((world, index) => ({ world, index }))
+      .filter(({ world }) => matchesEditorCollectionQuery([
+        world.name,
+        world.subtitle,
+        (world.tags || []).join(" ")
+      ], query));
+    const visibleWorlds = visibleEditorCollectionItems(
+      filteredWorlds,
+      worldEditorVisibleCount,
+      selectedWorldId,
+      ({ world }) => world.id
+    );
+
+    setEditorCollectionView(
+      elements.worldEditorList,
+      elements.worldEditorGridViewButton,
+      elements.worldEditorChipViewButton,
+      worldEditorViewMode
+    );
+
+    updateEditorCollectionSummary({
+      summary: elements.worldEditorResultSummary,
+      moreButton: elements.worldEditorMoreButton,
+      total: project.worlds.length,
+      filtered: filteredWorlds.length,
+      visible: visibleWorlds.length,
+      unit: "개"
+    });
+
     if (project.worlds.length === 0) {
       elements.worldEditorList.innerHTML =
         '<p class="empty-message">등록된 세계관이 없습니다.</p>';
       return;
     }
 
-    elements.worldEditorList.innerHTML = project.worlds.map((world, index) => {
+    if (filteredWorlds.length === 0) {
+      elements.worldEditorList.innerHTML =
+        '<p class="empty-message">검색 결과가 없습니다.</p>';
+      return;
+    }
+
+    elements.worldEditorList.innerHTML = visibleWorlds.map(({ world, index }) => {
       const url = worldImageUrl(world);
       const thumb = url
-        ? `<img src="${escapeHtml(url)}" alt="">`
+        ? `<img src="${escapeHtml(url)}" alt="" loading="lazy">`
         : "WORLD";
+      const name = world.name || `새 세계관 ${index + 1}`;
 
       return `
         <button
@@ -4271,14 +4446,17 @@ elements.characterPreviewModalTags.innerHTML = [
           type="button"
           data-select-world="${escapeHtml(world.id)}"
           aria-pressed="${world.id === selectedWorldId}"
+          title="${escapeHtml(name)}"
         >
           <span class="world-editor-list-thumb" aria-hidden="true">${thumb}</span>
           <span class="world-editor-list-copy">
-            <strong>${escapeHtml(world.name || `새 세계관 ${index + 1}`)}</strong>
+            <strong>${escapeHtml(name)}</strong>
           </span>
         </button>
       `;
     }).join("");
+
+    elements.worldEditorList.scrollTop = previousScrollTop;
   }
 
   function renderWorldSectionsEditor() {
@@ -4334,6 +4512,44 @@ elements.characterPreviewModalTags.innerHTML = [
 
   function renderWorldCharacterLinks() {
     const world = getSelectedWorld();
+    const previousScrollTop = elements.worldCharacterLinkList.scrollTop;
+    const query = normalizeEditorCollectionQuery(worldCharacterLinkSearchQuery);
+    const characters = project.characters
+      .map((character, index) => ({ character, index }))
+      .filter(({ character }) => character && typeof character === "object")
+      .filter(({ character }) => {
+        const currentWorld = project.worlds.find(
+          (entry) => entry.id === character.worldId
+        );
+        return matchesEditorCollectionQuery([
+          character.name,
+          character.subtitle,
+          (character.tags || []).join(" "),
+          (character.genres || []).map(genreLabel).join(" "),
+          currentWorld?.name
+        ], query);
+      });
+    const visibleCharacters = characters.slice(0, worldCharacterLinkVisibleCount);
+    const linkedCount = project.characters.filter(
+      (character) => character.worldId === world?.id
+    ).length;
+
+    setEditorCollectionView(
+      elements.worldCharacterLinkList,
+      elements.worldCharacterLinkGridViewButton,
+      elements.worldCharacterLinkChipViewButton,
+      worldCharacterLinkViewMode
+    );
+
+    updateEditorCollectionSummary({
+      summary: elements.worldCharacterLinkResultSummary,
+      moreButton: elements.worldCharacterLinkMoreButton,
+      total: project.characters.length,
+      filtered: characters.length,
+      visible: visibleCharacters.length,
+      unit: "명",
+      extra: world ? ` · 현재 연결 ${linkedCount}명` : ""
+    });
 
     if (!world || project.characters.length === 0) {
       elements.worldCharacterLinkList.innerHTML =
@@ -4341,17 +4557,13 @@ elements.characterPreviewModalTags.innerHTML = [
       return;
     }
 
-    const characters = project.characters
-      .map((character, index) => ({ character, index }))
-      .filter(({ character }) => character && typeof character === "object");
-
     if (characters.length === 0) {
       elements.worldCharacterLinkList.innerHTML =
-        '<p class="empty-message">등록된 캐릭터가 없습니다.</p>';
+        '<p class="empty-message">검색 결과가 없습니다.</p>';
       return;
     }
 
-    elements.worldCharacterLinkList.innerHTML = characters.map(
+    elements.worldCharacterLinkList.innerHTML = visibleCharacters.map(
       ({ character, index }) => {
         const imageUrl = characterImageUrl(character);
         const currentWorld = project.worlds.find(
@@ -4370,7 +4582,7 @@ elements.characterPreviewModalTags.innerHTML = [
             )}</span>`;
 
         return `
-          <label class="world-character-link-item">
+          <label class="world-character-link-item" title="${escapeHtml(status)}">
             <input
               type="checkbox"
               data-world-character-index="${index}"
@@ -4387,6 +4599,8 @@ elements.characterPreviewModalTags.innerHTML = [
         `;
       }
     ).join("");
+
+    elements.worldCharacterLinkList.scrollTop = previousScrollTop;
   }
 
   function updateWorldCharacterLink(target) {
@@ -4643,6 +4857,9 @@ elements.characterPreviewModalTags.innerHTML = [
     const world = createWorld();
     project.worlds.push(world);
     selectedWorldId = world.id;
+    worldEditorSearchQuery = "";
+    worldEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
+    elements.worldEditorSearchInput.value = "";
     if (project.worlds.length > previewWorldColumnCount()) {
       worldPreviewExpanded = true;
     }
@@ -7881,6 +8098,30 @@ elements.characterPreviewModalTags.innerHTML = [
 
   elements.addCharacterButton.addEventListener("click", addCharacter);
 
+  elements.characterEditorSearchInput.addEventListener("input", (event) => {
+    characterEditorSearchQuery = event.target.value;
+    characterEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
+    elements.characterEditorList.scrollTop = 0;
+    renderCharacterList();
+  });
+
+  elements.characterEditorGridViewButton.addEventListener("click", () => {
+    characterEditorViewMode = "grid";
+    elements.characterEditorList.scrollTop = 0;
+    renderCharacterList();
+  });
+
+  elements.characterEditorChipViewButton.addEventListener("click", () => {
+    characterEditorViewMode = "chip";
+    elements.characterEditorList.scrollTop = 0;
+    renderCharacterList();
+  });
+
+  elements.characterEditorMoreButton.addEventListener("click", () => {
+    characterEditorVisibleCount += EDITOR_COLLECTION_PAGE_SIZE;
+    renderCharacterList();
+  });
+
   elements.characterEditorList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-select-character]");
     if (!button) return;
@@ -8160,6 +8401,30 @@ elements.worldPreviewSoundtrack.addEventListener(
 
   elements.addWorldButton.addEventListener("click", addWorld);
 
+  elements.worldEditorSearchInput.addEventListener("input", (event) => {
+    worldEditorSearchQuery = event.target.value;
+    worldEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
+    elements.worldEditorList.scrollTop = 0;
+    renderWorldList();
+  });
+
+  elements.worldEditorGridViewButton.addEventListener("click", () => {
+    worldEditorViewMode = "grid";
+    elements.worldEditorList.scrollTop = 0;
+    renderWorldList();
+  });
+
+  elements.worldEditorChipViewButton.addEventListener("click", () => {
+    worldEditorViewMode = "chip";
+    elements.worldEditorList.scrollTop = 0;
+    renderWorldList();
+  });
+
+  elements.worldEditorMoreButton.addEventListener("click", () => {
+    worldEditorVisibleCount += EDITOR_COLLECTION_PAGE_SIZE;
+    renderWorldList();
+  });
+
   elements.worldEditorList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-select-world]");
     if (!button) return;
@@ -8186,6 +8451,30 @@ elements.worldPreviewSoundtrack.addEventListener(
     );
     if (!button) return;
     handleWorldSectionAction(button);
+  });
+
+  elements.worldCharacterLinkSearchInput.addEventListener("input", (event) => {
+    worldCharacterLinkSearchQuery = event.target.value;
+    worldCharacterLinkVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
+    elements.worldCharacterLinkList.scrollTop = 0;
+    renderWorldCharacterLinks();
+  });
+
+  elements.worldCharacterLinkGridViewButton.addEventListener("click", () => {
+    worldCharacterLinkViewMode = "grid";
+    elements.worldCharacterLinkList.scrollTop = 0;
+    renderWorldCharacterLinks();
+  });
+
+  elements.worldCharacterLinkChipViewButton.addEventListener("click", () => {
+    worldCharacterLinkViewMode = "chip";
+    elements.worldCharacterLinkList.scrollTop = 0;
+    renderWorldCharacterLinks();
+  });
+
+  elements.worldCharacterLinkMoreButton.addEventListener("click", () => {
+    worldCharacterLinkVisibleCount += EDITOR_COLLECTION_PAGE_SIZE;
+    renderWorldCharacterLinks();
   });
 
   elements.worldCharacterLinkList.addEventListener("change", (event) => {

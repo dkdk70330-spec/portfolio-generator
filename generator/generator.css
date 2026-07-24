@@ -3231,3 +3231,298 @@ body.character-filter-picker-open { overflow: hidden; }
     white-space: nowrap;
   }
 }
+
+
+/* =================================================
+   대규모 세계관·캐릭터 목록 탐색
+   ================================================= */
+.editor-collection-browser {
+  min-width: 0;
+}
+
+.editor-collection-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .45rem;
+  align-items: center;
+}
+
+.editor-collection-search {
+  min-width: 0;
+}
+
+.editor-collection-search input {
+  min-height: 38px;
+  padding: .5rem .65rem;
+  font-size: .72rem;
+}
+
+.editor-collection-view-switch {
+  display: inline-flex;
+  gap: .2rem;
+  padding: .2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+}
+
+.editor-collection-view-button {
+  min-height: 30px;
+  padding: .3rem .55rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: .65rem;
+  font-weight: 850;
+}
+
+.editor-collection-view-button.is-active {
+  background: var(--surface-3);
+  color: var(--accent);
+}
+
+.editor-collection-view-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.editor-collection-summary {
+  margin: .45rem 0 .35rem;
+  color: var(--muted);
+  font-size: .65rem;
+}
+
+.editor-collection-list {
+  max-height: 360px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: .15rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.editor-collection-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.editor-collection-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--line-strong);
+  background-clip: padding-box;
+}
+
+.editor-collection-list.is-grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: .4rem;
+  align-content: start;
+}
+
+.editor-collection-list.is-chip-view {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-content: flex-start;
+}
+
+.editor-collection-list > .empty-message {
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: .8rem .25rem;
+}
+
+.editor-collection-more-button {
+  width: 100%;
+  min-height: 34px;
+  margin-top: .45rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 850;
+}
+
+.editor-collection-more-button:hover,
+.editor-collection-more-button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.world-editor-layout,
+.character-editor-layout {
+  grid-template-columns: minmax(230px, .55fr) minmax(0, 1.45fr);
+}
+
+.world-editor-sidebar,
+.character-editor-sidebar {
+  padding: .55rem;
+  overflow: hidden;
+}
+
+.world-editor-list,
+.character-editor-list {
+  margin: 0;
+}
+
+.world-editor-list-item,
+.character-editor-list-item {
+  min-width: 0;
+  width: 100%;
+}
+
+.world-editor-list.is-grid-view .world-editor-list-item,
+.character-editor-list.is-grid-view .character-editor-list-item {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: .45rem;
+  padding: .4rem;
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--bg) 68%, transparent);
+}
+
+.world-editor-list.is-grid-view .world-editor-list-thumb,
+.character-editor-list.is-grid-view .character-editor-list-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+}
+
+.world-editor-list.is-chip-view .world-editor-list-item,
+.character-editor-list.is-chip-view .character-editor-list-item {
+  display: inline-grid;
+  width: max-content;
+  max-width: 100%;
+  grid-template-columns: 26px minmax(0, auto) auto;
+  flex: 0 0 auto;
+  gap: .35rem;
+  padding: .28rem .45rem;
+  border-color: var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 68%, transparent);
+}
+
+.world-editor-list.is-chip-view .world-editor-list-thumb,
+.character-editor-list.is-chip-view .character-editor-list-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: .46rem;
+}
+
+.world-editor-list.is-chip-view .world-editor-list-copy strong,
+.character-editor-list.is-chip-view .character-editor-list-copy strong {
+  max-width: 10rem;
+  font-size: .7rem;
+}
+
+.world-editor-list-item.is-active,
+.character-editor-list-item.is-active {
+  border-color: var(--accent);
+}
+
+.world-character-link-browser {
+  padding: .65rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 54%, transparent);
+}
+
+.world-character-link-list {
+  margin-top: 0;
+}
+
+.world-character-link-list.is-grid-view {
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+}
+
+.world-character-link-list.is-chip-view .world-character-link-item {
+  display: inline-grid;
+  width: max-content;
+  max-width: 100%;
+  grid-template-columns: auto 26px minmax(0, auto);
+  flex: 0 0 auto;
+  gap: .35rem;
+  padding: .28rem .45rem;
+  border-radius: 999px;
+}
+
+.world-character-link-list.is-chip-view .world-character-link-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+
+.world-character-link-list.is-chip-view .world-character-link-copy strong {
+  max-width: 10rem;
+  font-size: .7rem;
+}
+
+.world-character-link-list.is-chip-view .world-character-link-copy small {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .world-editor-layout,
+  .character-editor-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@container (max-width: 760px) {
+  .world-editor-layout,
+  .character-editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .world-editor-sidebar,
+  .character-editor-sidebar {
+    overflow: hidden;
+  }
+
+  .world-editor-list,
+  .character-editor-list {
+    display: grid;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-bottom: 0;
+  }
+
+  .world-editor-list.is-chip-view,
+  .character-editor-list.is-chip-view {
+    display: flex;
+  }
+
+  .world-editor-list-item,
+  .character-editor-list-item {
+    flex: initial;
+  }
+}
+
+@container (max-width: 520px) {
+  .editor-collection-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-collection-view-switch {
+    width: fit-content;
+  }
+
+  .editor-collection-list {
+    max-height: 320px;
+  }
+
+  .editor-collection-list.is-grid-view,
+  .world-character-link-list.is-grid-view {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .editor-collection-list.is-grid-view,
+  .world-character-link-list.is-grid-view {
+    grid-template-columns: 1fr;
+  }
+}

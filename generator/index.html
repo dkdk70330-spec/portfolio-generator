@@ -337,10 +337,43 @@
             </div>
 
         <div class="world-editor-layout">
-          <aside class="world-editor-sidebar" aria-label="세계관 목록">
-            <div id="worldEditorList" class="world-editor-list">
+          <aside class="world-editor-sidebar editor-collection-browser" aria-label="세계관 목록">
+            <div class="editor-collection-controls">
+              <label class="editor-collection-search">
+                <span class="sr-only">세계관 검색</span>
+                <input
+                  id="worldEditorSearchInput"
+                  type="search"
+                  placeholder="세계관 검색"
+                  autocomplete="off"
+                >
+              </label>
+              <div class="editor-collection-view-switch" role="group" aria-label="세계관 목록 보기 방식">
+                <button
+                  id="worldEditorGridViewButton"
+                  class="editor-collection-view-button is-active"
+                  type="button"
+                  aria-pressed="true"
+                >
+                  그리드
+                </button>
+                <button
+                  id="worldEditorChipViewButton"
+                  class="editor-collection-view-button"
+                  type="button"
+                  aria-pressed="false"
+                >
+                  칩
+                </button>
+              </div>
+            </div>
+            <p id="worldEditorResultSummary" class="editor-collection-summary" aria-live="polite">0개</p>
+            <div id="worldEditorList" class="world-editor-list editor-collection-list is-grid-view">
               <p class="empty-message">등록된 세계관이 없습니다.</p>
             </div>
+            <button id="worldEditorMoreButton" class="editor-collection-more-button" type="button" hidden>
+              더보기
+            </button>
           </aside>
 
           <div id="worldEditorEmpty" class="world-editor-empty">
@@ -465,8 +498,43 @@
                 <b aria-hidden="true">⌄</b>
               </summary>
               <div class="editor-fold-body">
-                <div id="worldCharacterLinkList" class="world-character-link-list">
-                  <p class="empty-message">등록된 캐릭터가 없습니다.</p>
+                <div class="editor-collection-browser world-character-link-browser">
+                  <div class="editor-collection-controls">
+                    <label class="editor-collection-search">
+                      <span class="sr-only">연결 캐릭터 검색</span>
+                      <input
+                        id="worldCharacterLinkSearchInput"
+                        type="search"
+                        placeholder="이름, 부제, 태그 검색"
+                        autocomplete="off"
+                      >
+                    </label>
+                    <div class="editor-collection-view-switch" role="group" aria-label="연결 캐릭터 보기 방식">
+                      <button
+                        id="worldCharacterLinkGridViewButton"
+                        class="editor-collection-view-button is-active"
+                        type="button"
+                        aria-pressed="true"
+                      >
+                        그리드
+                      </button>
+                      <button
+                        id="worldCharacterLinkChipViewButton"
+                        class="editor-collection-view-button"
+                        type="button"
+                        aria-pressed="false"
+                      >
+                        칩
+                      </button>
+                    </div>
+                  </div>
+                  <p id="worldCharacterLinkResultSummary" class="editor-collection-summary" aria-live="polite">0명</p>
+                  <div id="worldCharacterLinkList" class="world-character-link-list editor-collection-list is-grid-view">
+                    <p class="empty-message">등록된 캐릭터가 없습니다.</p>
+                  </div>
+                  <button id="worldCharacterLinkMoreButton" class="editor-collection-more-button" type="button" hidden>
+                    더보기
+                  </button>
                 </div>
               </div>
             </details>
@@ -510,10 +578,43 @@
             </div>
 
         <div class="character-editor-layout">
-          <aside class="character-editor-sidebar" aria-label="캐릭터 목록">
-            <div id="characterEditorList" class="character-editor-list">
+          <aside class="character-editor-sidebar editor-collection-browser" aria-label="캐릭터 목록">
+            <div class="editor-collection-controls">
+              <label class="editor-collection-search">
+                <span class="sr-only">캐릭터 검색</span>
+                <input
+                  id="characterEditorSearchInput"
+                  type="search"
+                  placeholder="캐릭터 검색"
+                  autocomplete="off"
+                >
+              </label>
+              <div class="editor-collection-view-switch" role="group" aria-label="캐릭터 목록 보기 방식">
+                <button
+                  id="characterEditorGridViewButton"
+                  class="editor-collection-view-button is-active"
+                  type="button"
+                  aria-pressed="true"
+                >
+                  그리드
+                </button>
+                <button
+                  id="characterEditorChipViewButton"
+                  class="editor-collection-view-button"
+                  type="button"
+                  aria-pressed="false"
+                >
+                  칩
+                </button>
+              </div>
+            </div>
+            <p id="characterEditorResultSummary" class="editor-collection-summary" aria-live="polite">0명</p>
+            <div id="characterEditorList" class="character-editor-list editor-collection-list is-grid-view">
               <p class="empty-message">등록된 캐릭터가 없습니다.</p>
             </div>
+            <button id="characterEditorMoreButton" class="editor-collection-more-button" type="button" hidden>
+              더보기
+            </button>
           </aside>
 
           <div id="characterEditorEmpty" class="character-editor-empty">
