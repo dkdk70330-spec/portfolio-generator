@@ -15,7 +15,7 @@ window.ADMIN_CATALOG = {
       "name": "슬래시",
       "icon": "profile-links/slash.png"
     },
-{
+    {
       "id": "lover",
       "name": "러버미",
       "icon": "profile-links/lover.png"
@@ -60,26 +60,35 @@ window.ADMIN_CATALOG = {
       "name": "로판",
       "icon": "profile-links/rofan.png"
     },
-{
+    {
       "id": "rplay",
       "name": "로플",
       "icon": "profile-links/rplay.png"
     },
-{
+    {
       "id": "tpat",
       "name": "티팟",
       "icon": "profile-links/tpat.png"
     },
-{
+    {
       "id": "whif",
       "name": "위프",
       "icon": "profile-links/whif.png"
     },
-
     {
       "id": "tingle",
       "name": "팅글",
       "icon": "profile-links/tingle.png"
+    },
+    {
+      "id": "zeta",
+      "name": "제타",
+      "icon": "profile-links/zeta.png"
+    },
+    {
+      "id": "melting",
+      "name": "멜팅",
+      "icon": "profile-links/melting.png"
     }
   ],
   
@@ -99,17 +108,17 @@ window.ADMIN_CATALOG = {
       "name": "로판",
       "icon": "platforms/rofan.png"
     },
-{
+    {
       "id": "rplay",
       "name": "로플",
       "icon": "platforms/rplay.png"
     },
-{
+    {
       "id": "tpat",
       "name": "티팟",
       "icon": "platforms/tpat.png"
     },
-{
+    {
       "id": "whif",
       "name": "위프",
       "icon": "platforms/whif.png"
@@ -119,6 +128,16 @@ window.ADMIN_CATALOG = {
       "id": "tingle",
       "name": "팅글",
       "icon": "platforms/tingle.png"
+    },
+    {
+      "id": "zeta",
+      "name": "제타",
+      "icon": "platforms/zeta.png"
+    },
+    {
+      "id": "melting",
+      "name": "멜팅",
+      "icon": "platforms/melting.png"
     }
   ],
 
