@@ -3041,8 +3041,9 @@ body.character-filter-picker-open { overflow: hidden; }
 
 #characterBulkPasteInput {
   min-height: 150px;
-  white-space: pre;
-  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: .72rem;
 }

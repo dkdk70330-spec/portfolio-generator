@@ -1129,18 +1129,6 @@ const elements = {
   }
 
 
-  const CHARACTER_BULK_HEADER_ALIASES = new Map([
-    ["캐릭터이름", "name"],
-    ["캐릭터명", "name"],
-    ["이름", "name"],
-    ["부제", "subtitle"],
-    ["캐릭터부제", "subtitle"],
-    ["태그", "tags"],
-    ["캐릭터소개", "description"],
-    ["소개", "description"],
-    ["설명", "description"]
-  ]);
-
   let characterBulkDraftRows = [];
 
   function createCharacterBulkDraft(source = {}) {
@@ -1480,120 +1468,127 @@ const elements = {
     renderCharacterBulkDraftRows();
   }
 
-  function normalizeCharacterBulkHeader(value) {
+  function normalizeCharacterBulkPlatformName(value) {
     return String(value || "")
-      .replace(/^\uFEFF/, "")
       .trim()
       .replace(/\s+/g, "")
       .toLowerCase();
   }
 
-  function parseCharacterBulkTsv(source) {
-    const text = String(source || "").replace(/\r\n?/g, "\n");
-    const rows = [];
-    let row = [];
-    let cell = "";
-    let quoted = false;
+  function characterBulkPlatformNameMap() {
+    const entries = [];
 
-    for (let index = 0; index < text.length; index += 1) {
-      const character = text[index];
-      const nextCharacter = text[index + 1];
+    BULK_CHARACTER_PLATFORM_COLUMNS.forEach(({ id, name }) => {
+      entries.push([normalizeCharacterBulkPlatformName(name), id]);
+      entries.push([normalizeCharacterBulkPlatformName(id), id]);
+    });
 
-      if (character === '"') {
-        if (quoted && nextCharacter === '"') {
-          cell += '"';
-          index += 1;
-        } else {
-          quoted = !quoted;
-        }
-        continue;
-      }
-
-      if (character === "\t" && !quoted) {
-        row.push(cell);
-        cell = "";
-        continue;
-      }
-
-      if (character === "\n" && !quoted) {
-        row.push(cell);
-        rows.push(row);
-        row = [];
-        cell = "";
-        continue;
-      }
-
-      cell += character;
-    }
-
-    row.push(cell);
-    rows.push(row);
-
-    return rows.filter((cells) =>
-      cells.some((value) => String(value || "").trim())
-    );
+    return new Map(entries);
   }
 
   function parseCharacterBulkPaste(source) {
-    const rows = parseCharacterBulkTsv(source);
-    if (rows.length === 0) {
+    const lines = String(source || "")
+      .replace(/\r\n?/g, "\n")
+      .split("\n")
+      .map((line, index) => ({ line, number: index + 1 }))
+      .filter(({ line }) => line.trim());
+
+    if (lines.length === 0) {
       return { rows: [], error: "붙여넣은 내용이 없습니다." };
     }
 
-    const platformHeaderMap = new Map(
-      BULK_CHARACTER_PLATFORM_COLUMNS.map(({ id, name }) => [normalizeCharacterBulkHeader(name), id])
-    );
-    const normalizedFirstRow = rows[0].map(normalizeCharacterBulkHeader);
-    const hasHeader = normalizedFirstRow.some(
-      (header) => CHARACTER_BULK_HEADER_ALIASES.has(header) || platformHeaderMap.has(header)
-    );
-    const dataRows = hasHeader ? rows.slice(1) : rows;
-    const fieldIndexes = { name: 0, subtitle: 1, tags: 2, description: 3 };
-    const platformIndexes = new Map(
-      BULK_CHARACTER_PLATFORM_COLUMNS.map(({ id }, index) => [id, index + 4])
-    );
+    const platformNameMap = characterBulkPlatformNameMap();
+    const supportedPlatformNames = BULK_CHARACTER_PLATFORM_COLUMNS
+      .map(({ name }) => name)
+      .join(", ");
+    const drafts = [];
+    const errors = [];
 
-    if (hasHeader) {
-      Object.keys(fieldIndexes).forEach((key) => { fieldIndexes[key] = undefined; });
-      platformIndexes.clear();
+    lines.forEach(({ line, number }) => {
+      const cells = line.split("^").map((value) => value.trim());
+      const name = cells[0] || "";
+      const subtitle = cells[1] || "";
+      const tags = cells[2] || "";
+      const description = cells[3] || "";
+      const platformCells = cells.slice(4);
+      const platforms = {};
 
-      normalizedFirstRow.forEach((header, index) => {
-        const field = CHARACTER_BULK_HEADER_ALIASES.get(header);
-        if (field && fieldIndexes[field] === undefined) {
-          fieldIndexes[field] = index;
-        }
-        const platformId = platformHeaderMap.get(header);
-        if (platformId && !platformIndexes.has(platformId)) {
-          platformIndexes.set(platformId, index);
-        }
-      });
-
-      if (fieldIndexes.name === undefined) {
-        return { rows: [], error: '제목 행에 "캐릭터 이름", "캐릭터명" 또는 "이름" 열이 필요합니다.' };
+      if (!name) {
+        errors.push(`${number}행: 캐릭터 이름이 비어 있습니다.`);
       }
+
+      if (platformCells.length % 2 !== 0) {
+        errors.push(`${number}행: 플랫폼 이름과 링크 주소를 한 쌍으로 입력해 주세요.`);
+      }
+
+      const seenPlatformIds = new Set();
+
+      for (let index = 0; index + 1 < platformCells.length; index += 2) {
+        const platformName = platformCells[index];
+        const url = platformCells[index + 1];
+
+        if (!platformName && !url) continue;
+
+        if (!platformName) {
+          errors.push(`${number}행: 링크 주소 앞의 플랫폼 이름이 비어 있습니다.`);
+          continue;
+        }
+
+        if (!url) {
+          errors.push(`${number}행: ${platformName}의 링크 주소가 비어 있습니다.`);
+          continue;
+        }
+
+        const platformId = platformNameMap.get(
+          normalizeCharacterBulkPlatformName(platformName)
+        );
+
+        if (!platformId) {
+          errors.push(
+            `${number}행: 알 수 없는 플랫폼 "${platformName}"입니다. 사용 가능: ${supportedPlatformNames}`
+          );
+          continue;
+        }
+
+        if (seenPlatformIds.has(platformId)) {
+          const label = platformCatalog.get(platformId)?.name || platformName;
+          errors.push(`${number}행: ${label} 플랫폼이 중복되었습니다.`);
+          continue;
+        }
+
+        seenPlatformIds.add(platformId);
+        platforms[platformId] = url;
+      }
+
+      drafts.push(createCharacterBulkDraft({
+        name,
+        subtitle,
+        tags,
+        description,
+        platforms
+      }));
+    });
+
+    if (errors.length > 0) {
+      const visibleErrors = errors.slice(0, 5);
+      const remainingCount = errors.length - visibleErrors.length;
+      const suffix = remainingCount > 0
+        ? ` 외 ${remainingCount}건`
+        : "";
+
+      return {
+        rows: [],
+        error: `${visibleErrors.join(" · ")}${suffix}`
+      };
     }
 
-    const drafts = dataRows.map((cells) => {
-      const valueAt = (index) => Number.isInteger(index) ? String(cells[index] || "") : "";
-      const platforms = {};
-      platformIndexes.forEach((columnIndex, platformId) => {
-        platforms[platformId] = valueAt(columnIndex).trim();
-      });
+    const nonEmptyDrafts = drafts.filter((row) => !isCharacterBulkDraftEmpty(row));
 
-      return createCharacterBulkDraft({
-        name: valueAt(fieldIndexes.name).trim(),
-        subtitle: valueAt(fieldIndexes.subtitle).trim(),
-        tags: valueAt(fieldIndexes.tags).trim(),
-        description: valueAt(fieldIndexes.description).trim(),
-        platforms
-      });
-    }).filter((row) => !isCharacterBulkDraftEmpty(row));
-
-    if (drafts.length === 0) {
+    if (nonEmptyDrafts.length === 0) {
       return { rows: [], error: "붙여넣은 내용에서 캐릭터 행을 찾지 못했습니다." };
     }
 
-    return { rows: drafts, error: "" };
+    return { rows: nonEmptyDrafts, error: "" };
   }
 
   function applyCharacterBulkPaste() {
