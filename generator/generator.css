@@ -386,6 +386,41 @@ textarea:focus {
   margin-top: 1rem;
 }
 
+.portfolio-fields-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, .8fr) minmax(220px, 1.35fr) minmax(112px, .55fr) minmax(128px, .6fr);
+  gap: .7rem;
+  align-items: end;
+}
+
+.portfolio-fields-grid > label,
+.portfolio-fields-grid .site-color-control {
+  margin: 0;
+}
+
+.portfolio-fields-grid > .site-color-controls {
+  display: contents;
+  margin: 0;
+}
+
+.portfolio-fields-grid #siteDescriptionInput {
+  min-height: 44px;
+}
+
+.creator-identity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .7rem;
+}
+
+.creator-identity-grid > label + label {
+  margin-top: 0;
+}
+
+.creator-identity-grid + input[type="hidden"] + label {
+  margin-top: 1rem;
+}
+
 .site-color-input-row {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
@@ -959,6 +994,20 @@ textarea:focus {
 
 .world-form {
   padding: 1rem;
+}
+
+.world-title-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: .7rem;
+}
+
+.world-title-grid > label + label {
+  margin-top: 0;
+}
+
+.world-title-grid + label {
+  margin-top: 1rem;
 }
 
 .world-form-actions {
@@ -1829,6 +1878,25 @@ body.world-preview-modal-open {
 .character-editor-empty p { margin: .3rem 0 0; color: var(--muted); font-size: .78rem; }
 .character-form { padding: 1rem; }
 .character-form > label + label { margin-top: 1rem; }
+.character-identity-grid,
+.character-world-featured-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .7rem;
+  margin-top: 1rem;
+}
+.character-identity-grid > label + label,
+.character-world-featured-grid > label + label {
+  margin-top: 0;
+}
+.character-world-featured-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, .9fr);
+  align-items: stretch;
+}
+.character-world-featured-grid .character-featured-option {
+  height: 100%;
+  margin-top: 0;
+}
 .character-form-actions { justify-content: flex-end; margin-bottom: 1rem; }
 .character-form-actions .secondary-button,
 .character-danger-button { min-height: 38px; padding: .5rem .75rem; font-size: .74rem; }
@@ -1906,9 +1974,12 @@ body.world-preview-modal-open {
 .character-platform-toggle { grid-template-columns: auto 36px minmax(0, 1fr); gap: .55rem; align-items: center; margin: 0; cursor: pointer; }
 .character-platform-editor-icon { width: 36px; height: 36px; display: grid; place-items: center; overflow: hidden; border-radius: 10px; background: var(--surface-3); font-size: .7rem; font-weight: 850; }
 .character-platform-editor-icon img { width: 100%; height: 100%; padding: 4px; object-fit: contain; }
-.character-content-editor-item { padding: .8rem; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--bg) 70%, transparent); }
-.character-content-editor-item > label + label { margin-top: .75rem; }
-.character-content-editor-toolbar { align-items: center; justify-content: flex-end; margin-bottom: .65rem; }
+.character-content-editor-item { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; padding: .8rem; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.character-content-editor-item > label { margin: 0; }
+.character-content-editor-item > label:nth-of-type(n + 3),
+.character-content-editor-item > .character-content-display-options { grid-column: 1 / -1; }
+.character-content-editor-item > .character-content-display-options { margin-top: 0; }
+.character-content-editor-toolbar { grid-column: 1 / -1; align-items: center; justify-content: flex-end; margin-bottom: 0; }
 .character-content-editor-toolbar > span { margin-right: auto; color: var(--muted); font-size: .68rem; font-weight: 800; }
 
 .stardust-character-preview { margin-top: 1rem; padding: clamp(1rem, 2.5vw, 1.6rem); border: 1px solid var(--line); border-radius: 22px; background: var(--bg); }
@@ -2114,6 +2185,10 @@ body.character-filter-picker-open { overflow: hidden; }
 
 
 @container (max-width: 760px) {
+  .portfolio-fields-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .world-editor-layout,
   .character-editor-layout {
     grid-template-columns: 1fr;
@@ -2154,6 +2229,15 @@ body.character-filter-picker-open { overflow: hidden; }
 }
 
 @container (max-width: 520px) {
+  .portfolio-fields-grid,
+  .creator-identity-grid,
+  .world-title-grid,
+  .character-identity-grid,
+  .character-world-featured-grid,
+  .character-content-editor-item {
+    grid-template-columns: 1fr;
+  }
+
   .site-color-controls,
   .profile-background-editor {
     grid-template-columns: 1fr;
@@ -3125,5 +3209,21 @@ body.character-filter-picker-open { overflow: hidden; }
   .character-bulk-image-field .file-label {
     width: 100%;
     justify-content: center;
+  }
+}
+
+
+/* 요청된 데스크톱 플랫폼 카드 정렬: 모바일 규칙은 기존 상태 유지 */
+@media (min-width: 761px) {
+  .character-platform-editor-item {
+    grid-template-columns: minmax(116px, max-content) minmax(0, 1fr);
+  }
+
+  .character-platform-toggle {
+    grid-template-columns: auto 36px auto;
+  }
+
+  .character-platform-toggle strong {
+    white-space: nowrap;
   }
 }

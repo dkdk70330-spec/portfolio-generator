@@ -80,41 +80,43 @@
 
             <fieldset>
 
-          <label>
-            <span>제목</span>
-            <input
-              id="siteTitleInput"
-              type="text"
-              maxlength="60"
-              placeholder="예: 콘의 비밀보따리"
-            >
-          </label>
-
-          <label>
-            <span>제작자 짧은 한줄 소개 (이름 위에 작게)</span>
-            <textarea
-              id="siteDescriptionInput"
-              rows="3"
-              maxlength="180"
-              placeholder="대물을 가진 제작자"
-            ></textarea>
-          </label>
-
-          <div class="site-color-controls" aria-label="사이트 색상">
-            <label class="site-color-control">
-              <span>글자색</span>
-              <span class="site-color-input-row">
-                <input id="siteTextColorInput" type="color" value="#f4f1ea">
-                <output id="siteTextColorValue" for="siteTextColorInput">#f4f1ea</output>
-              </span>
+          <div class="portfolio-fields-grid">
+            <label>
+              <span>제목</span>
+              <input
+                id="siteTitleInput"
+                type="text"
+                maxlength="60"
+                placeholder="예: 콘의 비밀보따리"
+              >
             </label>
-            <label class="site-color-control">
-              <span>전체 테마 색</span>
-              <span class="site-color-input-row">
-                <input id="siteThemeColorInput" type="color" value="#a897ff">
-                <output id="siteThemeColorValue" for="siteThemeColorInput">#a897ff</output>
-              </span>
+
+            <label>
+              <span>제작자 짧은 한줄 소개 (이름 위에 작게)</span>
+              <textarea
+                id="siteDescriptionInput"
+                rows="1"
+                maxlength="180"
+                placeholder="대물을 가진 제작자"
+              ></textarea>
             </label>
+
+            <div class="site-color-controls" aria-label="사이트 색상">
+              <label class="site-color-control">
+                <span>글자색</span>
+                <span class="site-color-input-row">
+                  <input id="siteTextColorInput" type="color" value="#f4f1ea">
+                  <output id="siteTextColorValue" for="siteTextColorInput">#f4f1ea</output>
+                </span>
+              </label>
+              <label class="site-color-control">
+                <span>전체 테마 색</span>
+                <span class="site-color-input-row">
+                  <input id="siteThemeColorInput" type="color" value="#a897ff">
+                  <output id="siteThemeColorValue" for="siteThemeColorInput">#a897ff</output>
+                </span>
+              </label>
+            </div>
           </div>
         
 
@@ -220,35 +222,29 @@
             </div>
           </div>
 
-          <label>
-            <span>제작자 이름</span>
-            <input
-              id="creatorNameInput"
-              type="text"
-              maxlength="50"
-              placeholder="예: 푸딩냥"
-            >
-          </label>
+          <div class="creator-identity-grid">
+            <label>
+              <span>제작자 이름</span>
+              <input
+                id="creatorNameInput"
+                type="text"
+                maxlength="50"
+                placeholder="예: 푸딩냥"
+              >
+            </label>
 
-          <label>
-            <span>아이디</span>
-            <input
-              id="creatorHandleInput"
-              type="text"
-              maxlength="50"
-              placeholder="예: @id"
-            >
-          </label>
+            <label>
+              <span>아이디</span>
+              <input
+                id="creatorHandleInput"
+                type="text"
+                maxlength="50"
+                placeholder="예: @id"
+              >
+            </label>
+          </div>
 
-          <label>
-            <span>프로필 대체 글자</span>
-            <input
-              id="creatorFallbackInput"
-              type="text"
-              maxlength="2"
-              placeholder="예: 냥"
-            >
-          </label>
+          <input id="creatorFallbackInput" type="hidden">
 
           <label>
             <span>소개</span>
@@ -396,23 +392,25 @@
               </div>
             </div>
 
-            <label>
-              <span>세계관 이름</span>
-              <input
-                id="worldNameInput"
-                type="text"
-                placeholder="예: 별의 왕관"
-              >
-            </label>
+            <div class="world-title-grid">
+              <label>
+                <span>세계관 이름</span>
+                <input
+                  id="worldNameInput"
+                  type="text"
+                  placeholder="예: 별의 왕관"
+                >
+              </label>
 
-            <label>
-              <span>부제</span>
-              <input
-                id="worldSubtitleInput"
-                type="text"
-                placeholder="예: 사라진 별과 패전국을 둘러싼 왕국 연대기"
-              >
-            </label>
+              <label>
+                <span>부제</span>
+                <input
+                  id="worldSubtitleInput"
+                  type="text"
+                  placeholder="예: 사라진 별과 패전국을 둘러싼 왕국 연대기"
+                >
+              </label>
+            </div>
 
             <label>
               <span>태그</span>
@@ -553,28 +551,32 @@
               </div>
             </details>
 
-            <label>
-              <span>캐릭터 이름</span>
-              <input id="characterNameInput" type="text" placeholder="예: 리라 베일">
-            </label>
+            <div class="character-identity-grid">
+              <label>
+                <span>캐릭터 이름</span>
+                <input id="characterNameInput" type="text" placeholder="예: 리라 베일">
+              </label>
 
-            <label>
-              <span>부제</span>
-              <input id="characterSubtitleInput" type="text" placeholder="예: 별을 잃어버린 천문학자">
-            </label>
+              <label>
+                <span>부제</span>
+                <input id="characterSubtitleInput" type="text" placeholder="예: 별을 잃어버린 천문학자">
+              </label>
+            </div>
 
-            <label>
-              <span>세계관</span>
-              <select id="characterWorldSelect"></select>
-            </label>
+            <div class="character-world-featured-grid">
+              <label>
+                <span>세계관</span>
+                <select id="characterWorldSelect"></select>
+              </label>
 
-            <label class="character-featured-option">
-              <input id="characterFeaturedInput" type="checkbox">
-              <span>
-                <strong>추천 캐릭터로 표시</strong>
-                <small>추천 캐릭터는 최대 3명까지 지정할 수 있습니다.</small>
-              </span>
-            </label>
+              <label class="character-featured-option">
+                <input id="characterFeaturedInput" type="checkbox">
+                <span>
+                  <strong>추천 캐릭터로 표시</strong>
+                  <small>추천 캐릭터는 최대 3명까지 지정할 수 있습니다.</small>
+                </span>
+              </label>
+            </div>
 
             <details class="character-genre-editor editor-fold" aria-labelledby="characterGenresTitle">
               <summary class="editor-fold-summary">
