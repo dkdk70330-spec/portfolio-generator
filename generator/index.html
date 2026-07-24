@@ -600,28 +600,6 @@
               <textarea id="characterDescriptionInput" rows="7" placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."></textarea>
             </label>
 
-            <details
-              class="character-music-editor music-editor editor-fold"
-              aria-labelledby="characterMusicTitle"
-            >
-              <summary class="editor-fold-summary">
-                <span>
-                  <strong class="character-field-label" id="characterMusicTitle">음악</strong>
-                  <small>캐릭터와 어울리는 MP3 또는 YouTube 음악을 등록합니다.</small>
-                </span>
-                <b aria-hidden="true">⌄</b>
-              </summary>
-              <div class="editor-fold-body">
-                <div class="editor-fold-action-row">
-                  <button id="addCharacterMusicButton" class="secondary-button" type="button">트랙 추가</button>
-                </div>
-                <p class="field-help">MP3는 브라우저에 저장되고 전체 백업 ZIP에 포함됩니다. YouTube는 링크만 저장됩니다.</p>
-                <div id="characterMusicList" class="music-editor-list">
-                  <p class="empty-message">등록된 음악이 없습니다.</p>
-                </div>
-              </div>
-            </details>
-
             <details class="character-platform-editor editor-fold" aria-labelledby="characterPlatformsTitle">
               <summary class="editor-fold-summary">
                 <span>
@@ -673,6 +651,29 @@
         <span id="saveStatus" class="save-status" role="status" aria-live="polite">자동 저장 준비 중</span>
       </div>
 
+            <details
+              class="character-music-editor music-editor editor-fold"
+              aria-labelledby="characterMusicTitle"
+            >
+              <summary class="editor-fold-summary">
+                <span>
+                  <strong class="character-field-label" id="characterMusicTitle">음악</strong>
+                  <small>캐릭터와 어울리는 MP3 또는 YouTube 음악을 등록합니다.</small>
+                </span>
+                <b aria-hidden="true">⌄</b>
+              </summary>
+              <div class="editor-fold-body">
+                <div class="editor-fold-action-row">
+                  <button id="addCharacterMusicButton" class="secondary-button" type="button">트랙 추가</button>
+                </div>
+                <p class="field-help">MP3는 브라우저에 저장되고 전체 백업 ZIP에 포함됩니다. YouTube는 링크만 저장됩니다.</p>
+                <div id="characterMusicList" class="music-editor-list">
+                  <p class="empty-message">등록된 음악이 없습니다.</p>
+                </div>
+              </div>
+            </details>
+
+// 여기부터 프리뷰 시작
       <div class="preview-viewport" id="previewViewport">
         <div class="preview-canvas" id="previewCanvas">
       <article class="portfolio-preview">
