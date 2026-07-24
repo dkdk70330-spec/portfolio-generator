@@ -630,27 +630,6 @@
                 </div>
               </div>
             </details>
-          </form>
-        </div>
-          </section>
-        </div>
-      </details>
-    </section>
-
-    <section class="preview-panel" aria-labelledby="previewTitle">
-      <div class="preview-toolbar">
-        <div>
-          <p class="eyebrow">LIVE PREVIEW</p>
-          <h2 id="previewTitle">미리보기</h2>
-        </div>
-        <label class="preview-width-control" for="previewWidthInput">
-          <span>미리보기 폭</span>
-          <input id="previewWidthInput" type="range" min="380" max="760" step="10" value="620">
-          <output id="previewWidthOutput" for="previewWidthInput">620px</output>
-        </label>
-        <span id="saveStatus" class="save-status" role="status" aria-live="polite">자동 저장 준비 중</span>
-      </div>
-
             <details
               class="character-music-editor music-editor editor-fold"
               aria-labelledby="characterMusicTitle"
@@ -672,8 +651,28 @@
                 </div>
               </div>
             </details>
+          </form>
+        </div>
+          </section>
+        </div>
+      </details>
+    </section>
 
 // 여기부터 프리뷰 시작
+    <section class="preview-panel" aria-labelledby="previewTitle">
+      <div class="preview-toolbar">
+        <div>
+          <p class="eyebrow">LIVE PREVIEW</p>
+          <h2 id="previewTitle">미리보기</h2>
+        </div>
+        <label class="preview-width-control" for="previewWidthInput">
+          <span>미리보기 폭</span>
+          <input id="previewWidthInput" type="range" min="380" max="760" step="10" value="620">
+          <output id="previewWidthOutput" for="previewWidthInput">620px</output>
+        </label>
+        <span id="saveStatus" class="save-status" role="status" aria-live="polite">자동 저장 준비 중</span>
+      </div>
+
       <div class="preview-viewport" id="previewViewport">
         <div class="preview-canvas" id="previewCanvas">
       <article class="portfolio-preview">
