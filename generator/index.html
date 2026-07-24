@@ -860,8 +860,8 @@
   <div class="guide-dialog-shell">
     <header class="guide-dialog-header">
       <div>
-        <p class="eyebrow">PUBLISH GUIDE</p>
-        <h2 id="netlifyGuideTitle">Netlify에 사이트 올리기</h2>
+        <p class="eyebrow">생성기 사용 가이드</p>
+        <h2 id="netlifyGuideTitle">사용 전 꼭 확인!</h2>
       </div>
 
       <button
@@ -876,50 +876,45 @@
 
     <ol class="guide-step-list">
       <li>
-        <strong>배포 ZIP 저장</strong>
+        <strong>수정 가능, 재배포 금지</strong>
         <p>
-          상단의 <b>백업</b>을 누르고
-          <b>Netlify 배포 ZIP</b>을 선택하세요.
+          본 생성기는 여러 플랫폼의 캐릭터와 세계관을 한 곳에 통합시켜 유저에게 보여주기 위한, <b>AI채팅 제작자용 아카이브</b>를 목적으로 합니다. 배포 받은 분의 개인적인 코드 <b>수정도 가능</b>하지만, 생성기의 <b>재배포는 금지</b>합니다.
         </p>
       </li>
 
       <li>
-        <strong>Netlify Drop 열기</strong>
+        <strong>자동 임시저장 기능</strong>
         <p>
-          Netlify 계정으로 로그인한 뒤 아래 버튼으로
-          배포 화면을 여세요.
+          작성 내용은 <b>자동으로 임시저장</b>되지만, 캐시 삭제 등 브라우저의 설정이 변경되면 데이터가 삭제될 수 있으니 중간에 백업이 필요합니다. 캐시가 남아있을 경우 관리자가 레이아웃을 수정해도 번경되지 않으니, 가끔 <b>ctrl+shift+R로 강제 새로고침</b> 해주세요. 임시저장된 데이터에는 영향이 없습니다.
         </p>
       </li>
 
       <li>
-        <strong>Netlify 업로드</strong>
+        <strong>백업 기능</strong>
         <p>
-          저장된 Netlify 배포 ZIP 또는 압축을 푼 파일을 업로드 영역에
-          끌어놓으세요. 반드시 <code>index.html</code>가 바로 보이는 파일이어야 합니다.
+          <b>텍스트 / 전체내용 zip / 배포용 zip</b> 중 용도에 맞춰 백업해주세요. 배포용 zip은 사이트 생성용이며 생성기에서 불러오기가 불가능합니다. 배포 이후에도 전체내용 zip을 소장하는 것을 권장합니다.
         </p>
       </li>
 
       <li>
-        <strong>사이트 주소 확인</strong>
+        <strong>사이트 배포</strong>
         <p>
-          배포가 끝나면 발급된
-          <b>netlify.app</b> 주소에서 사이트를 확인하세요.
+          netlify와 github 중 선택하여 배포한 뒤 사이트 링크를 이용합니다. 
         </p>
       </li>
 
       <li>
-        <strong>사이트 업데이트</strong>
+        <strong>Github</strong>
         <p>
-          내용을 수정한 뒤 새로운 배포 ZIP을 만들고,
-          기존 Netlify 사이트의 배포 화면에 다시 올리세요.
+          배포용 zip 다운로드 -> 압축 해제 -> 폴더 안에 든 모든 파일을 저장소에 업로드 -> 몇분 후 설정에서 site 생성
         </p>
       </li>
     </ol>
 
     <div class="guide-dialog-note">
-      <strong>github를 이용할 경우</strong>
+      <strong>Netlify</strong>
       <p>
-        ZIP의 압축을 풀고 새로운 저장소에 업로드 하세요. 반드시 <code>index.html</code>가 폴더 안에 바로 들어있는 형태여야 합니다. 업로드 후 setting-page에서 사이트 주소를 받습니다.
+        배포용 zip 다운로드 -> 하단의 Netlify Drop을 클릭 -> 업로드 화면에 zip 파일 업로드 -> 업로드 완료 후 site 주소 확인 
       </p>
     </div>
 
