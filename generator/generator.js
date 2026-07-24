@@ -3904,6 +3904,8 @@ const genres = (character.genres || [])
 
   function renderCharacterPreview() {
     renderArchiveCounts();
+    const hasAnyCharacters = project.characters.length > 0;
+    elements.previewCharacterSection.hidden = !hasAnyCharacters;
     const featured = [
       ...project.characters.filter((character) => character.featured),
       ...project.characters.filter((character) => !character.featured)
@@ -4698,6 +4700,7 @@ elements.characterPreviewModalTags.innerHTML = [
   function renderWorldPreview() {
     renderArchiveCounts();
     const hasWorlds = project.worlds.length > 0;
+    elements.previewWorldSection.hidden = !hasWorlds;
     elements.previewWorldGrid.hidden = !hasWorlds;
     elements.previewWorldEmpty.hidden = hasWorlds;
     elements.previewWorldGrid.innerHTML = hasWorlds
@@ -6251,10 +6254,12 @@ elements.characterPreviewModalTags.innerHTML = [
       previewGenreCount: document.querySelector("#previewGenreCount"),
       previewFeaturedSection: document.querySelector("#previewFeaturedSection"),
       previewFeaturedGrid: document.querySelector("#previewFeaturedGrid"),
+      previewWorldSection: document.querySelector("#previewWorldSection"),
       previewWorldGrid: document.querySelector("#previewWorldGrid"),
       previewWorldEmpty: document.querySelector("#previewWorldEmpty"),
       previewWorldToggleWrap: document.querySelector("#previewWorldToggleWrap"),
       previewWorldToggle: document.querySelector("#previewWorldToggle"),
+      previewCharacterSection: document.querySelector("#previewCharacterSection"),
       previewCharacterGrid: document.querySelector("#previewCharacterGrid"),
       previewCharacterEmpty: document.querySelector("#previewCharacterEmpty"),
       previewCharacterResultSummary: document.querySelector("#previewCharacterResultSummary"),
@@ -6669,6 +6674,7 @@ elements.characterPreviewModalTags.innerHTML = [
 
     function renderWorlds() {
       const worlds = project.worlds || [];
+      elements.previewWorldSection.hidden = worlds.length === 0;
       elements.previewWorldGrid.hidden = worlds.length === 0;
       elements.previewWorldEmpty.hidden = worlds.length > 0;
       elements.previewWorldGrid.innerHTML = worlds.map(worldCardMarkup).join("");
@@ -6922,18 +6928,26 @@ elements.characterPreviewModalTags.innerHTML = [
       }
     }
 
-    function renderCharacters() {
-      const characters = filteredCharacters();
-      const hasCharacters = characters.length > 0;
-      elements.previewCharacterGrid.innerHTML = characters
-        .map((character) => characterCardMarkup(character))
-        .join("");
-      elements.previewCharacterGrid.hidden = !hasCharacters;
-      elements.previewCharacterEmpty.hidden = hasCharacters;
-      elements.previewCharacterResultSummary.textContent =
-        `총 ${(project.characters || []).length}명 중 ${characters.length}명 표시`;
-      updateCharacterLimit();
-    }
+function renderCharacters() {
+  const allCharacters = project.characters || [];
+  const characters = filteredCharacters();
+  const hasCharacters = characters.length > 0;
+
+  elements.previewCharacterSection.hidden =
+    allCharacters.length === 0;
+
+  elements.previewCharacterGrid.innerHTML = characters
+    .map((character) => characterCardMarkup(character))
+    .join("");
+
+  elements.previewCharacterGrid.hidden = !hasCharacters;
+  elements.previewCharacterEmpty.hidden = hasCharacters;
+
+  elements.previewCharacterResultSummary.textContent =
+    `총 ${allCharacters.length}명 중 ${characters.length}명 표시`;
+
+  updateCharacterLimit();
+}
 
     function filterPickerLabel(group) {
       if (group === "genre") return "장르 선택";
