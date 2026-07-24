@@ -2720,3 +2720,237 @@ body.character-filter-picker-open { overflow: hidden; }
 .character-preview-content-box.is-collapsible summary > b { color: var(--accent); transition: transform .2s ease; }
 .character-preview-content-box.is-collapsible[open] summary > b { transform: rotate(180deg); }
 @media (max-width: 620px) { .character-content-display-options { grid-template-columns: 1fr; } }
+
+/* =================================================
+   캐릭터 일괄 등록
+   ================================================= */
+
+/* 캐릭터 편집 제목 오른쪽 버튼 묶음 */
+.character-editor-main-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+/* 일괄 등록 dialog 본체 */
+.character-bulk-dialog {
+  width: min(820px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  margin: auto;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 24px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* dialog 바깥의 어두운 배경 */
+.character-bulk-dialog::backdrop {
+  background: rgba(5, 5, 8, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+/* dialog 안쪽 전체 영역 */
+.character-bulk-dialog-shell {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  max-height: calc(100dvh - 24px);
+  padding: clamp(1.1rem, 3vw, 1.7rem);
+  overflow-y: auto;
+}
+
+/* dialog 제목과 닫기 버튼 */
+.character-bulk-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.character-bulk-dialog-header h2 {
+  margin: 0;
+  letter-spacing: -0.04em;
+}
+
+.character-bulk-dialog-header .eyebrow {
+  margin-bottom: 0.25rem;
+}
+
+/* 스프레드시트 붙여넣기 입력창 */
+#characterBulkImportInput {
+  width: 100%;
+  min-height: 240px;
+  resize: vertical;
+  white-space: pre;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+/* 등록 결과 미리보기 전체 */
+.character-bulk-preview {
+  min-height: 100px;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(
+    in srgb,
+    var(--surface-2) 76%,
+    transparent
+  );
+}
+
+/* 등록 가능 인원과 오류 개수 */
+.character-bulk-summary {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+/* 오류 목록 */
+.character-bulk-error-list {
+  margin-bottom: 0.85rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--danger) 55%,
+    var(--line)
+  );
+  border-radius: 13px;
+  background: color-mix(
+    in srgb,
+    var(--danger) 8%,
+    transparent
+  );
+}
+
+.character-bulk-error-list strong {
+  display: block;
+  color: var(--danger);
+  font-size: 0.78rem;
+}
+
+.character-bulk-error-list ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.character-bulk-error-list li {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.character-bulk-error-list li + li {
+  margin-top: 0.25rem;
+}
+
+/* 캐릭터 결과 목록 */
+.character-bulk-preview-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* 캐릭터 결과 한 줄 */
+.character-bulk-preview-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns:
+    minmax(120px, 0.8fr)
+    minmax(130px, 1fr)
+    minmax(150px, 1.2fr);
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--bg);
+}
+
+.character-bulk-preview-item strong,
+.character-bulk-preview-item span,
+.character-bulk-preview-item small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-bulk-preview-item strong {
+  font-size: 0.8rem;
+}
+
+.character-bulk-preview-item span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.character-bulk-preview-item small {
+  color: var(--accent);
+  font-size: 0.67rem;
+}
+
+/* dialog 아래쪽 버튼 */
+.character-bulk-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+/* 모바일 */
+@media (max-width: 620px) {
+  .character-editor-main-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .character-editor-main-actions button {
+    width: 100%;
+  }
+
+  .character-bulk-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .character-bulk-dialog-shell {
+    width: 100%;
+    max-height: 92dvh;
+    padding: 1rem;
+  }
+
+  .character-bulk-dialog-header {
+    align-items: center;
+  }
+
+  #characterBulkImportInput {
+    min-height: 210px;
+  }
+
+  .character-bulk-preview-item {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .character-bulk-dialog-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .character-bulk-dialog-actions button {
+    width: 100%;
+  }
+}
