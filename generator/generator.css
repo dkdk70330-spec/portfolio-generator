@@ -1868,8 +1868,33 @@ body.world-preview-modal-open {
 .character-featured-option strong,
 .character-featured-option small { display: block; }
 .character-featured-option small { color: var(--muted); font-size: .68rem; }
-.character-option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; margin-top: .7rem; }
-.character-option-item { grid-template-columns: auto minmax(0, 1fr); gap: .5rem; align-items: center; margin: 0; padding: .55rem; border: 1px solid var(--line); border-radius: 11px; cursor: pointer; }
+.character-option-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: .45rem;
+  margin-top: .7rem;
+}
+
+.character-option-item {
+  flex: 0 0 auto;
+  display: inline-grid;
+  width: max-content;
+  max-width: 100%;
+  grid-template-columns: auto auto;
+  gap: .5rem;
+  align-items: center;
+  margin: 0;
+  padding: .5rem .7rem;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  cursor: pointer;
+}
+
+.character-option-item > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}1px solid var(--line); border-radius: 11px; cursor: pointer; }
 .character-option-item:has(input:checked) { border-color: var(--accent); }
 .character-platform-editor-list {
   display: grid;
@@ -2071,8 +2096,9 @@ body.character-filter-picker-open { overflow: hidden; }
 @media (max-width: 560px) {
   .filter-picker-options { grid-template-columns: 1fr; }
 
-  .character-editor-list,
-  .character-option-grid { grid-template-columns: 1fr; }
+.character-editor-list {
+  grid-template-columns: 1fr;
+}
   .character-image-editor-item { grid-template-columns: 54px minmax(0, 1fr); }
   .character-image-editor-preview { width: 54px; }
   .character-image-editor-actions { grid-column: 1 / -1; justify-content: flex-end; }
@@ -2117,10 +2143,9 @@ body.character-filter-picker-open { overflow: hidden; }
     display: none;
   }
 
-  .world-character-link-list,
-  .character-option-grid {
-    grid-template-columns: 1fr;
-  }
+.world-character-link-list {
+  grid-template-columns: 1fr;
+}
 
   .character-platform-editor-item,
   .world-image-editor {
