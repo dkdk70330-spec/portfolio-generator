@@ -247,6 +247,9 @@ const elements = {
     addCharacterBulkRowButton: document.querySelector("#addCharacterBulkRowButton"),
     addFiveCharacterBulkRowsButton: document.querySelector("#addFiveCharacterBulkRowsButton"),
     removeEmptyCharacterBulkRowsButton: document.querySelector("#removeEmptyCharacterBulkRowsButton"),
+    characterBulkAutoImagesInput: document.querySelector("#characterBulkAutoImagesInput"),
+    characterBulkAutoImageStatus: document.querySelector("#characterBulkAutoImageStatus"),
+    characterBulkAutoImageReport: document.querySelector("#characterBulkAutoImageReport"),
     characterBulkRowList: document.querySelector("#characterBulkRowList"),
     characterBulkPasteInput: document.querySelector("#characterBulkPasteInput"),
     applyCharacterBulkPasteButton: document.querySelector("#applyCharacterBulkPasteButton"),
@@ -1175,6 +1178,242 @@ const elements = {
     elements.characterBulkImportCount.textContent = `입력된 캐릭터 ${count}명`;
   }
 
+  function resetCharacterBulkAutoImageReport() {
+    elements.characterBulkAutoImagesInput.value = "";
+    elements.characterBulkAutoImagesInput.disabled = false;
+    elements.characterBulkAutoImageStatus.textContent = "선택된 PNG가 없습니다.";
+    elements.characterBulkAutoImageReport.innerHTML = "";
+    elements.characterBulkAutoImageReport.hidden = true;
+  }
+
+  function normalizeCharacterBulkImageMatchName(value) {
+    return String(value || "")
+      .normalize("NFKC")
+      .trim()
+      .replace(/\s+/g, "")
+      .toLocaleLowerCase("ko-KR");
+  }
+
+  function parseCharacterBulkImageFilename(file) {
+    const filename = String(file?.name || "").trim();
+
+    if (!/\.png$/i.test(filename)) {
+      return {
+        filename,
+        characterName: "",
+        order: 0,
+        error: "PNG 확장자가 아닙니다."
+      };
+    }
+
+    const stem = filename.replace(/\.png$/i, "");
+    const match = stem.match(/^(.*?)([1-5])$/u);
+
+    if (!match || !match[1].trim()) {
+      return {
+        filename,
+        characterName: "",
+        order: 0,
+        error: "파일명을 캐릭터이름1.png부터 캐릭터이름5.png 형식으로 지정해 주세요."
+      };
+    }
+
+    return {
+      filename,
+      characterName: match[1].trim(),
+      order: Number(match[2]),
+      error: ""
+    };
+  }
+
+  function renderCharacterBulkAutoImageReport({
+    totalFiles = 0,
+    matchedRows = [],
+    issues = []
+  }) {
+    const matchedFileCount = matchedRows.reduce(
+      (count, item) => count + item.orders.length,
+      0
+    );
+    const issueCount = issues.length;
+
+    elements.characterBulkAutoImageStatus.textContent =
+      `PNG ${totalFiles}개 중 ${matchedFileCount}개 연결 · 확인 ${issueCount}건`;
+
+    if (matchedRows.length === 0 && issues.length === 0) {
+      elements.characterBulkAutoImageReport.innerHTML = "";
+      elements.characterBulkAutoImageReport.hidden = true;
+      return;
+    }
+
+    const matchedMarkup = matchedRows.length > 0
+      ? `
+        <section>
+          <strong>연결됨</strong>
+          <ul>
+            ${matchedRows.map((item) => `
+              <li>
+                <b>${escapeHtml(item.name)}</b>
+                <span>이미지 ${item.orders.join(", ")}번</span>
+              </li>
+            `).join("")}
+          </ul>
+        </section>
+      `
+      : "";
+
+    const issueMarkup = issues.length > 0
+      ? `
+        <section class="has-issues">
+          <strong>확인 필요</strong>
+          <ul>
+            ${issues.map((item) => `
+              <li>
+                <b>${escapeHtml(item.filename || "이름 없는 파일")}</b>
+                <span>${escapeHtml(item.reason)}</span>
+              </li>
+            `).join("")}
+          </ul>
+        </section>
+      `
+      : "";
+
+    elements.characterBulkAutoImageReport.innerHTML = matchedMarkup + issueMarkup;
+    elements.characterBulkAutoImageReport.hidden = false;
+  }
+
+  async function handleCharacterBulkAutoImageSelection() {
+    const files = [...(elements.characterBulkAutoImagesInput.files || [])]
+      .filter(Boolean);
+    elements.characterBulkAutoImagesInput.value = "";
+
+    if (files.length === 0) return;
+
+    elements.characterBulkAutoImagesInput.disabled = true;
+    elements.characterBulkAutoImageStatus.textContent =
+      `PNG ${files.length}개를 확인하는 중…`;
+    elements.characterBulkAutoImageReport.innerHTML = "";
+    elements.characterBulkAutoImageReport.hidden = true;
+
+    const rowsByName = new Map();
+
+    characterBulkDraftRows.forEach((row) => {
+      const normalizedName = normalizeCharacterBulkImageMatchName(row.name);
+      if (!normalizedName) return;
+      const rows = rowsByName.get(normalizedName) || [];
+      rows.push(row);
+      rowsByName.set(normalizedName, rows);
+    });
+
+    const matchedByRowId = new Map();
+    const issues = [];
+
+    try {
+      for (const file of files) {
+        const parsed = parseCharacterBulkImageFilename(file);
+
+        if (parsed.error) {
+          issues.push({ filename: parsed.filename, reason: parsed.error });
+          continue;
+        }
+
+        try {
+          await validatePngFile(file, parsed.filename || "캐릭터 PNG");
+        } catch (error) {
+          issues.push({
+            filename: parsed.filename,
+            reason: error.message || "PNG 파일을 읽을 수 없습니다."
+          });
+          continue;
+        }
+
+        const matchingRows = rowsByName.get(
+          normalizeCharacterBulkImageMatchName(parsed.characterName)
+        ) || [];
+
+        if (matchingRows.length === 0) {
+          issues.push({
+            filename: parsed.filename,
+            reason: `일괄등록 목록에서 “${parsed.characterName}” 캐릭터를 찾지 못했습니다.`
+          });
+          continue;
+        }
+
+        if (matchingRows.length > 1) {
+          issues.push({
+            filename: parsed.filename,
+            reason: `“${parsed.characterName}” 이름의 캐릭터가 여러 명이라 자동 연결할 수 없습니다.`
+          });
+          continue;
+        }
+
+        const row = matchingRows[0];
+        const slots = matchedByRowId.get(row.id) || new Map();
+
+        if (slots.has(parsed.order)) {
+          issues.push({
+            filename: parsed.filename,
+            reason: `${row.name}의 ${parsed.order}번 이미지 파일이 중복되었습니다.`
+          });
+          continue;
+        }
+
+        slots.set(parsed.order, file);
+        matchedByRowId.set(row.id, slots);
+      }
+
+      const matchedRows = [];
+
+      matchedByRowId.forEach((selectedSlots, rowId) => {
+        const row = getCharacterBulkDraftRow(rowId);
+        if (!row) return;
+
+        const combinedSlots = new Map(
+          row.images.map((file, index) => [index + 1, file])
+        );
+
+        selectedSlots.forEach((file, order) => {
+          combinedSlots.set(order, file);
+        });
+
+        const highestOrder = Math.max(...combinedSlots.keys());
+        const missingOrders = [];
+
+        for (let order = 1; order <= highestOrder; order += 1) {
+          if (!combinedSlots.has(order)) missingOrders.push(order);
+        }
+
+        if (missingOrders.length > 0) {
+          issues.push({
+            filename: row.name.trim() || "이름 없는 캐릭터",
+            reason: `${missingOrders.join(", ")}번 이미지가 없어 순서를 확정할 수 없습니다.`
+          });
+          return;
+        }
+
+        row.images = Array.from(
+          { length: highestOrder },
+          (_, index) => combinedSlots.get(index + 1)
+        );
+
+        matchedRows.push({
+          name: row.name.trim() || "이름 없는 캐릭터",
+          orders: [...selectedSlots.keys()].sort((left, right) => left - right)
+        });
+      });
+
+      renderCharacterBulkDraftRows();
+      renderCharacterBulkAutoImageReport({
+        totalFiles: files.length,
+        matchedRows,
+        issues
+      });
+      setCharacterBulkImportError("");
+    } finally {
+      elements.characterBulkAutoImagesInput.disabled = false;
+    }
+  }
+
   function characterBulkPlatformCount(row) {
     return Object.values(row.platforms)
       .filter((url) => String(url || "").trim())
@@ -1324,6 +1563,7 @@ const elements = {
       () => createCharacterBulkDraft()
     );
     setCharacterBulkImportError("");
+    resetCharacterBulkAutoImageReport();
     renderCharacterBulkDraftRows();
   }
 
@@ -8050,6 +8290,7 @@ function renderCharacters() {
   elements.addCharacterBulkRowButton.addEventListener("click", () => addCharacterBulkRows(1));
   elements.addFiveCharacterBulkRowsButton.addEventListener("click", () => addCharacterBulkRows(5));
   elements.removeEmptyCharacterBulkRowsButton.addEventListener("click", removeEmptyCharacterBulkRows);
+  elements.characterBulkAutoImagesInput.addEventListener("change", handleCharacterBulkAutoImageSelection);
   elements.applyCharacterBulkPasteButton.addEventListener("click", applyCharacterBulkPaste);
   elements.confirmCharacterBulkImportButton.addEventListener("click", confirmCharacterBulkImport);
   elements.characterBulkRowList.addEventListener("input", handleCharacterBulkRowInput);
