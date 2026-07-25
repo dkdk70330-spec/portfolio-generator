@@ -5643,82 +5643,6 @@ elements.characterPreviewModalTags.innerHTML = [
     }
   }
 
-  function readPngUint32(bytes, offset) {
-    return (
-      ((bytes[offset] << 24) >>> 0) +
-      ((bytes[offset + 1] << 16) >>> 0) +
-      ((bytes[offset + 2] << 8) >>> 0) +
-      (bytes[offset + 3] >>> 0)
-    );
-  }
-
-  async function stripPngMetadataChunks(file, label = "PNG 이미지") {
-    await validatePngFile(file, label);
-
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const allowedChunkTypes = new Set([
-      "IHDR",
-      "PLTE",
-      "IDAT",
-      "IEND",
-      "tRNS"
-    ]);
-    const keptChunks = [bytes.slice(0, PNG_SIGNATURE.length)];
-    let offset = PNG_SIGNATURE.length;
-    let hasHeader = false;
-    let hasImageData = false;
-    let hasEnd = false;
-
-    while (offset < bytes.length) {
-      if (offset + 12 > bytes.length) {
-        throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
-      }
-
-      const chunkLength = readPngUint32(bytes, offset);
-      const chunkEnd = offset + 12 + chunkLength;
-
-      if (chunkEnd > bytes.length) {
-        throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
-      }
-
-      const chunkType = String.fromCharCode(
-        bytes[offset + 4],
-        bytes[offset + 5],
-        bytes[offset + 6],
-        bytes[offset + 7]
-      );
-
-      if (chunkType === "IHDR") hasHeader = true;
-      if (chunkType === "IDAT") hasImageData = true;
-      if (chunkType === "IEND") hasEnd = true;
-
-      if (allowedChunkTypes.has(chunkType)) {
-        keptChunks.push(bytes.slice(offset, chunkEnd));
-      }
-
-      offset = chunkEnd;
-      if (chunkType === "IEND") break;
-    }
-
-    if (!hasHeader || !hasImageData || !hasEnd) {
-      throw new Error(`${label}의 PNG 구조가 올바르지 않습니다.`);
-    }
-
-    const totalLength = keptChunks.reduce(
-      (sum, chunk) => sum + chunk.length,
-      0
-    );
-    const cleanBytes = new Uint8Array(totalLength);
-    let writeOffset = 0;
-
-    keptChunks.forEach((chunk) => {
-      cleanBytes.set(chunk, writeOffset);
-      writeOffset += chunk.length;
-    });
-
-    return new Blob([cleanBytes], { type: "image/png" });
-  }
-
   async function sanitizePng(file, label = "PNG 이미지") {
     await validatePngFile(file, label);
     const sourceUrl = URL.createObjectURL(file);
@@ -5758,19 +5682,98 @@ elements.characterPreviewModalTags.innerHTML = [
         }, "image/png");
       });
 
-      const cleanBlob = await stripPngMetadataChunks(blob, label);
-
-      if (cleanBlob.size > MAX_IMAGE_FILE_BYTES) {
+      if (blob.size > MAX_IMAGE_FILE_BYTES) {
         throw new Error(`변환된 ${label}가 10MB를 초과합니다.`);
       }
 
       return {
-        blob: cleanBlob,
+        blob,
         width: image.naturalWidth,
         height: image.naturalHeight
       };
     } finally {
       URL.revokeObjectURL(sourceUrl);
+    }
+  }
+
+
+  function readPngUint32(bytes, offset) {
+    return (
+      ((bytes[offset] << 24) >>> 0) +
+      ((bytes[offset + 1] << 16) >>> 0) +
+      ((bytes[offset + 2] << 8) >>> 0) +
+      (bytes[offset + 3] >>> 0)
+    );
+  }
+
+  async function assertPngMetadataFree(file, label = "PNG 이미지") {
+    await validatePngFile(file, label);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const allowedChunkTypes = new Set(["IHDR", "PLTE", "IDAT", "IEND", "tRNS"]);
+    let offset = PNG_SIGNATURE.length;
+
+    while (offset < bytes.length) {
+      if (offset + 12 > bytes.length) throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
+      const chunkLength = readPngUint32(bytes, offset);
+      const chunkEnd = offset + 12 + chunkLength;
+      if (chunkEnd > bytes.length) throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
+      const chunkType = String.fromCharCode(
+        bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]
+      );
+      if (!allowedChunkTypes.has(chunkType)) {
+        throw new Error(`${label}에 제거되지 않은 PNG 메타데이터 청크(${chunkType})가 남아 있습니다.`);
+      }
+      offset = chunkEnd;
+      if (chunkType === "IEND") break;
+    }
+  }
+
+  async function stripPngMetadataChunks(file, label = "PNG 이미지") {
+    await validatePngFile(file, label);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const allowedChunkTypes = new Set(["IHDR", "PLTE", "IDAT", "IEND", "tRNS"]);
+    const kept = [bytes.slice(0, PNG_SIGNATURE.length)];
+    let offset = PNG_SIGNATURE.length;
+    let hasHeader = false;
+    let hasImageData = false;
+    let hasEnd = false;
+
+    while (offset < bytes.length) {
+      if (offset + 12 > bytes.length) throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
+      const chunkLength = readPngUint32(bytes, offset);
+      const chunkEnd = offset + 12 + chunkLength;
+      if (chunkEnd > bytes.length) throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
+      const chunkType = String.fromCharCode(
+        bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]
+      );
+      if (chunkType === "IHDR") hasHeader = true;
+      if (chunkType === "IDAT") hasImageData = true;
+      if (chunkType === "IEND") hasEnd = true;
+      if (allowedChunkTypes.has(chunkType)) kept.push(bytes.slice(offset, chunkEnd));
+      offset = chunkEnd;
+      if (chunkType === "IEND") break;
+    }
+
+    if (!hasHeader || !hasImageData || !hasEnd) {
+      throw new Error(`${label}의 PNG 구조가 올바르지 않습니다.`);
+    }
+
+    const total = kept.reduce((sum, part) => sum + part.length, 0);
+    const clean = new Uint8Array(total);
+    let cursor = 0;
+    kept.forEach((part) => {
+      clean.set(part, cursor);
+      cursor += part.length;
+    });
+    const cleanBlob = new Blob([clean], { type: "image/png" });
+    await assertPngMetadataFree(cleanBlob, label);
+    return cleanBlob;
+  }
+
+  async function sanitizeZipPngEntries(entries) {
+    for (const entry of entries) {
+      if (!String(entry.name || "").toLowerCase().endsWith(".png")) continue;
+      entry.data = await stripPngMetadataChunks(entry.data, entry.name);
     }
   }
 
@@ -7633,8 +7636,8 @@ function renderCharacters() {
         missing.push(label);
         return "";
       }
-      const sanitized = await sanitizePng(blob, label);
-      entries.push({ name: path, data: sanitized.blob });
+      const cleanBlob = await stripPngMetadataChunks(blob, label);
+      entries.push({ name: path, data: cleanBlob });
       imageCount += 1;
       return `./${path}`;
     }
@@ -7840,17 +7843,14 @@ function renderCharacters() {
         const destination = `assets/catalog/${item.icon}`;
         if (!catalogAssetPaths.has(destination)) {
           try {
-            const sourceBlob = await fetchDeployBlob(
+            const blob = await fetchDeployBlob(
               new URL(sourceBuilder(item), window.location.href).href,
               `${item.name || item.id} 아이콘`
             );
-            const blob = destination.toLowerCase().endsWith(".png")
-              ? (await sanitizePng(
-                sourceBlob,
-                `${item.name || item.id} 아이콘`
-              )).blob
-              : sourceBlob;
-            entries.push({ name: destination, data: blob });
+            const packagedBlob = destination.toLowerCase().endsWith(".png")
+              ? await stripPngMetadataChunks(blob, `${item.name || item.id} 아이콘`)
+              : blob;
+            entries.push({ name: destination, data: packagedBlob });
             catalogAssetPaths.add(destination);
           } catch (error) {
             console.warn(error);
@@ -8026,8 +8026,7 @@ function renderCharacters() {
     });
 
     if (!blob) return null;
-    const sanitized = await sanitizePng(blob, image.name || "백업 PNG");
-    return sanitized.blob;
+    return await stripPngMetadataChunks(blob, image.name || "백업 PNG");
   }
 
   async function resolveEditorBackupAudioBlob(audio, records) {
@@ -8149,6 +8148,7 @@ function renderCharacters() {
         )
       });
 
+      await sanitizeZipPngEntries(entries);
       const zip = await createStoredZip(entries);
       downloadBlob(zip, `${buildBackupBaseName()}-editor-backup.zip`);
       saveProjectToStorage();
@@ -8177,6 +8177,7 @@ function renderCharacters() {
       const normalizedProject = normalizeProject(project);
       const { entries, imageCount, audioCount } =
         await buildNetlifyDeployEntries(normalizedProject);
+      await sanitizeZipPngEntries(entries);
       const zip = await createStoredZip(entries);
       downloadBlob(zip, `${buildBackupBaseName()}-netlify.zip`);
       saveProjectToStorage();
@@ -8259,21 +8260,18 @@ function renderCharacters() {
       const data = entries.get(image.path);
       if (!data) throw new Error(`백업 이미지가 없습니다: ${image.path}`);
       const blob = new Blob([data], { type: "image/png" });
-      const sanitized = await sanitizePng(
-        blob,
-        image.name || "백업 PNG"
-      );
+      await validatePngFile(blob, image.name || "백업 PNG");
       restoredRecords.push({
         id: image.id,
         role: image.role,
         ownerId: image.ownerId,
         name: image.name || `${image.id}.png`,
         type: "image/png",
-        size: sanitized.blob.size,
-        width: sanitized.width || Number(image.width) || 0,
-        height: sanitized.height || Number(image.height) || 0,
+        size: blob.size,
+        width: Number(image.width) || 0,
+        height: Number(image.height) || 0,
         updatedAt: image.updatedAt || new Date().toISOString(),
-        blob: sanitized.blob
+        blob
       });
     }
 
