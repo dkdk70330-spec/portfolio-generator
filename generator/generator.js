@@ -5696,84 +5696,164 @@ elements.characterPreviewModalTags.innerHTML = [
     }
   }
 
-
-  function readPngUint32(bytes, offset) {
-    return (
-      ((bytes[offset] << 24) >>> 0) +
-      ((bytes[offset + 1] << 16) >>> 0) +
-      ((bytes[offset + 2] << 8) >>> 0) +
-      (bytes[offset + 3] >>> 0)
-    );
-  }
-
-  async function assertPngMetadataFree(file, label = "PNG 이미지") {
+  async function sanitizeOpaquePngForZip(file, label = "PNG 이미지") {
     await validatePngFile(file, label);
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const allowedChunkTypes = new Set(["IHDR", "PLTE", "IDAT", "IEND", "tRNS"]);
-    let offset = PNG_SIGNATURE.length;
+    const sourceUrl = URL.createObjectURL(file);
 
-    while (offset < bytes.length) {
-      if (offset + 12 > bytes.length) throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
-      const chunkLength = readPngUint32(bytes, offset);
-      const chunkEnd = offset + 12 + chunkLength;
-      if (chunkEnd > bytes.length) throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
-      const chunkType = String.fromCharCode(
-        bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]
-      );
-      if (!allowedChunkTypes.has(chunkType)) {
-        throw new Error(`${label}에 제거되지 않은 PNG 메타데이터 청크(${chunkType})가 남아 있습니다.`);
+    try {
+      const image = new Image();
+      image.decoding = "async";
+
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(
+          new Error(`${label}를 읽을 수 없습니다.`)
+        );
+        image.src = sourceUrl;
+      });
+
+      if (!image.naturalWidth || !image.naturalHeight) {
+        throw new Error(`${label}의 크기를 확인할 수 없습니다.`);
       }
-      offset = chunkEnd;
-      if (chunkType === "IEND") break;
-    }
-  }
 
-  async function stripPngMetadataChunks(file, label = "PNG 이미지") {
-    await validatePngFile(file, label);
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const allowedChunkTypes = new Set(["IHDR", "PLTE", "IDAT", "IEND", "tRNS"]);
-    const kept = [bytes.slice(0, PNG_SIGNATURE.length)];
-    let offset = PNG_SIGNATURE.length;
-    let hasHeader = false;
-    let hasImageData = false;
-    let hasEnd = false;
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
 
-    while (offset < bytes.length) {
-      if (offset + 12 > bytes.length) throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
-      const chunkLength = readPngUint32(bytes, offset);
-      const chunkEnd = offset + 12 + chunkLength;
-      if (chunkEnd > bytes.length) throw new Error(`${label}의 PNG 데이터가 손상되었습니다.`);
-      const chunkType = String.fromCharCode(
-        bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]
+      const context = canvas.getContext("2d", {
+        alpha: false,
+        willReadFrequently: true
+      });
+
+      if (!context) {
+        throw new Error("이미지 변환 기능을 사용할 수 없습니다.");
+      }
+
+      context.globalCompositeOperation = "copy";
+      context.fillStyle = "#000000";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.globalCompositeOperation = "source-over";
+      context.drawImage(image, 0, 0);
+
+      const pixels = context.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
       );
-      if (chunkType === "IHDR") hasHeader = true;
-      if (chunkType === "IDAT") hasImageData = true;
-      if (chunkType === "IEND") hasEnd = true;
-      if (allowedChunkTypes.has(chunkType)) kept.push(bytes.slice(offset, chunkEnd));
-      offset = chunkEnd;
-      if (chunkType === "IEND") break;
-    }
 
-    if (!hasHeader || !hasImageData || !hasEnd) {
-      throw new Error(`${label}의 PNG 구조가 올바르지 않습니다.`);
-    }
+      for (let index = 3; index < pixels.data.length; index += 4) {
+        pixels.data[index] = 255;
+      }
 
-    const total = kept.reduce((sum, part) => sum + part.length, 0);
-    const clean = new Uint8Array(total);
-    let cursor = 0;
-    kept.forEach((part) => {
-      clean.set(part, cursor);
-      cursor += part.length;
-    });
-    const cleanBlob = new Blob([clean], { type: "image/png" });
-    await assertPngMetadataFree(cleanBlob, label);
-    return cleanBlob;
+      context.putImageData(pixels, 0, 0);
+
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((result) => {
+          if (result) resolve(result);
+          else reject(new Error(`${label} 변환에 실패했습니다.`));
+        }, "image/png");
+      });
+
+      await verifySanitizedOpaquePng(blob, label);
+      return blob;
+    } finally {
+      URL.revokeObjectURL(sourceUrl);
+    }
   }
 
-  async function sanitizeZipPngEntries(entries) {
-    for (const entry of entries) {
-      if (!String(entry.name || "").toLowerCase().endsWith(".png")) continue;
-      entry.data = await stripPngMetadataChunks(entry.data, entry.name);
+  async function verifySanitizedOpaquePng(blob, label = "PNG 이미지") {
+    await validatePngFile(blob, label);
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const allowedChunks = new Set([
+      "IHDR",
+      "PLTE",
+      "IDAT",
+      "IEND",
+      "tRNS"
+    ]);
+    let offset = PNG_SIGNATURE.length;
+    let foundIend = false;
+
+    while (offset + 12 <= bytes.length) {
+      const length = (
+        bytes[offset] * 0x1000000 +
+        bytes[offset + 1] * 0x10000 +
+        bytes[offset + 2] * 0x100 +
+        bytes[offset + 3]
+      ) >>> 0;
+      const type = String.fromCharCode(
+        bytes[offset + 4],
+        bytes[offset + 5],
+        bytes[offset + 6],
+        bytes[offset + 7]
+      );
+      const nextOffset = offset + 12 + length;
+
+      if (nextOffset > bytes.length) {
+        throw new Error(`${label}의 PNG 구조가 올바르지 않습니다.`);
+      }
+
+      if (!allowedChunks.has(type)) {
+        throw new Error(
+          `${label} 정제 후 허용되지 않은 PNG 정보(${type})가 남았습니다.`
+        );
+      }
+
+      offset = nextOffset;
+
+      if (type === "IEND") {
+        foundIend = true;
+        break;
+      }
+    }
+
+    if (!foundIend || offset !== bytes.length) {
+      throw new Error(`${label} 정제 후 PNG 뒤에 추가 데이터가 남았습니다.`);
+    }
+
+    const verifyUrl = URL.createObjectURL(blob);
+
+    try {
+      const image = new Image();
+      image.decoding = "async";
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(
+          new Error(`${label} 정제 결과를 다시 읽을 수 없습니다.`)
+        );
+        image.src = verifyUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext("2d", {
+        alpha: true,
+        willReadFrequently: true
+      });
+
+      if (!context) {
+        throw new Error("이미지 검증 기능을 사용할 수 없습니다.");
+      }
+
+      context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      ).data;
+
+      for (let index = 3; index < pixels.length; index += 4) {
+        if (pixels[index] !== 255) {
+          throw new Error(
+            `${label} 정제 후 알파 채널에 숨은 정보가 남았습니다.`
+          );
+        }
+      }
+    } finally {
+      URL.revokeObjectURL(verifyUrl);
     }
   }
 
@@ -7636,8 +7716,8 @@ function renderCharacters() {
         missing.push(label);
         return "";
       }
-      const cleanBlob = await stripPngMetadataChunks(blob, label);
-      entries.push({ name: path, data: cleanBlob });
+      const sanitizedBlob = await sanitizeOpaquePngForZip(blob, label);
+      entries.push({ name: path, data: sanitizedBlob });
       imageCount += 1;
       return `./${path}`;
     }
@@ -7847,10 +7927,7 @@ function renderCharacters() {
               new URL(sourceBuilder(item), window.location.href).href,
               `${item.name || item.id} 아이콘`
             );
-            const packagedBlob = destination.toLowerCase().endsWith(".png")
-              ? await stripPngMetadataChunks(blob, `${item.name || item.id} 아이콘`)
-              : blob;
-            entries.push({ name: destination, data: packagedBlob });
+            entries.push({ name: destination, data: blob });
             catalogAssetPaths.add(destination);
           } catch (error) {
             console.warn(error);
@@ -8026,7 +8103,10 @@ function renderCharacters() {
     });
 
     if (!blob) return null;
-    return await stripPngMetadataChunks(blob, image.name || "백업 PNG");
+    return await sanitizeOpaquePngForZip(
+      blob,
+      image.name || "백업 PNG"
+    );
   }
 
   async function resolveEditorBackupAudioBlob(audio, records) {
@@ -8148,7 +8228,6 @@ function renderCharacters() {
         )
       });
 
-      await sanitizeZipPngEntries(entries);
       const zip = await createStoredZip(entries);
       downloadBlob(zip, `${buildBackupBaseName()}-editor-backup.zip`);
       saveProjectToStorage();
@@ -8177,7 +8256,6 @@ function renderCharacters() {
       const normalizedProject = normalizeProject(project);
       const { entries, imageCount, audioCount } =
         await buildNetlifyDeployEntries(normalizedProject);
-      await sanitizeZipPngEntries(entries);
       const zip = await createStoredZip(entries);
       downloadBlob(zip, `${buildBackupBaseName()}-netlify.zip`);
       saveProjectToStorage();
