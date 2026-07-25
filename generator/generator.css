@@ -2053,7 +2053,23 @@ body.world-preview-modal-open {
 .character-preview-card-button { width: 100%; padding: 0; overflow: hidden; text-align: left; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); }
 .character-preview-card-button:hover { transform: translateY(-3px); border-color: var(--line-strong); }
 .character-preview-card-image-wrap { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--surface-2); }
-.character-preview-card.is-featured .character-preview-card-image-wrap { aspect-ratio: 4 / 4.7; }
+/* 넓은 화면의 추천 캐릭터는 낮은 가로형 카드로 표시합니다. */
+.character-preview-card.is-featured .character-preview-card-button {
+  display: grid;
+  grid-template-columns: minmax(120px, 42%) minmax(0, 1fr);
+  min-height: 180px;
+}
+.character-preview-card.is-featured .character-preview-card-image-wrap {
+  height: 100%;
+  min-height: 180px;
+  aspect-ratio: auto;
+}
+.character-preview-card.is-featured .character-preview-card-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+}
 .character-preview-card-image-wrap > img { width: 100%; height: 100%; object-fit: cover; transition: transform .25s ease; }
 .character-preview-card-button:hover .character-preview-card-image-wrap > img { transform: scale(1.035); }
 .character-preview-card-image-fallback { width: 100%; height: 100%; display: grid; place-items: center; color: var(--muted); font-size: .58rem; font-weight: 900; letter-spacing: .1em; }
@@ -2296,6 +2312,20 @@ body.character-filter-picker-open { overflow: hidden; }
 }
 
 @container live-preview (max-width: 760px) {
+  /* 좁은 미리보기에서는 기존 세로형 추천 카드로 돌아갑니다. */
+  .character-preview-card.is-featured .character-preview-card-button {
+    display: block;
+    min-height: 0;
+  }
+  .character-preview-card.is-featured .character-preview-card-image-wrap {
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 4 / 4.7;
+  }
+  .character-preview-card.is-featured .character-preview-card-body {
+    display: block;
+  }
+
   .character-preview-heading,
   .stardust-world-preview .world-preview-section-heading {
     align-items: flex-start;
