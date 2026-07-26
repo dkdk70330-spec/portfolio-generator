@@ -3919,3 +3919,402 @@ body.character-filter-picker-open { overflow: hidden; }
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* =================================================
+   캐릭터 편집 압축형 입력 환경
+   입력 항목과 기능은 유지하고 중첩 카드 표현만 줄입니다.
+   ================================================= */
+
+.character-editor-section {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+}
+
+.character-editor-layout {
+  gap: .65rem;
+  margin-top: .75rem;
+}
+
+.character-editor-sidebar,
+.character-form,
+.character-editor-empty {
+  border-radius: 12px;
+}
+
+.character-editor-sidebar {
+  padding: .4rem;
+}
+
+.character-form {
+  padding: .75rem;
+  background: transparent;
+}
+
+.character-form-actions {
+  gap: .4rem;
+  margin-bottom: .65rem;
+}
+
+.character-form-actions .secondary-button,
+.character-danger-button {
+  min-height: 34px;
+  padding: .38rem .62rem;
+  font-size: .68rem;
+}
+
+.character-identity-grid,
+.character-world-featured-grid {
+  gap: .5rem;
+  margin-top: .65rem;
+}
+
+.character-form label {
+  gap: .28rem;
+}
+
+.character-form label > span {
+  font-size: .68rem;
+}
+
+.character-form input,
+.character-form select {
+  min-height: 36px;
+  padding: .42rem .58rem;
+  border-radius: 8px;
+  font-size: .76rem;
+}
+
+.character-form textarea {
+  min-height: 76px;
+  padding: .52rem .6rem;
+  border-radius: 8px;
+  font-size: .76rem;
+}
+
+.character-form .field-help,
+.character-form .image-input-hint {
+  margin: .2rem 0 0;
+  font-size: .61rem;
+}
+
+.character-world-featured-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, .8fr);
+}
+
+.character-featured-option {
+  min-height: 36px;
+  gap: .5rem;
+  align-items: center;
+  margin: 0;
+  padding: .42rem .55rem;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.character-featured-option input {
+  margin: 0;
+}
+
+.character-featured-option strong {
+  font-size: .7rem;
+}
+
+.character-featured-option small {
+  font-size: .59rem;
+}
+
+.character-image-editor,
+.character-genre-editor,
+.character-platform-editor,
+.character-content-editor,
+.character-music-editor {
+  margin-top: .7rem;
+  border-top: 1px solid var(--line);
+}
+
+.character-image-editor {
+  margin-top: 0;
+}
+
+.character-form .editor-fold {
+  overflow: visible;
+}
+
+.character-form .editor-fold-summary {
+  min-height: 38px;
+  padding: .5rem .1rem;
+}
+
+.character-form .editor-fold-summary strong {
+  font-size: .72rem;
+}
+
+.character-form .editor-fold-summary small {
+  margin-top: .04rem;
+  font-size: .59rem;
+}
+
+.character-form .editor-fold-body {
+  padding: 0 .1rem .55rem;
+}
+
+.character-form .editor-fold-action-row {
+  margin-bottom: .45rem;
+}
+
+.character-form .editor-fold-action-row .secondary-button,
+.character-form .editor-fold-action-row .file-label {
+  min-height: 34px;
+  padding: .38rem .62rem;
+  font-size: .68rem;
+}
+
+.character-image-list,
+.character-content-editor-list {
+  gap: 0;
+  margin-top: .4rem;
+}
+
+.character-image-editor-item {
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: .55rem;
+  padding: .5rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-image-editor-item:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.character-image-editor-preview {
+  width: 52px;
+  border-radius: 8px;
+}
+
+.character-image-editor-meta strong {
+  font-size: .7rem;
+}
+
+.character-image-editor-meta small {
+  font-size: .6rem;
+}
+
+.character-image-editor-actions {
+  gap: .25rem;
+}
+
+.character-image-editor-actions button {
+  min-height: 28px;
+  padding: .25rem .42rem;
+  font-size: .6rem;
+}
+
+.character-option-grid {
+  gap: .3rem;
+  margin-top: .4rem;
+}
+
+.character-option-item {
+  gap: .35rem;
+  padding: .35rem .5rem;
+  border-radius: 8px;
+  font-size: .68rem;
+}
+
+.character-option-item input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.character-platform-editor-list {
+  gap: 0;
+  margin-top: .35rem;
+}
+
+.character-platform-editor-item {
+  gap: .5rem;
+  padding: .48rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-platform-editor-item:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.character-platform-toggle {
+  grid-template-columns: auto 30px auto;
+  gap: .45rem;
+}
+
+.character-platform-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.character-platform-editor-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.character-platform-toggle strong {
+  font-size: .68rem;
+}
+
+.character-platform-editor-item input[type="url"] {
+  min-height: 34px;
+}
+
+.character-content-editor-list {
+  border-top: 1px solid var(--line);
+}
+
+.character-content-editor-item {
+  gap: .5rem;
+  padding: .6rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-content-editor-toolbar {
+  margin-bottom: 0;
+}
+
+.character-content-editor-toolbar > span {
+  font-size: .62rem;
+}
+
+.character-content-editor-toolbar button {
+  min-height: 28px;
+  padding: .25rem .42rem;
+  font-size: .6rem;
+}
+
+.character-content-display-options {
+  gap: .4rem;
+  margin-top: .4rem;
+}
+
+.character-content-toggle-option,
+.character-content-spoiler-option {
+  gap: .45rem;
+  margin: 0;
+  padding: .45rem .5rem;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.character-content-toggle-option strong,
+.character-content-spoiler-option strong {
+  font-size: .68rem;
+}
+
+.character-content-toggle-option small,
+.character-content-spoiler-option small {
+  font-size: .58rem;
+}
+
+.character-content-toggle-option input,
+.character-content-spoiler-option input {
+  width: 16px;
+  height: 16px;
+  margin: .05rem 0 0;
+}
+
+.character-form .music-editor-list {
+  gap: 0;
+  margin-top: .4rem;
+  border-top: 1px solid var(--line);
+}
+
+.character-form .music-editor-item {
+  padding: .6rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-form .music-editor-toolbar {
+  gap: .25rem;
+  margin-bottom: .5rem;
+}
+
+.character-form .music-editor-toolbar > span {
+  font-size: .61rem;
+}
+
+.character-form .music-editor-toolbar button {
+  min-height: 28px;
+  padding: .25rem .42rem;
+  font-size: .6rem;
+}
+
+.character-form .music-editor-grid {
+  gap: .5rem;
+}
+
+.character-form .music-file-row {
+  gap: .5rem;
+  padding: .5rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-form .music-file-status {
+  font-size: .64rem;
+}
+
+.character-form .music-source-editor {
+  margin-top: .5rem;
+}
+
+.character-form .empty-message {
+  margin: .35rem 0;
+  font-size: .68rem;
+}
+
+@media (max-width: 760px) {
+  .character-world-featured-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .character-platform-editor-item {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .character-form {
+    padding: .65rem;
+  }
+
+  .character-image-editor-item {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .character-image-editor-preview {
+    width: 46px;
+  }
+
+  .character-image-editor-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .character-content-editor-item,
+  .character-content-display-options {
+    grid-template-columns: 1fr;
+  }
+}
