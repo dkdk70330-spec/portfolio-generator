@@ -3620,3 +3620,39 @@ body.character-filter-picker-open { overflow: hidden; }
   }
 }
 
+/* 일괄등록 헤더 관리 버튼 및 이미지 드래그·붙여넣기 영역 */
+.character-bulk-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.character-bulk-header-actions .text-button {
+  min-height: 38px;
+  padding: .45rem .75rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line));
+}
+
+.character-bulk-auto-image-panel,
+.character-bulk-image-field {
+  outline: 0;
+}
+
+.character-bulk-auto-image-panel:focus-visible,
+.character-bulk-image-field:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+@media (max-width: 620px) {
+  .character-bulk-dialog-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .character-bulk-header-actions {
+    width: 100%;
+  }
+}
+

@@ -244,9 +244,9 @@ const elements = {
     characterBulkImportDialog: document.querySelector("#characterBulkImportDialog"),
     closeCharacterBulkImportButton: document.querySelector("#closeCharacterBulkImportButton"),
     cancelCharacterBulkImportButton: document.querySelector("#cancelCharacterBulkImportButton"),
-    addCharacterBulkRowButton: document.querySelector("#addCharacterBulkRowButton"),
-    addFiveCharacterBulkRowsButton: document.querySelector("#addFiveCharacterBulkRowsButton"),
+    clearAllCharacterBulkRowsButton: document.querySelector("#clearAllCharacterBulkRowsButton"),
     removeEmptyCharacterBulkRowsButton: document.querySelector("#removeEmptyCharacterBulkRowsButton"),
+    characterBulkAutoImagePanel: document.querySelector("[data-character-bulk-auto-image-drop]"),
     characterBulkAutoImagesInput: document.querySelector("#characterBulkAutoImagesInput"),
     characterBulkAutoImageStatus: document.querySelector("#characterBulkAutoImageStatus"),
     characterBulkAutoImageReport: document.querySelector("#characterBulkAutoImageReport"),
@@ -1133,6 +1133,8 @@ const elements = {
 
 
   let characterBulkDraftRows = [];
+  let activeCharacterBulkImageRowId = "";
+  let characterBulkAutoImageDropActive = false;
 
   function createCharacterBulkDraft(source = {}) {
     const sourcePlatforms = isPlainObject(source.platforms)
@@ -1282,11 +1284,8 @@ const elements = {
     elements.characterBulkAutoImageReport.hidden = false;
   }
 
-  async function handleCharacterBulkAutoImageSelection() {
-    const files = [...(elements.characterBulkAutoImagesInput.files || [])]
-      .filter(Boolean);
-    elements.characterBulkAutoImagesInput.value = "";
-
+  async function processCharacterBulkAutoImageFiles(sourceFiles) {
+    const files = [...(sourceFiles || [])].filter(Boolean);
     if (files.length === 0) return;
 
     elements.characterBulkAutoImagesInput.disabled = true;
@@ -1414,6 +1413,136 @@ const elements = {
     }
   }
 
+  async function handleCharacterBulkAutoImageSelection() {
+    const files = [...(elements.characterBulkAutoImagesInput.files || [])]
+      .filter(Boolean);
+    elements.characterBulkAutoImagesInput.value = "";
+    await processCharacterBulkAutoImageFiles(files);
+  }
+
+  function setCharacterBulkDropVisual(zone, active) {
+    zone?.classList.toggle("is-drag-over", active);
+  }
+
+  function initializeCharacterBulkImageDropAndPaste() {
+    const autoPanel = elements.characterBulkAutoImagePanel;
+
+    if (autoPanel) {
+      autoPanel.addEventListener("focus", () => {
+        characterBulkAutoImageDropActive = true;
+        activeCharacterBulkImageRowId = "";
+      });
+      autoPanel.addEventListener("click", () => {
+        characterBulkAutoImageDropActive = true;
+        activeCharacterBulkImageRowId = "";
+      });
+      autoPanel.addEventListener("dragenter", (event) => {
+        event.preventDefault();
+        characterBulkAutoImageDropActive = true;
+        activeCharacterBulkImageRowId = "";
+        setCharacterBulkDropVisual(autoPanel, true);
+      });
+      autoPanel.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        setCharacterBulkDropVisual(autoPanel, true);
+      });
+      autoPanel.addEventListener("dragleave", (event) => {
+        if (!autoPanel.contains(event.relatedTarget)) {
+          setCharacterBulkDropVisual(autoPanel, false);
+        }
+      });
+      autoPanel.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        setCharacterBulkDropVisual(autoPanel, false);
+        await processCharacterBulkAutoImageFiles(
+          droppedPngFiles(event.dataTransfer)
+        );
+      });
+    }
+
+    elements.characterBulkRowList.addEventListener("focusin", (event) => {
+      const zone = event.target.closest("[data-character-bulk-image-drop]");
+      const card = zone?.closest("[data-character-bulk-row-id]");
+      if (!card) return;
+      activeCharacterBulkImageRowId = card.dataset.characterBulkRowId;
+      characterBulkAutoImageDropActive = false;
+    });
+
+    elements.characterBulkRowList.addEventListener("click", (event) => {
+      const zone = event.target.closest("[data-character-bulk-image-drop]");
+      const card = zone?.closest("[data-character-bulk-row-id]");
+      if (!card) return;
+      activeCharacterBulkImageRowId = card.dataset.characterBulkRowId;
+      characterBulkAutoImageDropActive = false;
+    });
+
+    elements.characterBulkRowList.addEventListener("dragenter", (event) => {
+      const zone = event.target.closest("[data-character-bulk-image-drop]");
+      if (!zone) return;
+      event.preventDefault();
+      const card = zone.closest("[data-character-bulk-row-id]");
+      activeCharacterBulkImageRowId = card?.dataset.characterBulkRowId || "";
+      characterBulkAutoImageDropActive = false;
+      setCharacterBulkDropVisual(zone, true);
+    });
+
+    elements.characterBulkRowList.addEventListener("dragover", (event) => {
+      const zone = event.target.closest("[data-character-bulk-image-drop]");
+      if (!zone) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      setCharacterBulkDropVisual(zone, true);
+    });
+
+    elements.characterBulkRowList.addEventListener("dragleave", (event) => {
+      const zone = event.target.closest("[data-character-bulk-image-drop]");
+      if (zone && !zone.contains(event.relatedTarget)) {
+        setCharacterBulkDropVisual(zone, false);
+      }
+    });
+
+    elements.characterBulkRowList.addEventListener("drop", async (event) => {
+      const zone = event.target.closest("[data-character-bulk-image-drop]");
+      if (!zone) return;
+      event.preventDefault();
+      setCharacterBulkDropVisual(zone, false);
+      const card = zone.closest("[data-character-bulk-row-id]");
+      const row = card
+        ? getCharacterBulkDraftRow(card.dataset.characterBulkRowId)
+        : null;
+      await addCharacterBulkImagesToRow(
+        row,
+        droppedPngFiles(event.dataTransfer)
+      );
+    });
+
+    document.addEventListener("paste", async (event) => {
+      if (!elements.characterBulkImportDialog.open) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable
+      ) return;
+
+      const files = clipboardImageFiles(event);
+      if (files.length === 0) return;
+
+      event.preventDefault();
+
+      if (characterBulkAutoImageDropActive) {
+        await processCharacterBulkAutoImageFiles(files);
+        return;
+      }
+
+      const row = getCharacterBulkDraftRow(activeCharacterBulkImageRowId);
+      if (row) {
+        await addCharacterBulkImagesToRow(row, files);
+      }
+    });
+  }
+
   function characterBulkPlatformCount(row) {
     return Object.values(row.platforms)
       .filter((url) => String(url || "").trim())
@@ -1516,7 +1645,13 @@ const elements = {
                 >${escapeHtml(row.description)}</textarea>
               </label>
 
-              <div class="character-bulk-image-field">
+              <div
+                class="character-bulk-image-field image-drop-zone"
+                data-character-bulk-image-drop
+                tabindex="0"
+                role="group"
+                aria-label="캐릭터 PNG 업로드 영역"
+              >
                 <div>
                   <strong>캐릭터 PNG</strong>
                   <small>최대 5장 · 첫 이미지가 대표 이미지</small>
@@ -1557,7 +1692,7 @@ const elements = {
     updateCharacterBulkImportCount();
   }
 
-  function resetCharacterBulkDraftRows(count = 3) {
+  function resetCharacterBulkDraftRows(count = 1) {
     characterBulkDraftRows = Array.from(
       { length: Math.max(1, count) },
       () => createCharacterBulkDraft()
@@ -1627,7 +1762,40 @@ const elements = {
     updateCharacterBulkImportCount();
   }
 
-  function handleCharacterBulkImageSelection(event) {
+  async function addCharacterBulkImagesToRow(row, files) {
+    const selected = [...(files || [])].filter(Boolean);
+    if (!row || selected.length === 0) return;
+
+    const available = Math.max(0, 5 - row.images.length);
+
+    if (selected.length > available) {
+      markCharacterBulkFieldError(
+        row.id,
+        "images",
+        `이미지는 최대 5장입니다. 현재 ${available}장만 더 추가할 수 있습니다.`
+      );
+      return;
+    }
+
+    try {
+      for (const file of selected) {
+        await validatePngFile(file, file.name || "캐릭터 PNG");
+      }
+    } catch (error) {
+      markCharacterBulkFieldError(
+        row.id,
+        "images",
+        error.message || "PNG 파일을 읽을 수 없습니다."
+      );
+      return;
+    }
+
+    row.images.push(...selected);
+    setCharacterBulkImportError("");
+    renderCharacterBulkDraftRows();
+  }
+
+  async function handleCharacterBulkImageSelection(event) {
     const input = event.target.closest("[data-character-bulk-images]");
     if (!input) return;
 
@@ -1637,25 +1805,7 @@ const elements = {
 
     const selected = [...(input.files || [])].filter(Boolean);
     input.value = "";
-    const available = Math.max(0, 5 - row.images.length);
-
-    if (selected.length > available) {
-      markCharacterBulkFieldError(
-        row.id,
-        "images",
-        `이미지는 최대 5장입니다. 현재 ${available}장만 더 선택할 수 있습니다.`
-      );
-      return;
-    }
-
-    const invalidFile = selected.find((file) => file.type && file.type !== "image/png");
-    if (invalidFile) {
-      markCharacterBulkFieldError(row.id, "images", "PNG 파일만 선택할 수 있습니다.");
-      return;
-    }
-
-    row.images.push(...selected);
-    renderCharacterBulkDraftRows();
+    await addCharacterBulkImagesToRow(row, selected);
   }
 
   function deleteCharacterBulkImage(button) {
@@ -1708,6 +1858,19 @@ const elements = {
     renderCharacterBulkDraftRows();
   }
 
+  function clearAllCharacterBulkRows() {
+    const hasContent = characterBulkDraftRows.some(
+      (row) => !isCharacterBulkDraftEmpty(row)
+    );
+
+    if (hasContent && !window.confirm("일괄등록 화면의 모든 입력과 선택 이미지를 삭제할까요?")) {
+      return;
+    }
+
+    resetCharacterBulkDraftRows(1);
+    elements.characterBulkPasteInput.value = "";
+  }
+
   function normalizeCharacterBulkPlatformName(value) {
     return String(value || "")
       .trim()
@@ -1737,7 +1900,7 @@ const blocks = String(source || "")
   }))
   .filter(({ block }) => block);
 
-    if (lines.length === 0) {
+    if (blocks.length === 0) {
       return { rows: [], error: "붙여넣은 내용이 없습니다." };
     }
 
@@ -1967,7 +2130,7 @@ blocks.forEach(({ block, number }) => {
 
   function openCharacterBulkImportDialog() {
     if (characterBulkDraftRows.length === 0) {
-      resetCharacterBulkDraftRows(3);
+      resetCharacterBulkDraftRows(1);
     } else {
       renderCharacterBulkDraftRows();
     }
@@ -2019,7 +2182,7 @@ blocks.forEach(({ block, number }) => {
       scheduleAutosave();
       setSaveStatus(`캐릭터 ${result.characters.length}명이 일괄 등록됨`);
 
-      resetCharacterBulkDraftRows(3);
+      resetCharacterBulkDraftRows(1);
       closeCharacterBulkImportDialog();
     } finally {
       elements.confirmCharacterBulkImportButton.disabled = false;
@@ -8452,10 +8615,10 @@ function renderCharacters() {
   elements.openCharacterBulkImportButton.addEventListener("click", openCharacterBulkImportDialog);
   elements.closeCharacterBulkImportButton.addEventListener("click", closeCharacterBulkImportDialog);
   elements.cancelCharacterBulkImportButton.addEventListener("click", closeCharacterBulkImportDialog);
-  elements.addCharacterBulkRowButton.addEventListener("click", () => addCharacterBulkRows(1));
-  elements.addFiveCharacterBulkRowsButton.addEventListener("click", () => addCharacterBulkRows(5));
+  elements.clearAllCharacterBulkRowsButton.addEventListener("click", clearAllCharacterBulkRows);
   elements.removeEmptyCharacterBulkRowsButton.addEventListener("click", removeEmptyCharacterBulkRows);
   elements.characterBulkAutoImagesInput.addEventListener("change", handleCharacterBulkAutoImageSelection);
+  initializeCharacterBulkImageDropAndPaste();
   elements.applyCharacterBulkPasteButton.addEventListener("click", applyCharacterBulkPaste);
   elements.confirmCharacterBulkImportButton.addEventListener("click", confirmCharacterBulkImport);
   elements.characterBulkRowList.addEventListener("input", handleCharacterBulkRowInput);

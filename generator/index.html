@@ -1036,16 +1036,20 @@
           <h2 id="characterBulkImportTitle">캐릭터 일괄 등록</h2>
           <p>생성기 안에서 여러 캐릭터와 PNG 이미지를 직접 작성하고 한 번에 등록합니다.</p>
         </div>
-        <button id="closeCharacterBulkImportButton" class="secondary-button" type="button">닫기</button>
+        <div class="character-bulk-header-actions">
+          <button id="clearAllCharacterBulkRowsButton" class="text-button" type="button">전부삭제</button>
+          <button id="removeEmptyCharacterBulkRowsButton" class="secondary-button" type="button">빈 카드 삭제</button>
+          <button id="closeCharacterBulkImportButton" class="secondary-button" type="button">닫기</button>
+        </div>
       </header>
 
-      <div class="character-bulk-toolbar" aria-label="일괄 등록 행 관리">
-        <button id="addCharacterBulkRowButton" class="secondary-button" type="button">1명 추가</button>
-        <button id="addFiveCharacterBulkRowsButton" class="secondary-button" type="button">5명 추가</button>
-        <button id="removeEmptyCharacterBulkRowsButton" class="text-button" type="button">빈 입력 삭제</button>
-      </div>
-
-      <section class="character-bulk-auto-image-panel" aria-labelledby="characterBulkAutoImageTitle">
+      <section
+        class="character-bulk-auto-image-panel image-drop-zone"
+        aria-labelledby="characterBulkAutoImageTitle"
+        data-character-bulk-auto-image-drop
+        tabindex="0"
+        role="group"
+      >
         <div class="character-bulk-auto-image-heading">
           <span>
             <strong id="characterBulkAutoImageTitle">PNG 이미지 일괄 추가</strong>
@@ -1062,6 +1066,7 @@
             multiple
           >
         </div>
+        <p class="image-input-hint">파일 선택 · 끌어놓기 · 이미지 영역 선택 후 Ctrl+V</p>
         <p
           id="characterBulkAutoImageStatus"
           class="character-bulk-auto-image-status"
@@ -1074,8 +1079,6 @@
           hidden
         ></div>
       </section>
-
-      <div id="characterBulkRowList" class="character-bulk-row-list"></div>
 
       <details class="character-bulk-paste-panel">
         <summary>메모장에서 ^ 구분자로 붙여넣기</summary>
@@ -1098,6 +1101,9 @@
           </div>
         </div>
       </details>
+
+
+      <div id="characterBulkRowList" class="character-bulk-row-list"></div>
 
       <p id="characterBulkImportError" class="form-error character-bulk-global-error" role="alert" hidden></p>
 
