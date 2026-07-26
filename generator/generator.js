@@ -52,6 +52,12 @@
   const IMAGE_STORE_NAME = "images";
   const MAX_IMAGE_FILE_BYTES = 10 * 1024 * 1024;
   const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+  const SUPPORTED_IMAGE_MIME_TYPES = new Set([
+    "image/png",
+    "image/jpeg",
+    "image/webp"
+  ]);
+  const SUPPORTED_IMAGE_EXTENSION_PATTERN = /\.(?:png|jpe?g|webp)$/i;
   const MP3_MIME_TYPE = "audio/mpeg";
 
   const services = Array.isArray(adminCatalog.profileLinkServices)
@@ -1184,7 +1190,7 @@ const elements = {
   function resetCharacterBulkAutoImageReport() {
     elements.characterBulkAutoImagesInput.value = "";
     elements.characterBulkAutoImagesInput.disabled = false;
-    elements.characterBulkAutoImageStatus.textContent = "선택된 PNG가 없습니다.";
+    elements.characterBulkAutoImageStatus.textContent = "선택된 이미지가 없습니다.";
     elements.characterBulkAutoImageReport.innerHTML = "";
     elements.characterBulkAutoImageReport.hidden = true;
   }
@@ -1200,16 +1206,16 @@ const elements = {
   function parseCharacterBulkImageFilename(file) {
     const filename = String(file?.name || "").trim();
 
-    if (!/\.png$/i.test(filename)) {
+    if (!SUPPORTED_IMAGE_EXTENSION_PATTERN.test(filename)) {
       return {
         filename,
         characterName: "",
         order: 0,
-        error: "PNG 확장자가 아닙니다."
+        error: "PNG·JPEG·JPG·WebP 확장자가 아닙니다."
       };
     }
 
-    const stem = filename.replace(/\.png$/i, "");
+    const stem = filename.replace(SUPPORTED_IMAGE_EXTENSION_PATTERN, "");
     const match = stem.match(/^(.*?)([1-5])$/u);
 
     if (!match || !match[1].trim()) {
@@ -1217,7 +1223,7 @@ const elements = {
         filename,
         characterName: "",
         order: 0,
-        error: "파일명을 캐릭터이름1.png부터 캐릭터이름5.png 형식으로 지정해 주세요."
+        error: "파일명을 캐릭터이름1.png, 캐릭터이름2.jpg처럼 이름 뒤에 1~5 번호를 붙여 주세요."
       };
     }
 
@@ -1241,7 +1247,7 @@ const elements = {
     const issueCount = issues.length;
 
     elements.characterBulkAutoImageStatus.textContent =
-      `PNG ${totalFiles}개 중 ${matchedFileCount}개 연결 · 확인 ${issueCount}건`;
+      `이미지 ${totalFiles}개 중 ${matchedFileCount}개 연결 · 확인 ${issueCount}건`;
 
     if (matchedRows.length === 0 && issues.length === 0) {
       elements.characterBulkAutoImageReport.innerHTML = "";
@@ -1291,7 +1297,7 @@ const elements = {
 
     elements.characterBulkAutoImagesInput.disabled = true;
     elements.characterBulkAutoImageStatus.textContent =
-      `PNG ${files.length}개를 확인하는 중…`;
+      `이미지 ${files.length}개를 확인하는 중…`;
     elements.characterBulkAutoImageReport.innerHTML = "";
     elements.characterBulkAutoImageReport.hidden = true;
 
@@ -1318,7 +1324,7 @@ const elements = {
         }
 
         try {
-          await validatePngFile(file, parsed.filename || "캐릭터 PNG");
+          await validateSupportedImageFile(file, parsed.filename || "캐릭터 이미지");
         } catch (error) {
           issues.push({
             filename: parsed.filename,
@@ -1457,7 +1463,7 @@ const elements = {
         event.preventDefault();
         setCharacterBulkDropVisual(autoPanel, false);
         await processCharacterBulkAutoImageFiles(
-          droppedPngFiles(event.dataTransfer)
+          droppedImageFiles(event.dataTransfer)
         );
       });
     }
@@ -1514,7 +1520,7 @@ const elements = {
         : null;
       await addCharacterBulkImagesToRow(
         row,
-        droppedPngFiles(event.dataTransfer)
+        droppedImageFiles(event.dataTransfer)
       );
     });
 
@@ -1569,7 +1575,7 @@ const elements = {
 
   function characterBulkImageMarkup(row) {
     if (row.images.length === 0) {
-      return '<p class="empty-message">선택한 PNG가 없습니다.</p>';
+      return '<p class="empty-message">선택한 이미지가 없습니다.</p>';
     }
 
     return `
@@ -1651,18 +1657,18 @@ const elements = {
                 data-character-bulk-image-drop
                 tabindex="0"
                 role="group"
-                aria-label="캐릭터 PNG 업로드 영역"
+                aria-label="캐릭터 이미지 업로드 영역"
               >
                 <div>
                   <strong>이미지 ${row.images.length}/5</strong>
                   <small>첫 이미지가 대표 이미지</small>
                 </div>
-                <label class="file-label" for="characterBulkImages-${escapeHtml(row.id)}">PNG 선택</label>
+                <label class="file-label" for="characterBulkImages-${escapeHtml(row.id)}">이미지 선택</label>
                 <input
                   id="characterBulkImages-${escapeHtml(row.id)}"
                   class="file-input"
                   type="file"
-                  accept="image/png"
+                  accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                   multiple
                   data-character-bulk-images
                 >
@@ -1780,7 +1786,7 @@ const elements = {
 
     try {
       for (const file of selected) {
-        await validatePngFile(file, file.name || "캐릭터 PNG");
+        await validateSupportedImageFile(file, file.name || "캐릭터 이미지");
       }
     } catch (error) {
       markCharacterBulkFieldError(
@@ -4680,19 +4686,19 @@ elements.characterPreviewModalTags.innerHTML = [
     }
 
     elements.characterImageInput.disabled = true;
-    setSaveStatus("캐릭터 PNG 저장 중…");
+    setSaveStatus("캐릭터 이미지 변환·저장 중…");
     const storedIds = [];
     try {
       const nextMetadata = [];
       for (const file of candidates) {
-        const sanitized = await sanitizePng(file, "캐릭터 PNG");
+        const sanitized = await sanitizeImageToPng(file, "캐릭터 이미지");
         const id = createImageId();
         const updatedAt = new Date().toISOString();
         const record = {
           id,
           role: "character-image",
           ownerId: character.id,
-          name: file.name || "character.png",
+          name: outputPngName(file, "character.png"),
           type: "image/png",
           size: sanitized.blob.size,
           width: sanitized.width,
@@ -4720,7 +4726,7 @@ elements.characterPreviewModalTags.innerHTML = [
       renderCharacterPreview();
       renderWorldPreview();
       saveProjectToStorage();
-      setSaveStatus(`캐릭터 PNG ${nextMetadata.length}개가 브라우저에 저장됨`);
+      setSaveStatus(`캐릭터 이미지 ${nextMetadata.length}개가 새 PNG로 저장됨`);
     } catch (error) {
       for (const id of storedIds) {
         releaseCharacterImageObjectUrl(id);
@@ -4728,7 +4734,7 @@ elements.characterPreviewModalTags.innerHTML = [
       }
       console.error(error);
       window.alert(error.message || "캐릭터 이미지를 처리하지 못했습니다.");
-      setSaveStatus("캐릭터 PNG 저장 실패");
+      setSaveStatus("캐릭터 이미지 저장 실패");
     } finally {
       elements.characterImageInput.disabled = false;
     }
@@ -5429,18 +5435,18 @@ elements.characterPreviewModalTags.innerHTML = [
     if (!world || !file) return;
 
     elements.worldImageInput.disabled = true;
-    setSaveStatus("세계관 PNG 저장 중…");
+    setSaveStatus("세계관 이미지 변환·저장 중…");
 
     try {
       const previousMetadata = getWorldImageMetadata(world);
-      const sanitized = await sanitizePng(file, "세계관 PNG");
+      const sanitized = await sanitizeImageToPng(file, "세계관 이미지");
       const id = createImageId();
       const updatedAt = new Date().toISOString();
       const record = {
         id,
         role: "world-cover",
         ownerId: world.id,
-        name: file.name || "world.png",
+        name: outputPngName(file, "world.png"),
         type: "image/png",
         size: sanitized.blob.size,
         width: sanitized.width,
@@ -5477,12 +5483,12 @@ elements.characterPreviewModalTags.innerHTML = [
       renderWorldEditor();
       renderWorldPreview();
       saveProjectToStorage();
-      setSaveStatus("세계관 PNG가 브라우저에 저장됨");
+      setSaveStatus("세계관 이미지가 새 PNG로 저장됨");
     } catch (error) {
       elements.worldImageInput.value = "";
       console.error(error);
       window.alert(error.message || "세계관 이미지를 처리하지 못했습니다.");
-      setSaveStatus("세계관 PNG 저장 실패");
+      setSaveStatus("세계관 이미지 저장 실패");
     } finally {
       elements.worldImageInput.disabled = false;
     }
@@ -5516,7 +5522,7 @@ elements.characterPreviewModalTags.innerHTML = [
       }
     }
 
-    setSaveStatus("세계관 PNG가 제거됨");
+    setSaveStatus("세계관 이미지가 제거됨");
   }
 
   function renderAvatarPreview() {
@@ -5785,8 +5791,25 @@ elements.characterPreviewModalTags.innerHTML = [
     elements.avatarInput.value = "";
   }
 
-  async function validatePngFile(file, label = "PNG 이미지") {
-    if (!file || file.size <= 0) {
+  function imageFileHasSupportedExtension(file) {
+    const name = String(file?.name || "").trim();
+    return Boolean(name && SUPPORTED_IMAGE_EXTENSION_PATTERN.test(name));
+  }
+
+  function imageFileHasSupportedMimeType(file) {
+    const type = String(file?.type || "").toLowerCase();
+    return Boolean(type && SUPPORTED_IMAGE_MIME_TYPES.has(type));
+  }
+
+  function outputPngName(file, fallback = "image.png") {
+    const original = String(file?.name || "").trim();
+    if (!original) return fallback;
+    const stem = original.replace(SUPPORTED_IMAGE_EXTENSION_PATTERN, "").trim();
+    return `${stem || fallback.replace(/\.png$/i, "")}.png`;
+  }
+
+  async function validateSupportedImageFile(file, label = "이미지") {
+    if (!(file instanceof Blob) || file.size <= 0) {
       throw new Error("비어 있는 이미지 파일은 사용할 수 없습니다.");
     }
 
@@ -5794,8 +5817,21 @@ elements.characterPreviewModalTags.innerHTML = [
       throw new Error(`${label}는 10MB 이하만 사용할 수 있습니다.`);
     }
 
-    if (file.type && file.type !== "image/png") {
-      throw new Error("PNG 파일만 선택할 수 있습니다.");
+    if (
+      !imageFileHasSupportedMimeType(file) &&
+      !imageFileHasSupportedExtension(file)
+    ) {
+      throw new Error("PNG·JPEG·JPG·WebP 이미지만 사용할 수 있습니다.");
+    }
+  }
+
+  async function validatePngFile(file, label = "PNG 이미지") {
+    if (!file || file.size <= 0) {
+      throw new Error("비어 있는 이미지 파일은 사용할 수 없습니다.");
+    }
+
+    if (file.size > MAX_IMAGE_FILE_BYTES) {
+      throw new Error(`${label}는 10MB 이하만 사용할 수 있습니다.`);
     }
 
     const signature = new Uint8Array(
@@ -5811,8 +5847,8 @@ elements.characterPreviewModalTags.innerHTML = [
     }
   }
 
-  async function sanitizePng(file, label = "PNG 이미지") {
-    await validatePngFile(file, label);
+  async function sanitizeImageToPng(file, label = "이미지") {
+    await validateSupportedImageFile(file, label);
     const sourceUrl = URL.createObjectURL(file);
 
     try {
@@ -5822,13 +5858,13 @@ elements.characterPreviewModalTags.innerHTML = [
       await new Promise((resolve, reject) => {
         image.onload = resolve;
         image.onerror = () => reject(
-          new Error("PNG 이미지를 읽을 수 없습니다.")
+          new Error(`${label}를 읽을 수 없습니다.`)
         );
         image.src = sourceUrl;
       });
 
       if (!image.naturalWidth || !image.naturalHeight) {
-        throw new Error("이미지 크기를 확인할 수 없습니다.");
+        throw new Error(`${label}의 크기를 확인할 수 없습니다.`);
       }
 
       const canvas = document.createElement("canvas");
@@ -5853,6 +5889,8 @@ elements.characterPreviewModalTags.innerHTML = [
       if (blob.size > MAX_IMAGE_FILE_BYTES) {
         throw new Error(`변환된 ${label}가 10MB를 초과합니다.`);
       }
+
+      await validatePngFile(blob, `${label} 변환본`);
 
       return {
         blob,
@@ -6057,18 +6095,18 @@ elements.characterPreviewModalTags.innerHTML = [
   async function storeCreatorBackgroundFile(file) {
     if (!file) return;
     elements.profileBackgroundInput.disabled = true;
-    setSaveStatus("프로필 배경 PNG 저장 중…");
+    setSaveStatus("프로필 배경 이미지 변환·저장 중…");
 
     try {
       const previousMetadata = getCreatorBackgroundMetadata();
-      const sanitized = await sanitizePng(file, "프로필 배경 PNG");
+      const sanitized = await sanitizeImageToPng(file, "프로필 배경 이미지");
       const id = createImageId();
       const updatedAt = new Date().toISOString();
       const record = {
         id,
         role: "creator-background",
         ownerId: "creator",
-        name: file.name || "profile-background.png",
+        name: outputPngName(file, "profile-background.png"),
         type: "image/png",
         size: sanitized.blob.size,
         width: sanitized.width,
@@ -6102,12 +6140,12 @@ elements.characterPreviewModalTags.innerHTML = [
 
       renderPreview();
       saveProjectToStorage();
-      setSaveStatus("프로필 배경 PNG가 브라우저에 저장됨");
+      setSaveStatus("프로필 배경 이미지가 새 PNG로 저장됨");
     } catch (error) {
       elements.profileBackgroundInput.value = "";
       console.error(error);
       window.alert(error.message || "프로필 배경 이미지를 처리하지 못했습니다.");
-      setSaveStatus("프로필 배경 PNG 저장 실패");
+      setSaveStatus("프로필 배경 이미지 저장 실패");
     } finally {
       elements.profileBackgroundInput.disabled = false;
     }
@@ -6136,7 +6174,7 @@ elements.characterPreviewModalTags.innerHTML = [
         return;
       }
     }
-    setSaveStatus("프로필 배경 PNG가 제거됨");
+    setSaveStatus("프로필 배경 이미지가 제거됨");
   }
 
   async function restoreAvatarFromDatabase() {
@@ -6175,17 +6213,17 @@ elements.characterPreviewModalTags.innerHTML = [
     if (!file) return;
 
     elements.avatarInput.disabled = true;
-    setSaveStatus("프로필 PNG 저장 중…");
+    setSaveStatus("프로필 이미지 변환·저장 중…");
 
     try {
       const previousMetadata = getAvatarMetadata();
-      const sanitized = await sanitizePng(file, "프로필 PNG");
+      const sanitized = await sanitizeImageToPng(file, "프로필 이미지");
       const id = createImageId();
       const updatedAt = new Date().toISOString();
       const record = {
         id,
         role: "creator-avatar",
-        name: file.name || "profile.png",
+        name: outputPngName(file, "profile.png"),
         type: "image/png",
         size: sanitized.blob.size,
         width: sanitized.width,
@@ -6221,12 +6259,12 @@ elements.characterPreviewModalTags.innerHTML = [
 
       renderPreview();
       saveProjectToStorage();
-      setSaveStatus("프로필 PNG가 브라우저에 저장됨");
+      setSaveStatus("프로필 이미지가 새 PNG로 저장됨");
     } catch (error) {
       elements.avatarInput.value = "";
       console.error(error);
       window.alert(error.message || "이미지를 처리하지 못했습니다.");
-      setSaveStatus("프로필 PNG 저장 실패");
+      setSaveStatus("프로필 이미지 저장 실패");
     } finally {
       elements.avatarInput.disabled = false;
     }
@@ -6257,7 +6295,7 @@ elements.characterPreviewModalTags.innerHTML = [
       }
     }
 
-    setSaveStatus("프로필 PNG가 제거됨");
+    setSaveStatus("프로필 이미지가 제거됨");
   }
 
   function setActiveImageDropTarget(zone) {
@@ -6269,21 +6307,27 @@ elements.characterPreviewModalTags.innerHTML = [
 
   function clipboardImageFiles(event) {
     return [...(event.clipboardData?.items || [])]
-      .filter((item) => item.kind === "file" && item.type === "image/png")
+      .filter(
+        (item) =>
+          item.kind === "file" &&
+          SUPPORTED_IMAGE_MIME_TYPES.has(String(item.type || "").toLowerCase())
+      )
       .map((item) => item.getAsFile())
       .filter(Boolean);
   }
 
-  function droppedPngFiles(dataTransfer) {
-    return [...(dataTransfer?.files || [])].filter((file) =>
-      file.type === "image/png" || file.name.toLowerCase().endsWith(".png")
+  function droppedImageFiles(dataTransfer) {
+    return [...(dataTransfer?.files || [])].filter(
+      (file) =>
+        imageFileHasSupportedMimeType(file) ||
+        imageFileHasSupportedExtension(file)
     );
   }
 
   async function routeImageFiles(target, files) {
     const candidates = [...(files || [])].filter(Boolean);
     if (candidates.length === 0) {
-      window.alert("PNG 이미지 파일을 찾지 못했습니다.");
+      window.alert("PNG·JPEG·JPG·WebP 이미지 파일을 찾지 못했습니다.");
       return;
     }
 
@@ -6337,12 +6381,13 @@ elements.characterPreviewModalTags.innerHTML = [
         setActiveImageDropTarget(zone);
         await routeImageFiles(
           zone.dataset.imageDropTarget,
-          droppedPngFiles(event.dataTransfer)
+          droppedImageFiles(event.dataTransfer)
         );
       });
     });
 
     document.addEventListener("paste", async (event) => {
+      if (elements.characterBulkImportDialog?.open) return;
       if (!activeImageDropTarget) return;
       const target = event.target;
       if (
@@ -8467,7 +8512,7 @@ function renderCharacters() {
       if (getAvatarMetadata() && !restoredAvatar) missingImages.push("프로필 PNG");
       if (creatorBackgroundRestoreMissing) missingImages.push("프로필 배경 PNG");
       if (missingWorldCount > 0) missingImages.push(`세계관 PNG ${missingWorldCount}개`);
-      if (missingCharacterCount > 0) missingImages.push(`캐릭터 PNG ${missingCharacterCount}개`);
+      if (missingCharacterCount > 0) missingImages.push(`캐릭터 이미지 ${missingCharacterCount}개`);
       if (missingMusicCount > 0) missingImages.push(`MP3 ${missingMusicCount}개`);
       setSaveStatus(`텍스트 프로젝트 불러옴 · ${missingImages.join(" · ")}를 다시 선택해 주세요`);
     } else {
@@ -9216,7 +9261,7 @@ elements.netlifyGuideDialog.addEventListener(
         messages.push("프로필 배경 PNG");
       }
       if (missingWorldCount > 0) messages.push(`세계관 PNG ${missingWorldCount}개`);
-      if (missingCharacterCount > 0) messages.push(`캐릭터 PNG ${missingCharacterCount}개`);
+      if (missingCharacterCount > 0) messages.push(`캐릭터 이미지 ${missingCharacterCount}개`);
       if (missingMusicCount > 0) messages.push(`MP3 ${missingMusicCount}개`);
       setSaveStatus(
         `${restoredAutosave ? "이전 자동 저장 복구됨 · " : ""}${messages.join(" · ")}를 다시 선택해 주세요`
