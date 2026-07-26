@@ -45,6 +45,9 @@
   const DEFAULT_THEME_COLOR = "#a897ff";
   const FULL_BACKUP_FORMAT = "portfolio-generator-full-backup";
   const FULL_BACKUP_VERSION = 1;
+  const GITHUB_UPLOAD_FILE_LIMIT = 90;
+  const GITHUB_DEPLOY_SNAPSHOT_KEY =
+    `portfolio-generator:github-deploy-snapshot:v${CURRENT_PROJECT_VERSION}`;
   const ADMIN_ASSET_BASE = "../template/images/";
 
   const IMAGE_DB_NAME = "portfolio-generator-images";
@@ -183,9 +186,10 @@ const elements = {
     document.querySelector("#netlifyGuideClose"),
 
   backupMenu: document.querySelector("#backupMenu"),
-    downloadTextBackupButton: document.querySelector("#downloadTextBackupButton"),
     downloadEditorBackupButton: document.querySelector("#downloadEditorBackupButton"),
-    downloadFullBackupButton: document.querySelector("#downloadFullBackupButton"),
+    downloadNetlifyDeployButton: document.querySelector("#downloadNetlifyDeployButton"),
+    downloadGithubDeployButton: document.querySelector("#downloadGithubDeployButton"),
+    downloadGithubSplitDeployButton: document.querySelector("#downloadGithubSplitDeployButton"),
     importProjectInput: document.querySelector("#importProjectInput"),
     resetProjectButton: document.querySelector("#resetProjectButton"),
 
@@ -6968,7 +6972,9 @@ elements.characterPreviewModalTags.innerHTML = [
   ${characterModal.outerHTML}
   ${worldModal.outerHTML}
 
-  <script src="./assets/site-data.js"></script>
+  <script src="./assets/site-main.js"></script>
+  <script src="./assets/site-worlds.js"></script>
+  <script src="./assets/site-characters.js"></script>
   <script src="./assets/site.js" defer></script>
 </body>
 </html>
@@ -8071,7 +8077,9 @@ function renderCharacters() {
 
   async function buildNetlifyDeployEntries(normalizedProject) {
     const deployProject = cloneJson(normalizedProject);
-    const entries = [];
+    const mainEntries = [];
+    const worldEntries = [];
+    const characterEntries = [];
     const missing = [];
     let imageCount = 0;
     let audioCount = 0;
@@ -8085,24 +8093,24 @@ function renderCharacters() {
       console.warn(error);
     }
 
-    async function addPng(path, blob, label) {
+    async function addPng(targetEntries, path, blob, label) {
       if (!blob) {
         missing.push(label);
         return "";
       }
       const sanitizedBlob = await sanitizeOpaquePngForZip(blob, label);
-      entries.push({ name: path, data: sanitizedBlob });
+      targetEntries.push({ name: path, data: sanitizedBlob });
       imageCount += 1;
       return `./${path}`;
     }
 
-    async function addMp3(path, blob, label) {
+    async function addMp3(targetEntries, path, blob, label) {
       if (!blob) {
         missing.push(label);
         return "";
       }
       await validateMp3File(blob, label);
-      entries.push({ name: path, data: blob });
+      targetEntries.push({ name: path, data: blob });
       audioCount += 1;
       return `./${path}`;
     }
@@ -8120,6 +8128,7 @@ function renderCharacters() {
         label: "프로필 PNG"
       });
       deployProject.creator.avatar = await addPng(
+        mainEntries,
         "assets/images/creator-avatar.png",
         blob,
         "프로필 PNG"
@@ -8141,6 +8150,7 @@ function renderCharacters() {
         label: "프로필 배경 PNG"
       });
       deployProject.creator.background = await addPng(
+        mainEntries,
         "assets/images/creator-background.png",
         blob,
         "프로필 배경 PNG"
@@ -8150,11 +8160,15 @@ function renderCharacters() {
     for (let worldIndex = 0; worldIndex < normalizedProject.worlds.length; worldIndex += 1) {
       const originalWorld = normalizedProject.worlds[worldIndex];
       const deployWorld = deployProject.worlds[worldIndex];
+      const worldKey = safeDeployAssetSegment(
+        originalWorld.id,
+        `world-${worldIndex + 1}`
+      );
+
       if (originalWorld.image) {
         const metadata = isPlainObject(originalWorld.image)
           ? originalWorld.image
           : null;
-        const key = safeDeployAssetSegment(originalWorld.id, `world-${worldIndex + 1}`);
         const blob = await resolveDeployBlob({
           preferredBlob: worldImageBlobs.get(originalWorld.id),
           storedBlob: metadata?.id ? records.get(metadata.id)?.blob : null,
@@ -8165,9 +8179,38 @@ function renderCharacters() {
           label: `세계관 “${originalWorld.name || worldIndex + 1}” PNG`
         });
         deployWorld.image = await addPng(
-          `assets/images/world-${key}.png`,
+          worldEntries,
+          `assets/images/world-${worldKey}.png`,
           blob,
           `세계관 “${originalWorld.name || worldIndex + 1}” PNG`
+        );
+      }
+
+      for (let trackIndex = 0; trackIndex < (originalWorld.music || []).length; trackIndex += 1) {
+        const originalTrack = originalWorld.music[trackIndex];
+        const deployTrack = deployWorld.music[trackIndex];
+        if (originalTrack.type !== "mp3" || !originalTrack.file) continue;
+        const metadata = isPlainObject(originalTrack.file)
+          ? originalTrack.file
+          : null;
+        const trackKey = safeDeployAssetSegment(
+          originalTrack.id,
+          `track-${trackIndex + 1}`
+        );
+        const blob = await resolveDeployBlob({
+          preferredBlob: metadata?.id ? musicBlobs.get(metadata.id) : null,
+          storedBlob: metadata?.id ? records.get(metadata.id)?.blob : null,
+          previewUrl: metadata?.id ? musicPreviewUrls.get(metadata.id) || "" : "",
+          legacyUrl: typeof originalTrack.file === "string"
+            ? legacyImageUrl(originalTrack.file)
+            : "",
+          label: `세계관 “${originalWorld.name || worldIndex + 1}” MP3 ${trackIndex + 1}`
+        });
+        deployTrack.file = await addMp3(
+          worldEntries,
+          `assets/audio/world-${worldKey}-${trackKey}.mp3`,
+          blob,
+          `세계관 “${originalWorld.name || worldIndex + 1}” MP3 ${trackIndex + 1}`
         );
       }
     }
@@ -8198,6 +8241,7 @@ function renderCharacters() {
           label: `캐릭터 “${originalCharacter.name || characterIndex + 1}” 이미지 ${imageIndex + 1}`
         });
         const path = await addPng(
+          characterEntries,
           `assets/images/character-${characterKey}-${imageIndex + 1}.png`,
           blob,
           `캐릭터 “${originalCharacter.name || characterIndex + 1}” 이미지 ${imageIndex + 1}`
@@ -8226,42 +8270,10 @@ function renderCharacters() {
           label: `캐릭터 “${originalCharacter.name || characterIndex + 1}” MP3 ${trackIndex + 1}`
         });
         deployTrack.file = await addMp3(
+          characterEntries,
           `assets/audio/character-${characterKey}-${trackKey}.mp3`,
           blob,
           `캐릭터 “${originalCharacter.name || characterIndex + 1}” MP3 ${trackIndex + 1}`
-        );
-      }
-    }
-
-    for (let worldIndex = 0; worldIndex < normalizedProject.worlds.length; worldIndex += 1) {
-      const originalWorld = normalizedProject.worlds[worldIndex];
-      const deployWorld = deployProject.worlds[worldIndex];
-      const worldKey = safeDeployAssetSegment(originalWorld.id, `world-${worldIndex + 1}`);
-
-      for (let trackIndex = 0; trackIndex < (originalWorld.music || []).length; trackIndex += 1) {
-        const originalTrack = originalWorld.music[trackIndex];
-        const deployTrack = deployWorld.music[trackIndex];
-        if (originalTrack.type !== "mp3" || !originalTrack.file) continue;
-        const metadata = isPlainObject(originalTrack.file)
-          ? originalTrack.file
-          : null;
-        const trackKey = safeDeployAssetSegment(
-          originalTrack.id,
-          `track-${trackIndex + 1}`
-        );
-        const blob = await resolveDeployBlob({
-          preferredBlob: metadata?.id ? musicBlobs.get(metadata.id) : null,
-          storedBlob: metadata?.id ? records.get(metadata.id)?.blob : null,
-          previewUrl: metadata?.id ? musicPreviewUrls.get(metadata.id) || "" : "",
-          legacyUrl: typeof originalTrack.file === "string"
-            ? legacyImageUrl(originalTrack.file)
-            : "",
-          label: `세계관 “${originalWorld.name || worldIndex + 1}” MP3 ${trackIndex + 1}`
-        });
-        deployTrack.file = await addMp3(
-          `assets/audio/world-${worldKey}-${trackKey}.mp3`,
-          blob,
-          `세계관 “${originalWorld.name || worldIndex + 1}” MP3 ${trackIndex + 1}`
         );
       }
     }
@@ -8272,21 +8284,10 @@ function renderCharacters() {
       );
     }
 
-    const usedServiceIds = new Set(
-      (deployProject.creator.links || []).map((link) => link.id)
-    );
-    const usedPlatformIds = new Set(
-      deployProject.characters.flatMap((character) =>
-        (character.platforms || []).map((link) => link.id)
-      )
-    );
+    // 소셜·플랫폼 아이콘은 사용 횟수와 무관하게 공통 파일 한 벌만 패키징합니다.
     const deployCatalog = {
-      profileLinkServices: cloneJson(services).filter((item) =>
-        usedServiceIds.has(item.id)
-      ),
-      platforms: cloneJson(platformOptions).filter((item) =>
-        usedPlatformIds.has(item.id)
-      ),
+      profileLinkServices: cloneJson(services),
+      platforms: cloneJson(platformOptions),
       genres: cloneJson(genreOptions)
     };
     const catalogAssetPaths = new Set();
@@ -8301,7 +8302,7 @@ function renderCharacters() {
               new URL(sourceBuilder(item), window.location.href).href,
               `${item.name || item.id} 아이콘`
             );
-            entries.push({ name: destination, data: blob });
+            mainEntries.push({ name: destination, data: blob });
             catalogAssetPaths.add(destination);
           } catch (error) {
             console.warn(error);
@@ -8323,15 +8324,28 @@ function renderCharacters() {
     );
 
     const css = await readGeneratorStylesheetText();
-    const exportCss = `${css}\n\n/* Netlify exported portfolio shell */\n:root{--preview-panel-width:1200px;}\nbody.exported-portfolio-site{min-width:320px;}\n.exported-site-shell{width:min(calc(100% - 24px),1200px);margin:0 auto;padding:24px 0 64px;}\n.exported-site-shell .preview-canvas{width:100%;max-width:none;margin:0;}\n@media(max-width:620px){.exported-site-shell{width:min(calc(100% - 16px),1200px);padding-top:8px;}}\n`;
-    const dataSource = [
-      `window.PORTFOLIO_PROJECT = ${JSON.stringify(deployProject, null, 2)};`,
+    const exportCss = `${css}\n\n/* Exported portfolio shell */\n:root{--preview-panel-width:1200px;}\nbody.exported-portfolio-site{min-width:320px;}\n.exported-site-shell{width:min(calc(100% - 24px),1200px);margin:0 auto;padding:24px 0 64px;}\n.exported-site-shell .preview-canvas{width:100%;max-width:none;margin:0;}\n@media(max-width:620px){.exported-site-shell{width:min(calc(100% - 16px),1200px);padding-top:8px;}}\n`;
+    const deployMainProject = {
+      ...cloneJson(deployProject),
+      worlds: [],
+      characters: []
+    };
+    const mainDataSource = [
+      `window.PORTFOLIO_PROJECT = ${JSON.stringify(deployMainProject, null, 2)};`,
       `window.PORTFOLIO_CATALOG = ${JSON.stringify(deployCatalog, null, 2)};`
     ].join("\n\n");
+    const worldDataSource = [
+      `window.PORTFOLIO_PROJECT = window.PORTFOLIO_PROJECT || { site: {}, creator: { bio: [], links: [] }, worlds: [], characters: [] };`,
+      `window.PORTFOLIO_PROJECT.worlds = ${JSON.stringify(deployProject.worlds, null, 2)};`
+    ].join("\n");
+    const characterDataSource = [
+      `window.PORTFOLIO_PROJECT = window.PORTFOLIO_PROJECT || { site: {}, creator: { bio: [], links: [] }, worlds: [], characters: [] };`,
+      `window.PORTFOLIO_PROJECT.characters = ${JSON.stringify(deployProject.characters, null, 2)};`
+    ].join("\n");
     const runtimeSource = `(${netlifyPortfolioRuntime.toString()})();\n`;
     const html = buildNetlifyDeployHtml();
 
-    entries.unshift(
+    mainEntries.unshift(
       {
         name: "index.html",
         data: new TextEncoder().encode(html)
@@ -8341,16 +8355,31 @@ function renderCharacters() {
         data: new TextEncoder().encode(exportCss)
       },
       {
-        name: "assets/site-data.js",
-        data: new TextEncoder().encode(dataSource)
+        name: "assets/site-main.js",
+        data: new TextEncoder().encode(mainDataSource)
       },
       {
         name: "assets/site.js",
         data: new TextEncoder().encode(runtimeSource)
       }
     );
+    worldEntries.unshift({
+      name: "assets/site-worlds.js",
+      data: new TextEncoder().encode(worldDataSource)
+    });
+    characterEntries.unshift({
+      name: "assets/site-characters.js",
+      data: new TextEncoder().encode(characterDataSource)
+    });
 
-    return { entries, imageCount, audioCount };
+    return {
+      entries: [...mainEntries, ...worldEntries, ...characterEntries],
+      mainEntries,
+      worldEntries,
+      characterEntries,
+      imageCount,
+      audioCount
+    };
   }
 
 
@@ -8415,25 +8444,6 @@ function renderCharacters() {
     return items;
   }
 
-  function downloadTextBackup() {
-    window.clearTimeout(autosaveTimer);
-    autosaveTimer = 0;
-    try {
-      const normalizedProject = normalizeProject(project);
-      const blob = new Blob(
-        [JSON.stringify(normalizedProject, null, 2)],
-        { type: "application/json;charset=utf-8" }
-      );
-      downloadBlob(blob, `${buildBackupBaseName()}.json`);
-      saveProjectToStorage();
-      setSaveStatus("텍스트 백업 JSON 저장됨");
-      elements.backupMenu.open = false;
-    } catch (error) {
-      console.error(error);
-      window.alert(error.message || "텍스트 백업을 저장하지 못했습니다.");
-      setSaveStatus("텍스트 백업 실패");
-    }
-  }
 
 
   async function resolveEditorBackupImageBlob(image, records) {
@@ -8502,7 +8512,7 @@ function renderCharacters() {
     window.clearTimeout(autosaveTimer);
     autosaveTimer = 0;
     elements.downloadEditorBackupButton.disabled = true;
-    setSaveStatus("편집용 전체 백업 ZIP 생성 중…");
+    setSaveStatus("백업용 ZIP 생성 중…");
 
     try {
       const normalizedProject = normalizeProject(project);
@@ -8581,7 +8591,7 @@ function renderCharacters() {
 
       if (missing.length > 0) {
         throw new Error(
-          `편집용 백업에 넣을 수 없는 파일이 있습니다: ${missing.join(", ")}`
+          `백업용 ZIP에 넣을 수 없는 파일이 있습니다: ${missing.join(", ")}`
         );
       }
 
@@ -8603,28 +8613,142 @@ function renderCharacters() {
       });
 
       const zip = await createStoredZip(entries);
-      downloadBlob(zip, `${buildBackupBaseName()}-editor-backup.zip`);
+      downloadBlob(zip, `${buildBackupBaseName()}-backup.zip`);
       saveProjectToStorage();
       setSaveStatus(
-        `편집용 전체 백업 저장됨 · PNG ${manifestImages.length}개 · MP3 ${manifestAudio.length}개`
+        `백업용 ZIP 저장됨 · PNG ${manifestImages.length}개 · MP3 ${manifestAudio.length}개`
       );
       elements.backupMenu.open = false;
     } catch (error) {
       console.error(error);
       window.alert(
-        error.message || "편집용 전체 백업 ZIP을 저장하지 못했습니다."
+        error.message || "백업용 ZIP을 저장하지 못했습니다."
       );
-      setSaveStatus("편집용 전체 백업 ZIP 생성 실패");
+      setSaveStatus("백업용 ZIP 생성 실패");
     } finally {
       elements.downloadEditorBackupButton.disabled = false;
     }
   }
 
-  async function downloadFullBackup() {
+  function createGithubDeploySnapshot(normalizedProject) {
+    return {
+      version: 1,
+      main: JSON.stringify({
+        version: normalizedProject.version,
+        site: normalizedProject.site,
+        creator: normalizedProject.creator
+      }),
+      worlds: JSON.stringify(normalizedProject.worlds),
+      characters: JSON.stringify(normalizedProject.characters)
+    };
+  }
+
+  function readGithubDeploySnapshot() {
+    try {
+      const raw = window.localStorage.getItem(GITHUB_DEPLOY_SNAPSHOT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && parsed.version === 1 ? parsed : null;
+    } catch (error) {
+      console.warn(error);
+      return null;
+    }
+  }
+
+  function saveGithubDeploySnapshot(snapshot) {
+    try {
+      window.localStorage.setItem(
+        GITHUB_DEPLOY_SNAPSHOT_KEY,
+        JSON.stringify(snapshot)
+      );
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+
+  function githubDeployChangeState(normalizedProject) {
+    const previous = readGithubDeploySnapshot();
+    const current = createGithubDeploySnapshot(normalizedProject);
+    if (!previous) {
+      return {
+        current,
+        hasPrevious: false,
+        mainChanged: true,
+        worldsChanged: true,
+        charactersChanged: true,
+        partialContentOnly: false
+      };
+    }
+
+    const mainChanged = previous.main !== current.main;
+    const worldsChanged = previous.worlds !== current.worlds;
+    const charactersChanged = previous.characters !== current.characters;
+
+    return {
+      current,
+      hasPrevious: true,
+      mainChanged,
+      worldsChanged,
+      charactersChanged,
+      partialContentOnly:
+        !mainChanged && (worldsChanged || charactersChanged)
+    };
+  }
+
+  function chunkDeployEntries(entries, limit = GITHUB_UPLOAD_FILE_LIMIT) {
+    const chunks = [];
+    for (let index = 0; index < entries.length; index += limit) {
+      chunks.push(entries.slice(index, index + limit));
+    }
+    return chunks.length > 0 ? chunks : [[]];
+  }
+
+  function githubSplitGuideText({
+    mainCount,
+    worldCount,
+    characterCounts
+  }) {
+    const characterLines = characterCounts
+      .map((count, index) =>
+        `캐릭터-${String(index + 1).padStart(2, "0")}.zip: ${count}개 파일`
+      )
+      .join("\n");
+
+    return `GitHub 분할 배포 안내
+
+1. 메인.zip
+- index.html, 사이트 CSS·실행 파일
+- 포트폴리오, 제작자 프로필, 소셜 링크
+- 프로필 이미지와 배경 이미지
+- 모든 소셜 아이콘과 플랫폼 아이콘
+- 파일 수: ${mainCount}개
+
+2. 세계관.zip
+- 세계관 데이터, 이미지, MP3 전체
+- 세계관만 수정했을 때 이 ZIP만 다시 업로드할 수 있습니다.
+- 파일 수: ${worldCount}개
+
+3. 캐릭터-01.zip부터
+- 캐릭터 데이터, 이미지, MP3
+- ZIP 하나당 최대 ${GITHUB_UPLOAD_FILE_LIMIT}개 파일
+${characterLines || "캐릭터 파일 없음"}
+
+최초 배포
+메인.zip → 세계관.zip → 모든 캐릭터 ZIP 순서로 각각 압축을 풀고, 내부 파일과 폴더를 같은 GitHub 저장소에 업로드해 커밋합니다.
+
+부분 갱신
+- 포트폴리오·프로필·소셜·아이콘 변경: 메인.zip
+- 세계관만 변경: 세계관.zip
+- 캐릭터 변경: 캐릭터 ZIP 전체를 순서대로 갱신하는 것을 권장합니다.
+
+ZIP 파일 자체를 저장소에 올리지 말고, 각 ZIP의 압축을 푼 내부 파일을 업로드하세요.`;
+  }
+
+  async function downloadNetlifyDeploy() {
     window.clearTimeout(autosaveTimer);
     autosaveTimer = 0;
-    elements.downloadFullBackupButton.disabled = true;
-    setSaveStatus("Netlify 배포 ZIP 생성 중…");
+    elements.downloadNetlifyDeployButton.disabled = true;
+    setSaveStatus("Netlify 배포용 ZIP 생성 중…");
 
     try {
       const normalizedProject = normalizeProject(project);
@@ -8634,19 +8758,153 @@ function renderCharacters() {
       downloadBlob(zip, `${buildBackupBaseName()}-netlify.zip`);
       saveProjectToStorage();
       setSaveStatus(
-        `Netlify 배포 ZIP 저장됨 · PNG ${imageCount}개 · MP3 ${audioCount}개`
+        `Netlify 배포용 ZIP 저장됨 · 파일 ${entries.length}개 · PNG ${imageCount}개 · MP3 ${audioCount}개`
       );
       elements.backupMenu.open = false;
     } catch (error) {
       console.error(error);
       window.alert(
-        error.message || "Netlify 배포 ZIP을 저장하지 못했습니다."
+        error.message || "Netlify 배포용 ZIP을 저장하지 못했습니다."
       );
-      setSaveStatus("Netlify 배포 ZIP 생성 실패");
+      setSaveStatus("Netlify 배포용 ZIP 생성 실패");
     } finally {
-      elements.downloadFullBackupButton.disabled = false;
+      elements.downloadNetlifyDeployButton.disabled = false;
     }
   }
+
+  async function downloadGithubDeploy() {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = 0;
+    elements.downloadGithubDeployButton.disabled = true;
+    setSaveStatus("GitHub 배포용 ZIP 검사 중…");
+
+    try {
+      const normalizedProject = normalizeProject(project);
+      const changeState = githubDeployChangeState(normalizedProject);
+      const { entries, imageCount, audioCount } =
+        await buildNetlifyDeployEntries(normalizedProject);
+
+      if (entries.length > GITHUB_UPLOAD_FILE_LIMIT) {
+        window.alert(
+          `배포 파일이 ${entries.length}개라 GitHub 브라우저의 한 번 업로드 기준 ${GITHUB_UPLOAD_FILE_LIMIT}개를 넘습니다.\n\n“GitHub 분할 배포용 ZIP”을 사용해 주세요.`
+        );
+        setSaveStatus("GitHub 분할 배포용 ZIP 사용 필요");
+        elements.backupMenu.open = true;
+        return;
+      }
+
+      if (changeState.partialContentOnly) {
+        const changed = [
+          changeState.worldsChanged ? "세계관" : "",
+          changeState.charactersChanged ? "캐릭터" : ""
+        ].filter(Boolean).join("·");
+        window.alert(
+          `지난 GitHub 배포 이후 기본 파일은 그대로이고 ${changed}만 변경되었습니다.\n\n부분 갱신이 가능한 “GitHub 분할 배포용 ZIP”을 사용해 주세요.`
+        );
+        setSaveStatus("부분 갱신은 GitHub 분할 배포용 ZIP 권장");
+        elements.backupMenu.open = true;
+        return;
+      }
+
+      const zip = await createStoredZip(entries);
+      downloadBlob(zip, `${buildBackupBaseName()}-github.zip`);
+      saveGithubDeploySnapshot(changeState.current);
+      saveProjectToStorage();
+      setSaveStatus(
+        `GitHub 배포용 ZIP 저장됨 · 파일 ${entries.length}개 · PNG ${imageCount}개 · MP3 ${audioCount}개`
+      );
+      elements.backupMenu.open = false;
+    } catch (error) {
+      console.error(error);
+      window.alert(
+        error.message || "GitHub 배포용 ZIP을 저장하지 못했습니다."
+      );
+      setSaveStatus("GitHub 배포용 ZIP 생성 실패");
+    } finally {
+      elements.downloadGithubDeployButton.disabled = false;
+    }
+  }
+
+  async function downloadGithubSplitDeploy() {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = 0;
+    elements.downloadGithubSplitDeployButton.disabled = true;
+    setSaveStatus("GitHub 분할 배포용 ZIP 생성 중…");
+
+    try {
+      const normalizedProject = normalizeProject(project);
+      const changeState = githubDeployChangeState(normalizedProject);
+      const {
+        mainEntries,
+        worldEntries,
+        characterEntries,
+        imageCount,
+        audioCount
+      } = await buildNetlifyDeployEntries(normalizedProject);
+
+      if (mainEntries.length > GITHUB_UPLOAD_FILE_LIMIT) {
+        throw new Error(
+          `메인.zip의 파일이 ${mainEntries.length}개라 ${GITHUB_UPLOAD_FILE_LIMIT}개 제한을 넘습니다. 모든 아이콘을 메인에 포함하는 현재 규칙으로는 분할할 수 없습니다.`
+        );
+      }
+
+      if (worldEntries.length > GITHUB_UPLOAD_FILE_LIMIT) {
+        throw new Error(
+          `세계관.zip의 파일이 ${worldEntries.length}개라 ${GITHUB_UPLOAD_FILE_LIMIT}개 제한을 넘습니다.`
+        );
+      }
+
+      const characterChunks = chunkDeployEntries(
+        characterEntries,
+        GITHUB_UPLOAD_FILE_LIMIT
+      );
+      const mainZip = await createStoredZip(mainEntries);
+      const worldZip = await createStoredZip(worldEntries);
+      const outerEntries = [
+        { name: "메인.zip", data: mainZip },
+        { name: "세계관.zip", data: worldZip }
+      ];
+
+      for (let index = 0; index < characterChunks.length; index += 1) {
+        const zip = await createStoredZip(characterChunks[index]);
+        outerEntries.push({
+          name: `캐릭터-${String(index + 1).padStart(2, "0")}.zip`,
+          data: zip
+        });
+      }
+
+      const guide = githubSplitGuideText({
+        mainCount: mainEntries.length,
+        worldCount: worldEntries.length,
+        characterCounts: characterChunks.map((chunk) => chunk.length)
+      });
+      outerEntries.push({
+        name: "업로드-안내.txt",
+        data: new Blob([guide], { type: "text/plain;charset=utf-8" })
+      });
+
+      const outerZip = await createStoredZip(outerEntries);
+      downloadBlob(
+        outerZip,
+        `${buildBackupBaseName()}-github-split.zip`
+      );
+      saveGithubDeploySnapshot(changeState.current);
+      saveProjectToStorage();
+      setSaveStatus(
+        `GitHub 분할 배포용 ZIP 저장됨 · 메인 1개 · 세계관 1개 · 캐릭터 ${characterChunks.length}개 묶음 · PNG ${imageCount}개 · MP3 ${audioCount}개`
+      );
+      elements.backupMenu.open = false;
+    } catch (error) {
+      console.error(error);
+      window.alert(
+        error.message || "GitHub 분할 배포용 ZIP을 저장하지 못했습니다."
+      );
+      setSaveStatus("GitHub 분할 배포용 ZIP 생성 실패");
+    } finally {
+      elements.downloadGithubSplitDeployButton.disabled = false;
+    }
+  }
+
 
   async function importJsonBackup(file) {
     const text = await file.text();
@@ -9331,19 +9589,24 @@ elements.netlifyGuideDialog.addEventListener(
     }
   }
 );
-  elements.downloadTextBackupButton.addEventListener(
-    "click",
-    downloadTextBackup
-  );
-
   elements.downloadEditorBackupButton.addEventListener(
     "click",
     downloadEditorBackup
   );
 
-  elements.downloadFullBackupButton.addEventListener(
+  elements.downloadNetlifyDeployButton.addEventListener(
     "click",
-    downloadFullBackup
+    downloadNetlifyDeploy
+  );
+
+  elements.downloadGithubDeployButton.addEventListener(
+    "click",
+    downloadGithubDeploy
+  );
+
+  elements.downloadGithubSplitDeployButton.addEventListener(
+    "click",
+    downloadGithubSplitDeploy
   );
 
   elements.importProjectInput.addEventListener(

@@ -28,19 +28,23 @@
 		</button>
 
   <details class="backup-menu" id="backupMenu">
-        <summary class="secondary-button">백업</summary>
-        <div class="backup-menu-panel" aria-label="백업 형식 선택">
-          <button id="downloadTextBackupButton" type="button">
-            <strong>텍스트 저장</strong>
-            <small>텍스트만 저장</small>
-          </button>
+        <summary class="secondary-button">다운로드</summary>
+        <div class="backup-menu-panel" aria-label="다운로드 형식 선택">
           <button id="downloadEditorBackupButton" type="button">
-            <strong>전체 백업 ZIP</strong>
-            <small>프로젝트와 PNG·MP3를 다시 불러올 수 있게 저장</small>
+            <strong>백업용 ZIP</strong>
+            <small>생성기에서 다시 불러올 수 있는 전체 백업</small>
           </button>
-          <button id="downloadFullBackupButton" type="button">
-            <strong>배포용 ZIP</strong>
-            <small>배포용 ZIP으로 저장</small>
+          <button id="downloadNetlifyDeployButton" type="button">
+            <strong>Netlify 배포용 ZIP</strong>
+            <small>Netlify Drop에 바로 업로드하는 전체 사이트</small>
+          </button>
+          <button id="downloadGithubDeployButton" type="button">
+            <strong>GitHub 배포용 ZIP</strong>
+            <small>파일 90개 이하일 때 전체 사이트를 한 번에 저장</small>
+          </button>
+          <button id="downloadGithubSplitDeployButton" type="button">
+            <strong>GitHub 분할 배포용 ZIP</strong>
+            <small>메인·세계관·캐릭터 ZIP으로 나눠 저장하고 부분 갱신</small>
           </button>
         </div>
       </details>
@@ -892,7 +896,7 @@
       <li>
         <strong>백업 기능</strong>
         <p>
-          <b>텍스트 / 전체내용 zip / 배포용 zip</b> 중 용도에 맞춰 백업해주세요. 배포용 zip은 사이트 생성용이며 생성기에서 불러오기가 불가능합니다. 배포 이후에도 전체내용 zip을 소장하는 것을 권장합니다.
+          <b>백업용 ZIP / Netlify 배포용 ZIP / GitHub 배포용 ZIP / GitHub 분할 배포용 ZIP</b> 중 용도에 맞춰 저장해 주세요. 배포용 ZIP은 생성기에서 다시 불러올 수 없으므로, 배포 뒤에도 백업용 ZIP을 따로 보관하는 것을 권장합니다.
         </p>
       </li>
 
@@ -906,7 +910,7 @@
       <li>
         <strong>Github</strong>
         <p>
-          배포용 zip 다운로드 -> 압축 해제 -> 폴더 안에 든 모든 파일을 저장소에 업로드 -> 몇분 후 설정에서 site 생성
+          파일이 90개 이하라면 GitHub 배포용 ZIP을 사용합니다. 파일이 90개를 넘거나 세계관·캐릭터만 갱신할 때는 GitHub 분할 배포용 ZIP을 사용하고, 메인.zip → 세계관.zip → 캐릭터 ZIP 순서로 압축을 풀어 같은 저장소에 업로드합니다.
         </p>
       </li>
     </ol>
