@@ -244,6 +244,7 @@ const elements = {
     characterBulkImportDialog: document.querySelector("#characterBulkImportDialog"),
     closeCharacterBulkImportButton: document.querySelector("#closeCharacterBulkImportButton"),
     cancelCharacterBulkImportButton: document.querySelector("#cancelCharacterBulkImportButton"),
+    addCharacterBulkRowButton: document.querySelector("#addCharacterBulkRowButton"),
     clearAllCharacterBulkRowsButton: document.querySelector("#clearAllCharacterBulkRowsButton"),
     removeEmptyCharacterBulkRowsButton: document.querySelector("#removeEmptyCharacterBulkRowsButton"),
     characterBulkAutoImagePanel: document.querySelector("[data-character-bulk-auto-image-drop]"),
@@ -8615,6 +8616,7 @@ function renderCharacters() {
   elements.openCharacterBulkImportButton.addEventListener("click", openCharacterBulkImportDialog);
   elements.closeCharacterBulkImportButton.addEventListener("click", closeCharacterBulkImportDialog);
   elements.cancelCharacterBulkImportButton.addEventListener("click", closeCharacterBulkImportDialog);
+  elements.addCharacterBulkRowButton.addEventListener("click", () => addCharacterBulkRows(1));
   elements.clearAllCharacterBulkRowsButton.addEventListener("click", clearAllCharacterBulkRows);
   elements.removeEmptyCharacterBulkRowsButton.addEventListener("click", removeEmptyCharacterBulkRows);
   elements.characterBulkAutoImagesInput.addEventListener("change", handleCharacterBulkAutoImageSelection);
