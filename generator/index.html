@@ -1081,13 +1081,18 @@
         <summary>메모장에서 ^ 구분자로 붙여넣기</summary>
         <div class="character-bulk-paste-body">
           <p class="field-help">
-            한 줄에 캐릭터 한 명을 입력합니다. 형식은 이름^부제^태그1,태그2^캐릭터 소개^플랫폼명^링크 주소이며, 플랫폼명과 링크 주소는 필요한 만큼 뒤에 반복할 수 있습니다. 빈 부제·태그·소개는 ^^로 자리를 유지해 주세요. 제목 행은 사용하지 않습니다.
+            항목은 ^ 기호로 구분합니다. 캐릭터와 캐릭터 사이는 한 줄에 \ 하나만 입력해 구분합니다.
+		형식: 이름^부제^태그1,태그2^캐릭터 소개^플랫폼명^링크 주소^플랫폼명^링크 주소
+	빈 부제·태그·소개는 ^^로 자리를 유지해 주세요.
           </p>
-          <textarea
-            id="characterBulkPasteInput"
-            rows="7"
-            placeholder="리안^황실의 검^기사,판타지^황제를 지키는 기사^팅글^https://example.com/tingle^블룸^https://example.com/bloom"
-          ></textarea>
+<textarea
+  id="characterBulkPasteInput"
+  rows="7"
+  placeholder="리안^황실의 검^기사,판타지^황제를 지키는 기사입니다.
+설명의 줄바꿈도 그대로 유지됩니다.^팅글^https://example.com/tingle
+\
+세라^별의 마녀^마법사,집착^밤하늘을 연구합니다.^블룸^https://example.com/bloom"
+></textarea>
           <div class="character-bulk-paste-actions">
             <button id="applyCharacterBulkPasteButton" class="secondary-button" type="button">붙여넣은 캐릭터 추가</button>
           </div>

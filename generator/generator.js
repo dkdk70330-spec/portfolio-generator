@@ -1727,11 +1727,15 @@ const elements = {
   }
 
   function parseCharacterBulkPaste(source) {
-    const lines = String(source || "")
-      .replace(/\r\n?/g, "\n")
-      .split("\n")
-      .map((line, index) => ({ line, number: index + 1 }))
-      .filter(({ line }) => line.trim());
+const blocks = String(source || "")
+  .replace(/\r\n?/g, "\n")
+  // 줄 전체가 역슬래시 하나인 경우에만 캐릭터를 구분합니다.
+  .split(/^\s*\\\s*$/m)
+  .map((block, index) => ({
+    block: block.trim(),
+    number: index + 1
+  }))
+  .filter(({ block }) => block);
 
     if (lines.length === 0) {
       return { rows: [], error: "붙여넣은 내용이 없습니다." };
@@ -1744,8 +1748,8 @@ const elements = {
     const drafts = [];
     const errors = [];
 
-    lines.forEach(({ line, number }) => {
-      const cells = line.split("^").map((value) => value.trim());
+blocks.forEach(({ block, number }) => {
+  const cells = block.split("^").map((value) => value.trim());
       const name = cells[0] || "";
       const subtitle = cells[1] || "";
       const tags = cells[2] || "";
@@ -1754,11 +1758,11 @@ const elements = {
       const platforms = {};
 
       if (!name) {
-        errors.push(`${number}행: 캐릭터 이름이 비어 있습니다.`);
+        errors.push(`${number}번째 캐릭터: 캐릭터 이름이 비어 있습니다.`);
       }
 
       if (platformCells.length % 2 !== 0) {
-        errors.push(`${number}행: 플랫폼 이름과 링크 주소를 한 쌍으로 입력해 주세요.`);
+        errors.push(`${number}번째 캐릭터: 플랫폼 이름과 링크 주소를 한 쌍으로 입력해 주세요.`);
       }
 
       const seenPlatformIds = new Set();
@@ -1770,12 +1774,12 @@ const elements = {
         if (!platformName && !url) continue;
 
         if (!platformName) {
-          errors.push(`${number}행: 링크 주소 앞의 플랫폼 이름이 비어 있습니다.`);
+          errors.push(`${number}번째 캐릭터: 링크 주소 앞의 플랫폼 이름이 비어 있습니다.`);
           continue;
         }
 
         if (!url) {
-          errors.push(`${number}행: ${platformName}의 링크 주소가 비어 있습니다.`);
+          errors.push(`${number}번째 캐릭터: ${platformName}의 링크 주소가 비어 있습니다.`);
           continue;
         }
 
@@ -1785,14 +1789,14 @@ const elements = {
 
         if (!platformId) {
           errors.push(
-            `${number}행: 알 수 없는 플랫폼 "${platformName}"입니다. 사용 가능: ${supportedPlatformNames}`
+            `${number}번째 캐릭터: 알 수 없는 플랫폼 "${platformName}"입니다. 사용 가능: ${supportedPlatformNames}`
           );
           continue;
         }
 
         if (seenPlatformIds.has(platformId)) {
           const label = platformCatalog.get(platformId)?.name || platformName;
-          errors.push(`${number}행: ${label} 플랫폼이 중복되었습니다.`);
+          errors.push(`${number}번째 캐릭터: ${label} 플랫폼이 중복되었습니다.`);
           continue;
         }
 
