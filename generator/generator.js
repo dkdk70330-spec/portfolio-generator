@@ -1142,6 +1142,7 @@ const elements = {
   let characterBulkDraftRows = [];
   let activeCharacterBulkImageRowId = "";
   let characterBulkAutoImageDropActive = false;
+  let characterBulkAutoImageQueue = Promise.resolve();
 
   function createCharacterBulkDraft(source = {}) {
     const sourcePlatforms = isPlainObject(source.platforms)
@@ -1291,7 +1292,7 @@ const elements = {
     elements.characterBulkAutoImageReport.hidden = false;
   }
 
-  async function processCharacterBulkAutoImageFiles(sourceFiles) {
+  async function processCharacterBulkAutoImageFilesNow(sourceFiles) {
     const files = [...(sourceFiles || [])].filter(Boolean);
     if (files.length === 0) return;
 
@@ -1328,7 +1329,7 @@ const elements = {
         } catch (error) {
           issues.push({
             filename: parsed.filename,
-            reason: error.message || "PNG 파일을 읽을 수 없습니다."
+            reason: error.message || "이미지 파일을 읽을 수 없습니다."
           });
           continue;
         }
@@ -1374,15 +1375,20 @@ const elements = {
         const row = getCharacterBulkDraftRow(rowId);
         if (!row) return;
 
-        const combinedSlots = new Map(
-          row.images.map((file, index) => [index + 1, file])
-        );
+        // 기존에 등록된 이미지 슬롯을 먼저 복사한 뒤 이번 동작의 파일만
+        // 해당 번호에 추가·교체합니다. 다른 캐릭터의 이미지는 절대 건드리지 않습니다.
+        const previousImages = [...row.images];
+        const combinedSlots = new Map();
+
+        previousImages.forEach((file, index) => {
+          if (file) combinedSlots.set(index + 1, file);
+        });
 
         selectedSlots.forEach((file, order) => {
           combinedSlots.set(order, file);
         });
 
-        const highestOrder = Math.max(...combinedSlots.keys());
+        const highestOrder = Math.max(0, ...combinedSlots.keys());
         const missingOrders = [];
 
         for (let order = 1; order <= highestOrder; order += 1) {
@@ -1414,10 +1420,31 @@ const elements = {
         matchedRows,
         issues
       });
+
+      const retainedImageCount = characterBulkDraftRows.reduce(
+        (count, row) => count + row.images.length,
+        0
+      );
+
+      elements.characterBulkAutoImageStatus.textContent +=
+        ` · 현재 전체 ${retainedImageCount}장 유지`;
+
       setCharacterBulkImportError("");
     } finally {
       elements.characterBulkAutoImagesInput.disabled = false;
     }
+  }
+
+  function processCharacterBulkAutoImageFiles(sourceFiles) {
+    const files = [...(sourceFiles || [])].filter(Boolean);
+    if (files.length === 0) return Promise.resolve();
+
+    const task = characterBulkAutoImageQueue
+      .catch(() => {})
+      .then(() => processCharacterBulkAutoImageFilesNow(files));
+
+    characterBulkAutoImageQueue = task;
+    return task;
   }
 
   async function handleCharacterBulkAutoImageSelection() {
