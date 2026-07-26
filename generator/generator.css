@@ -3656,3 +3656,266 @@ body.character-filter-picker-open { overflow: hidden; }
   }
 }
 
+/* =================================================
+   캐릭터 일괄등록 압축형 입력 환경
+   기능과 입력 항목은 유지하고 중첩 카드 표현만 제거합니다.
+   ================================================= */
+
+.character-bulk-dialog-shell {
+  gap: .7rem;
+}
+
+.character-bulk-auto-image-panel {
+  gap: .45rem;
+  padding: .65rem 0;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-bulk-auto-image-heading {
+  gap: .75rem;
+}
+
+.character-bulk-auto-image-heading small {
+  max-width: 58rem;
+}
+
+.character-bulk-auto-image-report {
+  gap: .4rem;
+  max-height: 190px;
+}
+
+.character-bulk-auto-image-report section {
+  padding: .5rem .6rem;
+  border-radius: 8px;
+}
+
+.character-bulk-paste-panel {
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-bulk-paste-panel > summary {
+  padding: .55rem 0;
+}
+
+.character-bulk-paste-body {
+  padding: 0 0 .65rem;
+}
+
+#characterBulkPasteInput {
+  min-height: 110px;
+  border-radius: 8px;
+}
+
+.character-bulk-row-list {
+  gap: 0;
+}
+
+.character-bulk-row {
+  padding: .75rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-bulk-row:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.character-bulk-row-header {
+  margin-bottom: .5rem;
+  padding-inline: .1rem;
+}
+
+.character-bulk-row-header strong {
+  font-size: .76rem;
+}
+
+.character-bulk-row-header .text-button {
+  font-size: .68rem;
+}
+
+.character-bulk-primary-grid {
+  gap: .45rem .55rem;
+}
+
+.character-bulk-primary-grid label {
+  gap: .28rem;
+}
+
+.character-bulk-primary-grid label > span {
+  font-size: .68rem;
+}
+
+.character-bulk-primary-grid input {
+  min-height: 36px;
+  padding: .42rem .58rem;
+  border-radius: 8px;
+  font-size: .76rem;
+}
+
+.character-bulk-primary-grid .field-help {
+  margin: .2rem 0 0;
+  font-size: .61rem;
+}
+
+.character-bulk-description-field textarea {
+  min-height: 70px;
+  padding: .52rem .6rem;
+  border-radius: 8px;
+  font-size: .76rem;
+}
+
+.character-bulk-image-field {
+  min-height: 46px;
+  padding: .5rem .1rem;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-bulk-image-field > div:first-child strong {
+  font-size: .72rem;
+}
+
+.character-bulk-image-field > div:first-child small {
+  font-size: .6rem;
+}
+
+.character-bulk-image-field .file-label {
+  padding: .4rem .65rem;
+  font-size: .7rem;
+}
+
+.character-bulk-image-selection {
+  margin-top: -.15rem;
+}
+
+.character-bulk-image-selection > .empty-message {
+  margin: 0;
+  font-size: .64rem;
+}
+
+.character-bulk-image-file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+}
+
+.character-bulk-image-file {
+  width: fit-content;
+  max-width: 100%;
+  padding: .28rem .45rem;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.character-bulk-image-file span {
+  max-width: 15rem;
+  font-size: .62rem;
+}
+
+.character-bulk-image-file .text-button {
+  font-size: .6rem;
+}
+
+.character-bulk-platform-panel {
+  margin-top: 0;
+  border: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.character-bulk-platform-panel > summary {
+  padding: .5rem .1rem;
+  border-top: 1px solid var(--line);
+}
+
+.character-bulk-platform-panel > summary strong {
+  font-size: .7rem;
+}
+
+.character-bulk-platform-panel > summary small {
+  font-size: .6rem;
+}
+
+.character-bulk-platform-grid {
+  gap: .4rem .5rem;
+  padding: .55rem .1rem .1rem;
+  border-top: 0;
+}
+
+.character-bulk-platform-field {
+  gap: .25rem;
+}
+
+.character-bulk-platform-field > span {
+  font-size: .64rem;
+}
+
+.character-bulk-platform-field input {
+  min-height: 34px;
+  padding: .4rem .55rem;
+  border-radius: 8px;
+  font-size: .72rem;
+}
+
+.character-bulk-field-error {
+  margin-top: .15rem;
+  font-size: .6rem;
+}
+
+.character-bulk-dialog-actions {
+  padding-top: .65rem;
+}
+
+.character-bulk-dialog-actions button {
+  min-height: 38px;
+  padding: .5rem .8rem;
+}
+
+@media (max-width: 720px) {
+  .character-bulk-row {
+    padding: .7rem 0;
+  }
+
+  .character-bulk-primary-grid {
+    gap: .45rem;
+  }
+
+  .character-bulk-image-field {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .character-bulk-dialog-shell {
+    gap: .6rem;
+  }
+
+  .character-bulk-auto-image-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .character-bulk-auto-image-heading .file-label {
+    width: fit-content;
+  }
+
+  .character-bulk-image-field {
+    grid-template-columns: 1fr;
+  }
+
+  .character-bulk-image-field .file-label {
+    width: fit-content;
+  }
+
+  .character-bulk-dialog-actions > div {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -1654,8 +1654,8 @@ const elements = {
                 aria-label="캐릭터 PNG 업로드 영역"
               >
                 <div>
-                  <strong>캐릭터 PNG</strong>
-                  <small>최대 5장 · 첫 이미지가 대표 이미지</small>
+                  <strong>이미지 ${row.images.length}/5</strong>
+                  <small>첫 이미지가 대표 이미지</small>
                 </div>
                 <label class="file-label" for="characterBulkImages-${escapeHtml(row.id)}">PNG 선택</label>
                 <input
