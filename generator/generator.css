@@ -4318,3 +4318,311 @@ body.character-filter-picker-open { overflow: hidden; }
     grid-template-columns: 1fr;
   }
 }
+
+/* =================================================
+   세계관 편집 압축형 입력 환경
+   입력 항목과 기능은 유지하고 중첩 카드 표현만 줄입니다.
+   ================================================= */
+
+.world-editor-section {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+}
+
+.world-editor-layout {
+  gap: .65rem;
+  margin-top: .75rem;
+}
+
+.world-editor-sidebar,
+.world-form,
+.world-editor-empty {
+  border-radius: 12px;
+}
+
+.world-editor-sidebar {
+  padding: .4rem;
+}
+
+.world-form {
+  padding: .75rem;
+  background: transparent;
+}
+
+.world-form-actions {
+  gap: .4rem;
+  margin-bottom: .65rem;
+}
+
+.world-editor-section .world-form-actions .secondary-button,
+.world-editor-section .danger-button {
+  min-height: 34px;
+  padding: .38rem .62rem;
+  font-size: .68rem;
+}
+
+.world-image-editor {
+  grid-template-columns: minmax(110px, .52fr) minmax(0, 1.48fr);
+  gap: .75rem;
+  margin-bottom: .7rem;
+  padding-bottom: .65rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.world-image-editor-preview {
+  max-width: 170px;
+  border-radius: 9px;
+}
+
+.world-image-editor .file-label {
+  padding: .4rem .65rem;
+  font-size: .7rem;
+}
+
+.world-image-editor .image-input-hint,
+.world-image-editor .field-help {
+  margin: .2rem 0 0;
+  font-size: .61rem;
+}
+
+.world-title-grid {
+  gap: .5rem;
+}
+
+.world-form label {
+  gap: .28rem;
+}
+
+.world-form label > span {
+  font-size: .68rem;
+}
+
+.world-form input,
+.world-form select {
+  min-height: 36px;
+  padding: .42rem .58rem;
+  border-radius: 8px;
+  font-size: .76rem;
+}
+
+.world-form textarea {
+  min-height: 76px;
+  padding: .52rem .6rem;
+  border-radius: 8px;
+  font-size: .76rem;
+}
+
+.world-form .field-help {
+  margin: .2rem 0 0;
+  font-size: .61rem;
+}
+
+.world-character-link-editor,
+.world-section-editor,
+.world-music-editor {
+  margin-top: .7rem;
+  border-top: 1px solid var(--line);
+}
+
+.world-form .editor-fold {
+  overflow: visible;
+}
+
+.world-form .editor-fold-summary {
+  min-height: 38px;
+  padding: .5rem .1rem;
+}
+
+.world-form .editor-fold-summary strong {
+  font-size: .72rem;
+}
+
+.world-form .editor-fold-summary small {
+  margin-top: .04rem;
+  font-size: .59rem;
+}
+
+.world-form .editor-fold-body {
+  padding: 0 .1rem .55rem;
+}
+
+.world-form .editor-fold-action-row {
+  margin-bottom: .45rem;
+}
+
+.world-form .editor-fold-action-row .secondary-button,
+.world-form .editor-fold-action-row .file-label {
+  min-height: 34px;
+  padding: .38rem .62rem;
+  font-size: .68rem;
+}
+
+.world-character-link-browser {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.world-character-link-list {
+  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  gap: .3rem;
+  margin-top: .4rem;
+}
+
+.world-character-link-item {
+  grid-template-columns: auto 28px minmax(0, 1fr);
+  gap: .35rem;
+  padding: .34rem .4rem;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.world-character-link-item input {
+  width: 16px;
+  height: 16px;
+}
+
+.world-character-link-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.world-character-link-copy strong {
+  font-size: .68rem;
+}
+
+.world-character-link-copy small {
+  font-size: .56rem;
+}
+
+.world-section-editor-list {
+  gap: 0;
+  margin-top: .4rem;
+  border-top: 1px solid var(--line);
+}
+
+.world-section-editor-item {
+  padding: .6rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.world-section-editor-toolbar {
+  gap: .25rem;
+  margin-bottom: .5rem;
+}
+
+.world-section-editor-toolbar > span {
+  font-size: .61rem;
+}
+
+.world-section-editor-toolbar button {
+  min-height: 28px;
+  padding: .25rem .42rem;
+  font-size: .6rem;
+}
+
+.world-section-collapsible-option {
+  gap: .45rem;
+  margin-top: .5rem;
+  padding: .45rem .5rem;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.world-section-collapsible-option input {
+  width: 16px;
+  height: 16px;
+  margin: .05rem 0 0;
+}
+
+.world-section-collapsible-option strong {
+  font-size: .68rem;
+}
+
+.world-section-collapsible-option small {
+  font-size: .58rem;
+}
+
+.world-form .music-editor-list {
+  gap: 0;
+  margin-top: .4rem;
+  border-top: 1px solid var(--line);
+}
+
+.world-form .music-editor-item {
+  padding: .6rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.world-form .music-editor-toolbar {
+  gap: .25rem;
+  margin-bottom: .5rem;
+}
+
+.world-form .music-editor-toolbar > span {
+  font-size: .61rem;
+}
+
+.world-form .music-editor-toolbar button {
+  min-height: 28px;
+  padding: .25rem .42rem;
+  font-size: .6rem;
+}
+
+.world-form .music-editor-grid {
+  gap: .5rem;
+}
+
+.world-form .music-file-row {
+  gap: .5rem;
+  padding: .5rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.world-form .music-file-status {
+  font-size: .64rem;
+}
+
+.world-form .music-source-editor {
+  margin-top: .5rem;
+}
+
+.world-form .empty-message {
+  margin: .35rem 0;
+  font-size: .68rem;
+}
+
+@media (max-width: 760px) {
+  .world-image-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .world-image-editor-preview {
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 560px) {
+  .world-form {
+    padding: .65rem;
+  }
+
+  .world-title-grid,
+  .world-form .music-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .world-character-link-list {
+    grid-template-columns: 1fr;
+  }
+}
