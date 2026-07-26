@@ -255,6 +255,7 @@ const elements = {
     removeEmptyCharacterBulkRowsButton: document.querySelector("#removeEmptyCharacterBulkRowsButton"),
     characterBulkAutoImagePanel: document.querySelector("[data-character-bulk-auto-image-drop]"),
     characterBulkAutoImagesInput: document.querySelector("#characterBulkAutoImagesInput"),
+    pasteCharacterBulkAutoImagesButton: document.querySelector("#pasteCharacterBulkAutoImagesButton"),
     characterBulkAutoImageStatus: document.querySelector("#characterBulkAutoImageStatus"),
     characterBulkAutoImageReport: document.querySelector("#characterBulkAutoImageReport"),
     characterBulkRowList: document.querySelector("#characterBulkRowList"),
@@ -1478,8 +1479,8 @@ const elements = {
         0
       );
 
-      elements.characterBulkAutoImageStatus.textContent +=
-        ` · 현재 전체 ${retainedImageCount}장 유지`;
+      elements.characterBulkAutoImageStatus.textContent =
+        `등록된 이미지 ${retainedImageCount}장`;
 
       setCharacterBulkImportError("");
     } finally {
@@ -1504,6 +1505,51 @@ const elements = {
       .filter(Boolean);
     elements.characterBulkAutoImagesInput.value = "";
     await processCharacterBulkAutoImageFiles(files);
+  }
+
+  async function readCharacterBulkImagesFromClipboard() {
+    if (!navigator.clipboard?.read) {
+      window.alert("이 브라우저에서는 클립보드 읽기 버튼을 사용할 수 없습니다. 이미지 일괄 추가 줄을 클릭한 뒤 Ctrl+V를 사용해 주세요.");
+      return;
+    }
+
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      const files = [];
+
+      for (const item of clipboardItems) {
+        const imageTypes = item.types.filter((type) =>
+          SUPPORTED_IMAGE_MIME_TYPES.has(String(type || "").toLowerCase())
+        );
+
+        for (const type of imageTypes) {
+          const blob = await item.getType(type);
+          const extension =
+            type === "image/jpeg" ? "jpg" :
+            type === "image/webp" ? "webp" :
+            "png";
+
+          files.push(new File(
+            [blob],
+            `clipboard-${Date.now()}-${files.length + 1}.${extension}`,
+            { type }
+          ));
+        }
+      }
+
+      if (files.length === 0) {
+        window.alert("클립보드에서 PNG·JPEG·JPG·WebP 이미지를 찾지 못했습니다.");
+        return;
+      }
+
+      characterBulkAutoImageDropActive = true;
+      activeCharacterBulkImageRowId = "";
+      elements.characterBulkAutoImagePanel?.focus();
+      await processCharacterBulkAutoImageFiles(files);
+    } catch (error) {
+      console.error(error);
+      window.alert("클립보드를 읽지 못했습니다. 브라우저 권한을 허용하거나 이미지 일괄 추가 줄을 클릭한 뒤 Ctrl+V를 사용해 주세요.");
+    }
   }
 
   function setCharacterBulkDropVisual(zone, active) {
@@ -8777,6 +8823,7 @@ function renderCharacters() {
   elements.clearAllCharacterBulkRowsButton.addEventListener("click", clearAllCharacterBulkRows);
   elements.removeEmptyCharacterBulkRowsButton.addEventListener("click", removeEmptyCharacterBulkRows);
   elements.characterBulkAutoImagesInput.addEventListener("change", handleCharacterBulkAutoImageSelection);
+  elements.pasteCharacterBulkAutoImagesButton.addEventListener("click", readCharacterBulkImagesFromClipboard);
   initializeCharacterBulkImageDropAndPaste();
   elements.applyCharacterBulkPasteButton.addEventListener("click", applyCharacterBulkPaste);
   elements.confirmCharacterBulkImportButton.addEventListener("click", confirmCharacterBulkImport);

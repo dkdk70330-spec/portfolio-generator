@@ -1051,13 +1051,18 @@
         role="group"
       >
         <div class="character-bulk-auto-image-heading">
-          <span>
+          <div class="character-bulk-auto-image-copy">
             <strong id="characterBulkAutoImageTitle">이미지 일괄 추가</strong>
-            <small>
-              파일명을 캐릭터이름1.png부터 캐릭터이름5.png까지 지정하면 현재 일괄등록 목록의 같은 이름 캐릭터에 순서대로 연결합니다. 같은 번호에 이미 선택한 이미지가 있으면 새 파일로 교체됩니다.
-            </small>
-          </span>
-          <label class="file-label" for="characterBulkAutoImagesInput">이미지 여러 장 선택</label>
+            <small>파일명: 캐릭터이름1~5 · 이 줄에 드래그하거나 클릭 후 Ctrl+V</small>
+          </div>
+          <div class="character-bulk-auto-image-actions">
+            <label class="file-label" for="characterBulkAutoImagesInput">파일 선택</label>
+            <button
+              id="pasteCharacterBulkAutoImagesButton"
+              class="secondary-button"
+              type="button"
+            >클립보드</button>
+          </div>
           <input
             id="characterBulkAutoImagesInput"
             class="file-input"
@@ -1066,13 +1071,12 @@
             multiple
           >
         </div>
-        <p class="image-input-hint">파일 선택 · 끌어놓기 · 이미지 영역 선택 후 Ctrl+V</p>
         <p
           id="characterBulkAutoImageStatus"
           class="character-bulk-auto-image-status"
           role="status"
           aria-live="polite"
-        >선택된 이미지가 없습니다.</p>
+        >등록된 이미지 0장</p>
         <div
           id="characterBulkAutoImageReport"
           class="character-bulk-auto-image-report"

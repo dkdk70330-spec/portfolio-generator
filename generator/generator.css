@@ -4626,3 +4626,116 @@ body.character-filter-picker-open { overflow: hidden; }
     grid-template-columns: 1fr;
   }
 }
+
+/* 이미지 일괄추가 초압축 툴바 */
+.character-bulk-dialog-header {
+  gap: .75rem;
+  padding-bottom: .65rem;
+}
+
+.character-bulk-dialog-header > div:first-child p {
+  margin-top: .25rem;
+  font-size: .68rem;
+}
+
+.character-bulk-header-actions {
+  gap: .35rem;
+}
+
+.character-bulk-header-actions button {
+  min-height: 32px;
+  padding: .35rem .62rem;
+  font-size: .66rem;
+}
+
+.character-bulk-auto-image-panel {
+  display: grid;
+  gap: .25rem;
+  padding: .45rem 0 .5rem;
+  cursor: default;
+}
+
+.character-bulk-auto-image-heading {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+}
+
+.character-bulk-auto-image-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: .55rem;
+}
+
+.character-bulk-auto-image-copy strong {
+  flex: 0 0 auto;
+  font-size: .72rem;
+}
+
+.character-bulk-auto-image-copy small {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--muted);
+  font-size: .61rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-bulk-auto-image-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: .3rem;
+}
+
+.character-bulk-auto-image-actions .file-label,
+.character-bulk-auto-image-actions .secondary-button {
+  min-height: 30px;
+  margin: 0;
+  padding: .3rem .58rem;
+  border-radius: 999px;
+  font-size: .64rem;
+}
+
+.character-bulk-auto-image-status {
+  margin: 0;
+  font-size: .61rem;
+}
+
+.character-bulk-auto-image-report {
+  margin-top: .15rem;
+}
+
+@media (max-width: 720px) {
+  .character-bulk-auto-image-heading {
+    align-items: flex-start;
+  }
+
+  .character-bulk-auto-image-copy {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .12rem;
+  }
+
+  .character-bulk-auto-image-copy small {
+    overflow: visible;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 520px) {
+  .character-bulk-auto-image-heading {
+    flex-wrap: wrap;
+  }
+
+  .character-bulk-auto-image-actions {
+    width: 100%;
+  }
+
+  .character-bulk-auto-image-actions .file-label,
+  .character-bulk-auto-image-actions .secondary-button {
+    flex: 1;
+    justify-content: center;
+  }
+}
