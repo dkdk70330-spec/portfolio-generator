@@ -1779,6 +1779,9 @@ const elements = {
                 >${escapeHtml(row.description)}</textarea>
               </label>
 
+            </div>
+
+            <div class="character-bulk-secondary-row">
               <div
                 class="character-bulk-image-field image-drop-zone"
                 data-character-bulk-image-drop
@@ -1804,20 +1807,20 @@ const elements = {
                 </div>
                 <small class="character-bulk-field-error" data-character-bulk-error="images" hidden></small>
               </div>
-            </div>
 
-            <details class="character-bulk-platform-panel">
-              <summary>
-                <span>
-                  <strong>플랫폼 링크</strong>
-                  <small data-character-bulk-platform-summary>${platformCount > 0 ? `${platformCount}개 입력됨` : "필요한 플랫폼만 입력"}</small>
-                </span>
-                <b aria-hidden="true">⌄</b>
-              </summary>
-              <div class="character-bulk-platform-grid">
-                ${characterBulkPlatformMarkup(row)}
-              </div>
-            </details>
+              <details class="character-bulk-platform-panel">
+                <summary>
+                  <span>
+                    <strong>플랫폼 링크</strong>
+                    <small data-character-bulk-platform-summary>${platformCount > 0 ? `${platformCount}개 입력됨` : "필요한 플랫폼만 입력"}</small>
+                  </span>
+                  <b aria-hidden="true">⌄</b>
+                </summary>
+                <div class="character-bulk-platform-grid">
+                  ${characterBulkPlatformMarkup(row)}
+                </div>
+              </details>
+            </div>
           </article>
         `;
       })

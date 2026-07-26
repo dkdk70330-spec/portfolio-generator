@@ -4739,3 +4739,64 @@ body.character-filter-picker-open { overflow: hidden; }
     justify-content: center;
   }
 }
+
+/* 일괄등록 이미지·플랫폼 한 줄 배치 */
+.character-bulk-secondary-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, .9fr);
+  gap: .55rem;
+  align-items: start;
+  border-top: 1px solid var(--line);
+}
+
+.character-bulk-secondary-row .character-bulk-image-field,
+.character-bulk-secondary-row .character-bulk-platform-panel {
+  min-width: 0;
+  border: 0;
+}
+
+.character-bulk-secondary-row .character-bulk-image-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .2rem .5rem;
+  align-items: center;
+  padding: .5rem .1rem;
+}
+
+.character-bulk-secondary-row .character-bulk-image-selection,
+.character-bulk-secondary-row .character-bulk-field-error {
+  grid-column: 1 / -1;
+}
+
+.character-bulk-secondary-row .character-bulk-platform-panel {
+  margin: 0;
+}
+
+.character-bulk-secondary-row .character-bulk-platform-panel > summary {
+  min-height: 46px;
+  padding: .5rem .1rem;
+  border: 0;
+}
+
+.character-bulk-secondary-row .character-bulk-platform-panel[open] {
+  grid-column: 1 / -1;
+}
+
+.character-bulk-secondary-row .character-bulk-platform-panel[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.character-bulk-secondary-row .character-bulk-platform-grid {
+  padding: .5rem .1rem .1rem;
+}
+
+@media (max-width: 700px) {
+  .character-bulk-secondary-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .character-bulk-secondary-row .character-bulk-platform-panel {
+    border-top: 1px solid var(--line);
+  }
+}
