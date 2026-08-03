@@ -4872,3 +4872,2404 @@ body.character-filter-picker-open { overflow: hidden; }
     box-shadow: none;
   }
 }
+
+/* =========================================================
+   Horizontal archive prototype
+   기능과 데이터 구조는 유지하고 공개 미리보기의 배치만 변경합니다.
+   ========================================================= */
+
+:root {
+  --preview-panel-width: 1100px;
+}
+
+.app-header,
+.generator-layout {
+  width: min(calc(100% - 40px), 1880px);
+}
+
+.generator-layout {
+  grid-template-columns: minmax(520px, .78fr) minmax(760px, 1.22fr);
+  gap: 1.25rem;
+}
+
+.preview-panel {
+  width: min(calc(100vw - 40px), calc(var(--preview-panel-width) + 2.8rem));
+}
+
+.preview-canvas {
+  min-width: 760px;
+}
+
+.archive-tab-state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.archive-site-shell {
+  min-height: 650px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 84% 8%, color-mix(in srgb, var(--theme) 13%, transparent), transparent 24rem),
+    var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.archive-site-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.archive-site-brand,
+.archive-site-nav label {
+  cursor: pointer;
+  user-select: none;
+}
+
+.archive-site-brand {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: .55rem;
+}
+
+.archive-site-brand-mark {
+  color: var(--accent);
+  font-size: .68rem;
+}
+
+.archive-site-brand strong {
+  overflow: hidden;
+  font-size: .8rem;
+  letter-spacing: .02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-site-nav {
+  display: flex;
+  align-self: stretch;
+  align-items: stretch;
+  gap: 1.35rem;
+}
+
+.archive-site-nav label {
+  position: relative;
+  display: inline-flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .68rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .08em;
+}
+
+.archive-site-nav label::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: .72rem;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transform: scaleX(.35);
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.archive-site-nav label:hover {
+  color: var(--text);
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .archive-site-nav label[for="archiveTabWorld"],
+#archiveTabCharacter:checked ~ .archive-site-shell .archive-site-nav label[for="archiveTabCharacter"],
+#archiveTabPlan:checked ~ .archive-site-shell .archive-site-nav label[for="archiveTabPlan"] {
+  color: var(--text);
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .archive-site-nav label[for="archiveTabWorld"]::after,
+#archiveTabCharacter:checked ~ .archive-site-shell .archive-site-nav label[for="archiveTabCharacter"]::after,
+#archiveTabPlan:checked ~ .archive-site-shell .archive-site-nav label[for="archiveTabPlan"]::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.archive-pages {
+  display: grid;
+  min-width: 0;
+  gap: .9rem;
+  padding: .9rem;
+}
+
+.archive-pages > .portfolio-preview,
+.archive-pages > .character-featured-preview,
+.archive-pages > .stardust-world-preview,
+.archive-pages > .character-archive-preview,
+.archive-pages > .archive-plan-preview {
+  display: none;
+  min-width: 0;
+  margin: 0;
+}
+
+/* HOME: 제작자 + 추천 캐릭터 + 첫 3개 세계관 */
+#archiveTabHome:checked ~ .archive-site-shell .archive-pages {
+  grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
+  grid-template-areas:
+    "profile featured"
+    "profile worlds";
+  align-items: stretch;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel {
+  display: block;
+  grid-area: profile;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell .character-featured-preview {
+  display: block;
+  grid-area: featured;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell .stardust-world-preview {
+  display: block;
+  grid-area: worlds;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid > .world-card:nth-child(n + 4) {
+  display: none !important;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell #previewWorldToggleWrap {
+  display: none !important;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell .archive-page-world-kicker,
+#archiveTabHome:checked ~ .archive-site-shell .archive-page-world-title {
+  display: none;
+}
+
+/* WORLD */
+#archiveTabWorld:checked ~ .archive-site-shell .archive-pages,
+#archiveTabCharacter:checked ~ .archive-site-shell .archive-pages,
+#archiveTabPlan:checked ~ .archive-site-shell .archive-pages {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .stardust-world-preview,
+#archiveTabCharacter:checked ~ .archive-site-shell .character-archive-preview,
+#archiveTabPlan:checked ~ .archive-site-shell .archive-plan-preview {
+  display: block;
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .archive-home-world-kicker,
+#archiveTabWorld:checked ~ .archive-site-shell .archive-home-world-title {
+  display: none;
+}
+
+/* HOME profile */
+.archive-profile-panel {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.archive-profile-panel .preview-profile {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
+  padding: 1.15rem;
+}
+
+.archive-profile-panel .preview-profile::after {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 34%, transparent), var(--bg) 82%);
+}
+
+.archive-profile-panel .preview-avatar {
+  width: min(108px, 48%);
+  border-radius: 14px;
+}
+
+.archive-profile-panel .preview-profile-copy {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.archive-profile-panel .preview-manifesto {
+  margin: 0 0 .3rem;
+  font-size: .62rem;
+  letter-spacing: .06em;
+}
+
+.archive-profile-panel .preview-profile h3 {
+  font-size: clamp(1.35rem, 3.4cqw, 2.3rem);
+  line-height: 1.05;
+}
+
+.archive-profile-panel .preview-handle {
+  margin: .3rem 0 .75rem;
+  font-size: .7rem;
+}
+
+.archive-profile-panel .preview-bio {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.65;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 7;
+}
+
+.archive-profile-panel .preview-social-links {
+  margin-top: 1rem;
+}
+
+.archive-profile-panel .preview-social-link {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.archive-profile-panel .hero-stats {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+/* HOME panels */
+.archive-pages .character-featured-preview,
+.archive-pages .stardust-world-preview,
+.archive-pages .character-archive-preview,
+.archive-plan-preview {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.archive-pages .character-preview-heading,
+.archive-pages .world-preview-section-heading {
+  margin-bottom: .75rem;
+}
+
+.archive-pages .character-preview-heading h2,
+.archive-pages .world-preview-section-heading h2,
+.archive-page-heading h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 3.2cqw, 2rem);
+  letter-spacing: -.055em;
+}
+
+.archive-pages .eyebrow {
+  margin-bottom: .15rem;
+  font-size: .54rem;
+}
+
+/* 썸네일은 이미지 + 제목 + 한 줄 소개만 */
+.archive-pages .character-preview-card-genres,
+.archive-pages .character-preview-card-more,
+.archive-pages .world-card-meta,
+.archive-pages .world-card-tags,
+.archive-pages .world-face-stack,
+.archive-pages .archive-music-mark {
+  display: none !important;
+}
+
+.archive-pages .character-featured-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.archive-pages .character-preview-card.is-featured .character-preview-card-button {
+  display: block;
+  min-height: 0;
+}
+
+.archive-pages .character-preview-card.is-featured .character-preview-card-image-wrap {
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 4.55;
+}
+
+.archive-pages .character-preview-card.is-featured .character-preview-card-body {
+  display: block;
+}
+
+.archive-pages .character-preview-card-button,
+.archive-pages .world-card-button {
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+
+.archive-pages .character-preview-card-button:hover,
+.archive-pages .world-card-button:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  background: var(--surface-2);
+}
+
+.archive-pages .character-preview-card-image-wrap {
+  aspect-ratio: 4 / 5;
+}
+
+.archive-pages .character-preview-card-body,
+.archive-pages .world-card-body {
+  padding: .58rem .62rem .65rem;
+}
+
+.archive-pages .character-preview-card-body h3,
+.archive-pages .world-card-body h3 {
+  margin: 0;
+  overflow: hidden;
+  font-size: .78rem;
+  letter-spacing: -.025em;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-pages .character-preview-card-body p,
+.archive-pages .world-card-body > p {
+  display: block;
+  min-height: 0;
+  margin: .15rem 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .62rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-pages .world-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.archive-pages .world-card-image {
+  aspect-ratio: 16 / 8.2;
+}
+
+/* WORLD page */
+#archiveTabWorld:checked ~ .archive-site-shell .stardust-world-preview {
+  min-height: 570px;
+  padding: clamp(1rem, 2.2vw, 1.7rem);
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .world-card-image {
+  aspect-ratio: 16 / 9;
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .world-card-body h3 {
+  font-size: .9rem;
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .world-card-body > p {
+  font-size: .67rem;
+}
+
+/* CHARACTER page */
+#archiveTabCharacter:checked ~ .archive-site-shell .character-archive-preview {
+  min-height: 570px;
+  padding: clamp(1rem, 2.2vw, 1.7rem);
+}
+
+#archiveTabCharacter:checked ~ .archive-site-shell .character-preview-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .72rem;
+}
+
+#archiveTabCharacter:checked ~ .archive-site-shell .controls {
+  padding: .8rem;
+  margin-bottom: 1rem;
+  border-radius: 13px;
+}
+
+#archiveTabCharacter:checked ~ .archive-site-shell .search-box {
+  padding: .65rem .8rem;
+}
+
+#archiveTabCharacter:checked ~ .archive-site-shell .filter-row {
+  gap: .65rem;
+  margin-top: .7rem;
+}
+
+#archiveTabCharacter:checked ~ .archive-site-shell .filter-chip,
+#archiveTabCharacter:checked ~ .archive-site-shell .filter-more {
+  min-height: 32px;
+  padding: .32rem .56rem;
+  font-size: .68rem;
+}
+
+/* PLAN editor */
+.plan-editor-section {
+  margin-top: 2.2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--line);
+}
+
+.plan-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, .34fr) minmax(0, 1fr);
+  gap: .8rem;
+  margin-top: 1rem;
+}
+
+.plan-editor-sidebar,
+.plan-form,
+.plan-editor-empty {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+}
+
+.plan-editor-sidebar { padding: .55rem; }
+.plan-editor-list { display: grid; gap: .45rem; }
+.plan-editor-list-item {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: .65rem;
+  padding: .55rem;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.plan-editor-list-item:hover,
+.plan-editor-list-item.is-active {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+.plan-editor-list-item.is-active { border-color: var(--accent); }
+.plan-editor-list-thumb {
+  width: 42px;
+  aspect-ratio: 3 / 4;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: .55rem;
+  font-weight: 900;
+}
+.plan-editor-list-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.plan-editor-list-copy { min-width: 0; }
+.plan-editor-list-copy strong,
+.plan-editor-list-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-editor-list-copy strong { font-size: .78rem; }
+.plan-editor-list-copy small { color: var(--muted); font-size: .64rem; }
+.plan-editor-empty { display: grid; min-height: 210px; place-content: center; padding: 1.4rem; text-align: center; }
+.plan-editor-empty p { margin: .3rem 0 0; color: var(--muted); font-size: .78rem; }
+.plan-form { padding: 1rem; }
+.plan-form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-bottom: 1rem; }
+.plan-form-actions .secondary-button,
+.plan-danger-button { min-height: 38px; padding: .5rem .75rem; font-size: .74rem; }
+.plan-danger-button { border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line)); border-radius: 999px; background: transparent; color: var(--danger); font-weight: 800; }
+.plan-danger-button:hover { border-color: var(--danger); }
+.plan-image-editor { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 1rem; align-items: center; margin-bottom: 1.2rem; }
+.plan-image-editor-preview {
+  display: grid;
+  width: 132px;
+  aspect-ratio: 3 / 4;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 15px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--violet) 20%, transparent), color-mix(in srgb, var(--accent) 8%, transparent)), var(--surface-3);
+  color: var(--muted);
+  font-size: .65rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+.plan-image-editor-preview img { width: 100%; height: 100%; object-fit: cover; }
+.plan-identity-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.plan-identity-grid > label + label { margin-top: 0; }
+.plan-platform-editor { margin-top: 1.4rem; }
+.plan-subsection-heading strong,
+.plan-subsection-heading small { display: block; }
+.plan-subsection-heading small { margin-top: .1rem; color: var(--muted); font-size: .68rem; }
+.plan-platform-list { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .7rem; }
+.plan-platform-option {
+  display: inline-grid;
+  grid-template-columns: auto 28px auto;
+  align-items: center;
+  gap: .45rem;
+  margin: 0;
+  padding: .45rem .6rem;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  cursor: pointer;
+}
+.plan-platform-option:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.plan-platform-option input { width: 17px; height: 17px; min-height: 0; margin: 0; padding: 0; }
+.plan-platform-icon { width: 28px; height: 28px; display: grid; place-items: center; overflow: hidden; border-radius: 8px; background: var(--surface-3); font-size: .65rem; font-weight: 850; }
+.plan-platform-icon img { width: 100%; height: 100%; padding: 4px; object-fit: contain; }
+.plan-platform-option > span:last-child { font-size: .72rem; font-weight: 800; }
+
+/* Character NEW and platform marks */
+.character-new-mark {
+  position: absolute;
+  z-index: 3;
+  top: .42rem;
+  right: .42rem;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 68%, white 16%);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 88%, #111);
+  color: var(--accent-ink);
+  box-shadow: 0 5px 16px rgba(0,0,0,.28);
+  font-size: .6rem;
+  font-weight: 950;
+}
+.archive-pages .character-preview-card-platforms {
+  right: .42rem;
+  bottom: .42rem;
+  display: flex;
+  gap: .22rem;
+}
+.archive-pages .character-preview-platform-dot {
+  width: 20px;
+  height: 20px;
+  border-color: rgba(255,255,255,.22);
+  background: rgba(9,9,13,.82);
+  backdrop-filter: blur(5px);
+}
+
+/* PLAN poster wall */
+.archive-plan-preview { min-height: 570px; }
+.archive-page-heading > p:last-child { margin: .25rem 0 0; color: var(--muted); font-size: .72rem; }
+.archive-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .85rem;
+  margin-top: 1rem;
+}
+.archive-plan-card { min-width: 0; }
+.archive-plan-card-button {
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-2) 84%, transparent);
+  color: var(--text);
+  text-align: left;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+.archive-plan-card-button:hover { transform: translateY(-3px) rotate(-.2deg); border-color: color-mix(in srgb, var(--accent) 62%, var(--line)); background: var(--surface-2); }
+.archive-plan-card-image { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--surface-3); }
+.archive-plan-card-image > img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
+.archive-plan-card-button:hover .archive-plan-card-image > img { transform: scale(1.025); }
+.archive-plan-card-image-fallback { width: 100%; height: 100%; display: grid; place-items: center; color: var(--muted); font-size: .6rem; font-weight: 900; letter-spacing: .12em; }
+.archive-plan-status {
+  position: absolute;
+  z-index: 2;
+  top: .48rem;
+  left: .48rem;
+  max-width: calc(100% - .96rem);
+  padding: .24rem .48rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, transparent);
+  border-radius: 999px;
+  background: rgba(10,10,14,.78);
+  color: var(--accent);
+  backdrop-filter: blur(8px);
+  font-size: .56rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archive-plan-platforms { position: absolute; right: .45rem; bottom: .45rem; display: flex; gap: .22rem; }
+.archive-plan-platform-dot,
+.plan-preview-modal-platform-dot {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 50%;
+  background: rgba(10,10,14,.82);
+  color: var(--text);
+  font-size: .56rem;
+  font-weight: 850;
+}
+.archive-plan-platform-dot img,
+.plan-preview-modal-platform-dot img { width: 100%; height: 100%; padding: 3px; object-fit: contain; }
+.archive-plan-card-body { padding: .62rem .65rem .7rem; }
+.archive-plan-card-body h3 { margin: 0; overflow: hidden; font-size: .82rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.archive-plan-card-body p { display: -webkit-box; min-height: 2.7em; margin: .2rem 0 0; overflow: hidden; color: var(--muted); font-size: .62rem; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.archive-plan-empty {
+  display: grid;
+  min-height: 430px;
+  place-content: center;
+  padding: 2rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+.archive-plan-empty > span { color: var(--accent); font-size: 2rem; }
+.archive-plan-empty strong { margin-top: .65rem; color: var(--text); }
+.archive-plan-empty p { max-width: 28rem; margin: .25rem auto 0; font-size: .76rem; }
+
+/* PLAN small popup card */
+.plan-preview-modal {
+  width: min(690px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.plan-preview-modal::backdrop { background: rgba(5,5,8,.78); backdrop-filter: blur(10px); }
+.plan-preview-modal-shell { position: relative; display: grid; grid-template-columns: minmax(180px, .72fr) minmax(0, 1.28fr); min-height: 330px; }
+.plan-preview-modal-close { position: absolute; z-index: 4; top: .7rem; right: .7rem; width: 38px; height: 38px; border: 1px solid var(--line-strong); border-radius: 50%; background: rgba(12,12,16,.74); color: var(--text); font-size: 1.3rem; }
+.plan-preview-modal-image-wrap { position: relative; min-height: 330px; overflow: hidden; background: var(--surface-2); }
+.plan-preview-modal-image-wrap > img { width: 100%; height: 100%; object-fit: cover; }
+.plan-preview-modal-image-fallback { width: 100%; height: 100%; min-height: 330px; display: grid; place-items: center; color: var(--muted); font-size: .65rem; font-weight: 900; letter-spacing: .12em; }
+.plan-preview-modal-platforms { position: absolute; right: .65rem; bottom: .65rem; display: flex; gap: .3rem; }
+.plan-preview-modal-platform-dot { width: 28px; height: 28px; }
+.plan-preview-modal-content { max-height: calc(100dvh - 24px); padding: 2.2rem 2rem; overflow-y: auto; }
+.plan-preview-modal-status { width: fit-content; max-width: 100%; margin: 0 0 .55rem; padding: .25rem .55rem; overflow: hidden; border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--line)); border-radius: 999px; color: var(--accent); font-size: .64rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.plan-preview-modal-content h2 { margin: 0; padding-right: 2rem; font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -.06em; line-height: 1.05; }
+.plan-preview-modal-description { margin-top: 1.2rem; color: var(--muted); font-size: .86rem; line-height: 1.75; }
+.plan-preview-modal-description p { margin: 0; }
+.plan-preview-modal-description p + p { margin-top: .8rem; }
+body.plan-preview-modal-open { overflow: hidden; }
+
+@media (max-width: 760px) {
+  .plan-editor-layout { grid-template-columns: 1fr; }
+  .plan-editor-list { display: flex; overflow-x: auto; }
+  .plan-editor-list-item { flex: 0 0 170px; }
+  .plan-preview-modal-shell { grid-template-columns: 1fr; }
+  .plan-preview-modal-image-wrap,
+  .plan-preview-modal-image-fallback { min-height: 280px; max-height: 48vh; }
+}
+
+@media (max-width: 560px) {
+  .plan-image-editor,
+  .plan-identity-grid { grid-template-columns: 1fr; }
+  .plan-image-editor-preview { width: 100%; max-width: 180px; }
+  .plan-form-actions { justify-content: flex-start; flex-wrap: wrap; }
+}
+
+/* 배포 결과는 브라우저 폭을 넉넉하게 사용합니다. */
+.exported-portfolio-site {
+  min-width: 320px;
+}
+
+.exported-site-shell {
+  width: min(calc(100% - 28px), 1440px);
+  margin: 14px auto;
+}
+
+.exported-preview-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+.exported-preview-canvas .archive-site-shell {
+  min-height: calc(100dvh - 28px);
+}
+
+@media (max-width: 1500px) {
+  .generator-layout {
+    grid-template-columns: minmax(500px, .88fr) minmax(700px, 1.12fr);
+  }
+}
+
+@media (max-width: 1180px) {
+  .generator-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-panel {
+    position: static;
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
+@container live-preview (max-width: 900px) {
+  #archiveTabHome:checked ~ .archive-site-shell .archive-pages {
+    grid-template-columns: minmax(190px, 30%) minmax(0, 1fr);
+  }
+
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #archiveTabCharacter:checked ~ .archive-site-shell .character-preview-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .archive-plan-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container live-preview (max-width: 720px) {
+  .archive-site-header {
+    gap: .75rem;
+    padding-inline: .9rem;
+  }
+
+  .archive-site-nav {
+    gap: .8rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .archive-pages {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "profile"
+      "featured"
+      "worlds";
+  }
+
+  .archive-profile-panel .preview-profile {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .archive-profile-panel .preview-avatar {
+    width: 82px;
+  }
+
+  .archive-profile-panel .hero-stats {
+    margin-top: .8rem;
+  }
+
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid,
+  #archiveTabCharacter:checked ~ .archive-site-shell .character-preview-grid,
+  .archive-plan-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  .archive-site-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0;
+    padding-top: .75rem;
+  }
+
+  .archive-site-nav {
+    width: 100%;
+    min-height: 44px;
+    align-self: auto;
+    align-items: stretch;
+    justify-content: space-between;
+  }
+
+  .archive-site-nav label {
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .archive-pages {
+    padding: .6rem;
+  }
+
+  .archive-profile-panel .preview-profile {
+    display: flex;
+  }
+
+  .archive-pages .character-featured-grid,
+  .archive-pages .world-grid,
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid,
+  #archiveTabCharacter:checked ~ .archive-site-shell .character-preview-grid,
+  .archive-plan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+/* 탭 전환 뒤에는 전체 아카이브를 즉시 펼쳐 보입니다.
+   기존 더보기 로직과 데이터는 그대로 남아 있습니다. */
+#archiveTabWorld:checked ~ .archive-site-shell #previewWorldGrid > .world-card[hidden],
+#archiveTabCharacter:checked ~ .archive-site-shell #previewCharacterGrid > .character-preview-card[hidden] {
+  display: block !important;
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell #previewWorldToggleWrap,
+#archiveTabCharacter:checked ~ .archive-site-shell #previewCharacterToggleWrap {
+  display: none !important;
+}
+
+
+/* =========================================================
+   Mobile editor and exported-site hardening
+   ========================================================= */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+button,
+label,
+summary,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  .file-label {
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .image-drop-zone {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .image-input-hint {
+    font-size: 0;
+  }
+
+  .image-input-hint::after {
+    content: "이미지 영역이나 파일 선택 버튼을 눌러 업로드하세요.";
+    font-size: .72rem;
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    width: 100%;
+    overflow-x: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .app-header,
+  .generator-layout {
+    width: min(calc(100% - 16px), 1880px);
+  }
+
+  .app-header {
+    padding: calc(.85rem + env(safe-area-inset-top)) 0 1rem;
+    gap: .8rem;
+  }
+
+  .app-header h1 {
+    font-size: clamp(1.65rem, 8vw, 2.35rem);
+    line-height: 1.08;
+  }
+
+  .app-header > div > p:last-child {
+    margin-top: .35rem;
+    font-size: .78rem;
+  }
+
+  .header-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .45rem;
+  }
+
+  .header-actions > *,
+  .header-actions .secondary-button,
+  .header-actions .import-project-button,
+  .backup-menu,
+  .backup-menu > summary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .header-actions .secondary-button,
+  .header-actions .import-project-button,
+  .backup-menu > summary {
+    min-height: 46px;
+    padding: .6rem .72rem;
+  }
+
+  .backup-menu-panel {
+    position: fixed;
+    z-index: 120;
+    inset: auto 8px calc(8px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(72dvh, 620px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 18px;
+  }
+
+  .generator-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .75rem;
+    margin: .8rem auto 2rem;
+  }
+
+  .editor-panel,
+  .preview-panel {
+    width: 100%;
+    min-width: 0;
+    border-radius: 18px;
+  }
+
+  .editor-panel {
+    padding: .72rem;
+  }
+
+  .editor-panel > h2 {
+    margin: .1rem 0 .65rem;
+    font-size: 1.25rem;
+  }
+
+  .major-editor-fold-summary,
+  .editor-fold-summary {
+    min-height: 54px;
+    padding: .75rem .15rem;
+  }
+
+  .major-editor-fold-summary strong,
+  .editor-fold-summary strong {
+    font-size: .9rem;
+  }
+
+  .major-editor-fold-summary small,
+  .editor-fold-summary small {
+    font-size: .65rem;
+    line-height: 1.35;
+  }
+
+  .major-editor-fold-body,
+  .editor-fold-body {
+    min-width: 0;
+  }
+
+  fieldset + fieldset,
+  .world-editor-section,
+  .character-editor-section,
+  .plan-editor-section {
+    margin-top: 1.2rem;
+    padding-top: 1.15rem;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  input,
+  select {
+    min-height: 48px;
+  }
+
+  textarea {
+    min-height: 110px;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .character-danger-button,
+  .plan-danger-button {
+    min-height: 44px;
+  }
+
+  .portfolio-fields-grid,
+  .creator-identity-grid,
+  .site-color-controls,
+  .social-entry,
+  .world-title-grid,
+  .character-identity-grid,
+  .character-world-featured-grid,
+  .plan-identity-grid,
+  .music-editor-grid,
+  .character-content-editor-item {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .portfolio-fields-grid > label,
+  .creator-identity-grid > label,
+  .character-identity-grid > label,
+  .character-world-featured-grid > label,
+  .plan-identity-grid > label {
+    margin-top: 0;
+  }
+
+  .avatar-editor,
+  .profile-background-editor,
+  .world-image-editor,
+  .plan-image-editor {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .75rem;
+    align-items: start;
+  }
+
+  .avatar-preview {
+    width: 92px;
+    border-radius: 23px;
+  }
+
+  .profile-background-editor-preview,
+  .world-image-editor-preview,
+  .plan-image-editor-preview {
+    width: 100%;
+    max-width: 230px;
+  }
+
+  .file-label {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+    border-radius: 13px;
+  }
+
+  .image-drop-zone {
+    padding: .7rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: 15px;
+  }
+
+  .image-drop-zone:focus-within,
+  .image-drop-zone.is-image-target-active {
+    border-color: var(--accent);
+  }
+
+  .image-input-hint,
+  .field-help {
+    overflow-wrap: anywhere;
+  }
+
+  .world-editor-layout,
+  .character-editor-layout,
+  .plan-editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .65rem;
+  }
+
+  .world-editor-sidebar,
+  .character-editor-sidebar,
+  .plan-editor-sidebar {
+    padding: .45rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .world-editor-list,
+  .character-editor-list,
+  .plan-editor-list {
+    display: flex;
+    min-width: max-content;
+    gap: .4rem;
+    overflow: visible;
+  }
+
+  .world-editor-list-item,
+  .character-editor-list-item,
+  .plan-editor-list-item {
+    flex: 0 0 min(170px, 72vw);
+  }
+
+  .world-form,
+  .character-form,
+  .plan-form {
+    padding: .72rem;
+  }
+
+  .world-form-actions,
+  .character-form-actions,
+  .plan-form-actions,
+  .editor-fold-action-row,
+  .major-editor-action-row {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: .4rem;
+  }
+
+  .world-form-actions > button,
+  .character-form-actions > button,
+  .plan-form-actions > button {
+    flex: 1 1 88px;
+  }
+
+  .character-platform-editor-list,
+  .filter-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .character-platform-editor-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .character-option-grid,
+  .plan-platform-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .character-option-item,
+  .plan-platform-option {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .social-entry .primary-button {
+    width: 100%;
+  }
+
+  .preview-panel {
+    position: static;
+    padding: .6rem;
+  }
+
+  .preview-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .45rem;
+  }
+
+  .preview-width-control {
+    display: none;
+  }
+
+  .save-status {
+    overflow-wrap: anywhere;
+  }
+
+  .preview-viewport {
+    width: 100%;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .preview-canvas {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0;
+  }
+
+  .archive-site-shell {
+    width: 100%;
+    min-height: 0;
+    border-radius: 16px;
+  }
+
+  .archive-site-header {
+    position: sticky;
+    top: 0;
+    padding-inline: .72rem;
+  }
+
+  .archive-site-brand {
+    min-width: 0;
+    max-width: 46%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .archive-site-nav {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .archive-site-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .archive-site-nav label {
+    flex: 0 0 auto;
+    min-width: 66px;
+    min-height: 48px;
+  }
+
+  .archive-pages {
+    min-width: 0;
+    padding: .62rem;
+  }
+
+  .archive-profile-panel,
+  .archive-featured-panel,
+  .archive-world-panel,
+  .stardust-character-preview,
+  .stardust-world-preview {
+    border-radius: 14px;
+  }
+
+  .archive-profile-panel .preview-profile {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: .72rem;
+    padding: .85rem;
+  }
+
+  .archive-profile-panel .preview-avatar {
+    width: 70px;
+    border-radius: 18px;
+  }
+
+  .archive-profile-panel .preview-profile h3 {
+    font-size: clamp(1.45rem, 8vw, 2.15rem);
+  }
+
+  .archive-pages .character-featured-grid,
+  .archive-pages .world-grid,
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid,
+  #archiveTabCharacter:checked ~ .archive-site-shell .character-preview-grid,
+  .archive-plan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .48rem;
+  }
+
+  .archive-pages .character-preview-card-body,
+  .archive-pages .world-card-body,
+  .archive-plan-card-body {
+    padding: .55rem;
+  }
+
+  .archive-pages .character-preview-card-body h3,
+  .archive-pages .world-card-body h3,
+  .archive-plan-card-body h3 {
+    font-size: .78rem;
+  }
+
+  .archive-pages .character-preview-card-body p,
+  .archive-pages .world-card-body > p,
+  .archive-plan-card-body p {
+    font-size: .6rem;
+  }
+
+  .controls {
+    padding: .65rem;
+  }
+
+  .chip-list {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .chip-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-chip,
+  .filter-more {
+    min-height: 40px;
+  }
+
+  .world-modal,
+  .character-preview-modal,
+  .plan-preview-modal,
+  .guide-dialog,
+  .character-bulk-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    margin: auto 0 0;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .world-modal-shell,
+  .character-preview-modal-shell,
+  .plan-preview-modal-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .world-cover-panel,
+  .character-preview-gallery {
+    padding: .7rem;
+  }
+
+  .world-cover-panel img,
+  .world-cover-fallback,
+  .character-preview-main-image-wrap img,
+  .plan-preview-modal-image-wrap,
+  .plan-preview-modal-image-fallback {
+    min-height: 240px;
+    max-height: 48dvh;
+  }
+
+  .world-modal-content,
+  .character-preview-modal-content,
+  .plan-preview-modal-content {
+    max-height: none;
+    padding: 1.15rem;
+    overflow: visible;
+  }
+
+  .world-modal-content h2,
+  .character-preview-identity h2,
+  .plan-preview-modal-content h2 {
+    font-size: clamp(1.8rem, 10vw, 2.8rem);
+  }
+
+  .character-preview-modal,
+  .world-modal,
+  .plan-preview-modal {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .character-bulk-dialog-shell {
+    padding: .75rem;
+  }
+
+  .character-bulk-dialog-header,
+  .character-bulk-dialog-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .character-bulk-header-actions,
+  .character-bulk-dialog-actions > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exported-site-shell {
+    width: min(calc(100% - 10px), 1440px);
+    margin: 5px auto;
+  }
+}
+
+@media (max-width: 430px) {
+  .app-header,
+  .generator-layout {
+    width: min(calc(100% - 10px), 1880px);
+  }
+
+  .header-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .character-option-grid,
+  .plan-platform-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .archive-site-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+    padding-top: .55rem;
+  }
+
+  .archive-site-brand {
+    max-width: 100%;
+    min-height: 38px;
+  }
+
+  .archive-site-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .archive-site-nav label {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .archive-profile-panel .preview-profile {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+
+  .archive-profile-panel .preview-avatar {
+    width: 62px;
+  }
+
+  .archive-pages .character-featured-grid,
+  .archive-pages .world-grid,
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid,
+  #archiveTabCharacter:checked ~ .archive-site-shell .character-preview-grid,
+  .archive-plan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .archive-plan-status {
+    max-width: calc(100% - .7rem);
+    top: .35rem;
+    left: .35rem;
+  }
+}
+
+/* ---------------------------------------------------------
+   Archive top tabs: normalize label spacing and box height
+   Global `label + label` spacing must never affect navigation.
+   --------------------------------------------------------- */
+.archive-site-nav {
+  --archive-nav-item-height: 58px;
+  align-items: stretch;
+}
+
+.archive-site-nav > label,
+.archive-site-nav > label + label {
+  align-self: stretch;
+  box-sizing: border-box;
+  height: var(--archive-nav-item-height);
+  min-height: var(--archive-nav-item-height);
+  margin: 0 !important;
+  padding-block: 0;
+  padding-inline: .15rem;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  .archive-site-nav {
+    --archive-nav-item-height: 48px;
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  .archive-site-nav {
+    --archive-nav-item-height: 48px;
+  }
+}
+
+/* ---------------------------------------------------------
+   Mobile HOME recommendations: three items, one complete row
+   Keep the full WORLD / CHARACTER archives at their existing columns.
+   --------------------------------------------------------- */
+@media (max-width: 520px) {
+  #archiveTabHome:checked ~ .archive-site-shell .character-featured-grid,
+  #archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .4rem;
+  }
+
+  /* Undo the older mobile rule that hid the third recommended world. */
+  #archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid > .world-card:nth-child(3) {
+    display: block !important;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body {
+    padding: .45rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body h3,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body h3 {
+    font-size: .7rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body p,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body > p {
+    font-size: .54rem;
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  #archiveTabHome:checked ~ .archive-site-shell .character-featured-grid,
+  #archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .4rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid > .world-card:nth-child(3) {
+    display: block !important;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body {
+    padding: .45rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body h3,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body h3 {
+    font-size: .7rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body p,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body > p {
+    font-size: .54rem;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   Mobile HOME profile and recommendation layout
+   - Profile artwork is fixed to a 2:3 portrait crop on mobile.
+   - HOME recommendations stay in one three-card row.
+   - Full WORLD / CHARACTER archive grids keep their existing rules.
+   --------------------------------------------------------- */
+@media (max-width: 760px) {
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar {
+    flex: 0 0 auto;
+    aspect-ratio: 2 / 3;
+    height: auto;
+    overflow: hidden;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-featured-grid,
+  #archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .4rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body {
+    padding: .42rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body h3,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body h3 {
+    font-size: .69rem;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .character-preview-card-body p,
+  #archiveTabHome:checked ~ .archive-site-shell .world-card-body > p {
+    font-size: .53rem;
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar {
+    flex: 0 0 auto;
+    aspect-ratio: 2 / 3;
+    height: auto;
+    overflow: hidden;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* ---------------------------------------------------------
+   Compact archive sorting controls
+   They live in the heading rail and never consume thumbnail-grid space.
+   --------------------------------------------------------- */
+.archive-heading-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .65rem;
+}
+
+.archive-heading-actions > p {
+  margin: 0;
+}
+
+.archive-sort-control,
+.archive-sort-control + .archive-sort-control {
+  display: inline-flex;
+  width: auto;
+  min-width: 0;
+  align-items: center;
+  gap: .38rem;
+  margin: 0 !important;
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.archive-sort-control > span {
+  color: inherit;
+  font-size: inherit;
+}
+
+.archive-sort-control select {
+  width: auto;
+  min-width: 76px;
+  min-height: 30px;
+  padding: .28rem 1.65rem .28rem .58rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--surface-2) 86%, transparent);
+  color: var(--text);
+  font-size: .66rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell .archive-world-sort {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  .character-archive-heading {
+    align-items: flex-end;
+    flex-direction: row;
+  }
+
+  .archive-heading-actions {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: .28rem;
+  }
+
+  .archive-sort-control > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .archive-sort-control select {
+    min-width: 72px;
+    min-height: 32px;
+    padding-inline: .55rem 1.45rem;
+  }
+}
+
+
+.archive-world-sort {
+  margin-left: auto !important;
+}
+
+@media (max-width: 620px) {
+  .archive-sort-control select {
+    min-width: 88px;
+    font-size: 16px;
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  .archive-sort-control select {
+    min-width: 74px;
+    font-size: .72rem;
+  }
+}
+
+
+/* =========================================================
+   Individual text colors + layout containment fixes
+   ========================================================= */
+.editable-field-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: .55rem;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.editable-field-heading > span:first-child {
+  min-width: 0;
+}
+
+.field-color-input {
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  height: 24px;
+  min-height: 24px;
+  padding: 2px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.site-color-controls {
+  grid-template-columns: minmax(112px, 1fr);
+}
+
+/* The preview must stay inside its grid track. Horizontal overflow belongs
+   to the preview viewport, never on top of the editor. */
+.generator-layout {
+  grid-template-columns: minmax(480px, .78fr) minmax(0, 1.22fr);
+}
+
+.preview-panel {
+  width: 100%;
+  max-width: calc(var(--preview-panel-width) + 2.8rem);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.preview-viewport {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+@media (max-width: 1480px) {
+  .generator-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview-panel {
+    position: static;
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+  }
+}
+
+/* Keep sort controls in the same heading row even in narrow previews. */
+.character-preview-heading,
+.stardust-world-preview .world-preview-section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.archive-heading-actions {
+  display: flex;
+  min-width: max-content;
+  align-items: center;
+  flex-direction: row;
+  gap: .5rem;
+}
+
+.archive-sort-control {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 620px) {
+  .character-preview-heading,
+  .stardust-world-preview .world-preview-section-heading,
+  .character-archive-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    flex-direction: unset;
+  }
+
+  .archive-heading-actions {
+    align-items: center;
+    flex-direction: row;
+    gap: .35rem;
+  }
+
+  .archive-heading-actions > p {
+    display: none;
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  .character-preview-heading,
+  .stardust-world-preview .world-preview-section-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .archive-sort-control select {
+    min-width: 72px;
+    max-width: 82px;
+  }
+}
+
+/* =========================================================
+   Archive card clipping + coherent responsive profile layout
+   ========================================================= */
+
+/* Rounded shells and cards must clip every painted child, including
+   sticky/backdrop-filter layers and image wrappers. */
+.archive-site-shell,
+.archive-profile-panel,
+.archive-pages .character-featured-preview,
+.archive-pages .stardust-world-preview,
+.archive-pages .character-archive-preview,
+.archive-plan-preview,
+.archive-pages .character-preview-card-button,
+.archive-pages .world-card-button,
+.archive-plan-card-button {
+  overflow: hidden;
+  overflow: clip;
+  background-clip: padding-box;
+  isolation: isolate;
+}
+
+.archive-site-header {
+  border-radius: 19px 19px 0 0;
+  background-clip: padding-box;
+}
+
+.archive-profile-panel .preview-profile,
+.archive-pages .character-preview-card-image-wrap,
+.archive-pages .world-card-image,
+.archive-plan-card-image {
+  max-width: 100%;
+  overflow: hidden;
+  overflow: clip;
+  background-clip: padding-box;
+}
+
+.archive-pages .character-preview-card-image-wrap,
+.archive-pages .world-card-image,
+.archive-plan-card-image {
+  border-radius: 12px 12px 0 0;
+}
+
+/* The archive's visual mode is determined by the preview/site container.
+   This prevents viewport media queries and container queries from producing
+   a half-desktop, half-mobile profile when browser zoom changes. */
+@container live-preview (min-width: 721px) {
+  .archive-site-header {
+    min-height: 58px;
+    align-items: center;
+    flex-direction: row;
+    gap: 1.5rem;
+    padding: 0 1.25rem;
+  }
+
+  .archive-site-brand {
+    max-width: none;
+    min-height: 0;
+  }
+
+  .archive-site-nav {
+    width: auto;
+    min-height: 0;
+    align-self: stretch;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 1.35rem;
+    overflow: visible;
+  }
+
+  .archive-site-nav > label,
+  .archive-site-nav > label + label {
+    flex: 0 0 auto;
+    min-width: 0;
+    height: 58px;
+    min-height: 58px;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .archive-pages {
+    grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
+    grid-template-areas:
+      "profile featured"
+      "profile worlds";
+  }
+
+  .archive-profile-panel .preview-profile {
+    display: flex;
+    min-height: 100%;
+    grid-template-columns: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 1.15rem;
+  }
+
+  .archive-profile-panel .preview-avatar,
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar {
+    flex: 0 0 auto;
+    width: min(108px, 48%);
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 14px;
+  }
+}
+
+@container live-preview (max-width: 720px) {
+  .archive-site-header {
+    min-height: 58px;
+    align-items: center;
+    flex-direction: row;
+    gap: .75rem;
+    padding: 0 .9rem;
+  }
+
+  .archive-site-brand {
+    max-width: 46%;
+    min-height: 0;
+  }
+
+  .archive-site-nav {
+    width: auto;
+    min-height: 0;
+    align-self: stretch;
+    align-items: stretch;
+    justify-content: flex-end;
+    gap: .8rem;
+    overflow: visible;
+  }
+
+  .archive-site-nav > label,
+  .archive-site-nav > label + label {
+    flex: 0 0 auto;
+    min-width: 0;
+    height: 58px;
+    min-height: 58px;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .archive-pages {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "profile"
+      "featured"
+      "worlds";
+  }
+
+  .archive-profile-panel .preview-profile {
+    display: grid;
+    min-height: 0;
+    grid-template-columns: clamp(76px, 22cqw, 96px) minmax(0, 1fr);
+    grid-template-rows: auto;
+    flex-direction: unset;
+    align-items: start;
+    gap: .78rem;
+    padding: .85rem;
+  }
+
+  .archive-profile-panel .preview-avatar,
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar {
+    align-self: start;
+    justify-self: start;
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    border-radius: 14px;
+    overflow: hidden;
+    overflow: clip;
+  }
+
+  .archive-profile-panel .preview-avatar img,
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .archive-profile-panel .preview-profile-copy {
+    min-width: 0;
+    align-self: stretch;
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  .archive-site-header {
+    min-height: 0;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+    padding: .55rem .72rem 0;
+  }
+
+  .archive-site-brand {
+    width: 100%;
+    max-width: 100%;
+    min-height: 38px;
+  }
+
+  .archive-site-nav {
+    width: 100%;
+    min-height: 48px;
+    align-self: auto;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 0;
+    overflow: visible;
+  }
+
+  .archive-site-nav > label,
+  .archive-site-nav > label + label {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .archive-profile-panel .preview-profile {
+    display: grid;
+    grid-template-columns: clamp(72px, 23cqw, 88px) minmax(0, 1fr);
+    gap: .7rem;
+    padding: .78rem;
+  }
+
+  .archive-profile-panel .preview-avatar,
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 13px;
+  }
+}
+
+/* ---------------------------------------------------------
+   Mobile HOME profile artwork fill
+   The portrait becomes a full-height artwork rail so no empty
+   column remains below it when the profile copy is taller.
+   --------------------------------------------------------- */
+@container live-preview (max-width: 720px) {
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-profile {
+    align-items: stretch;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar {
+    align-self: stretch;
+    height: 100%;
+    min-height: 100%;
+    aspect-ratio: auto;
+  }
+
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  #archiveTabHome:checked ~ .archive-site-shell .archive-profile-panel .preview-avatar {
+    height: 100%;
+    min-height: 100%;
+    aspect-ratio: auto;
+  }
+}
+
+/* =========================================================
+   World thumbnails: match character thumbnail sizing only
+   ========================================================= */
+
+/* HOME recommended worlds use the same portrait ratio as
+   HOME recommended character thumbnails. */
+#archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid .world-card-image {
+  aspect-ratio: 4 / 4.55;
+}
+
+/* WORLD archive uses the same card width, gap, and portrait ratio
+   as the CHARACTER archive at each responsive width. */
+#archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .72rem;
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .world-card-image {
+  aspect-ratio: 4 / 5;
+}
+
+@container live-preview (max-width: 900px) {
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container live-preview (max-width: 720px) {
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+/* =========================================================
+   Compact world / character status controls
+   Keep primary selectors on one line without touching content sections.
+   ========================================================= */
+.world-primary-row {
+  grid-template-columns: minmax(150px, .8fr) minmax(210px, 1.25fr) auto;
+  align-items: end;
+}
+
+.compact-status-options {
+  display: inline-flex;
+  min-width: max-content;
+  align-items: flex-end;
+  align-self: end;
+  gap: .4rem;
+  margin: 0;
+}
+
+.compact-status-option,
+.compact-status-option + .compact-status-option,
+.character-status-options > label,
+.character-status-options > label + label,
+.world-status-options > label,
+.world-status-options > label + label {
+  display: inline-flex;
+  width: auto;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: .34rem;
+  margin: 0 !important;
+  padding: .36rem .55rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.compact-status-option input,
+.character-form .compact-status-option input,
+.world-form .compact-status-option input {
+  width: 15px;
+  min-width: 15px;
+  height: 15px;
+  min-height: 15px;
+  margin: 0;
+  padding: 0;
+}
+
+.compact-status-option > span,
+.character-form .compact-status-option > span,
+.world-form .compact-status-option > span {
+  color: var(--text);
+  font-size: .67rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.compact-status-option b {
+  color: var(--accent);
+  font-size: .64rem;
+}
+
+.character-status-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 210px) auto;
+  align-items: end;
+  justify-content: start;
+  gap: .5rem;
+}
+
+.character-world-field {
+  width: 100%;
+  max-width: 210px;
+  margin: 0;
+}
+
+.character-world-field select {
+  width: 100%;
+}
+
+.character-status-options {
+  flex-wrap: nowrap;
+}
+
+.world-new-mark {
+  z-index: 4;
+}
+
+@media (max-width: 760px) {
+  .character-world-featured-grid.character-status-row {
+    grid-template-columns: minmax(120px, 190px) auto;
+  }
+
+  .world-primary-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .world-primary-row .world-status-options {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 560px) {
+  .character-world-featured-grid.character-status-row {
+    grid-template-columns: minmax(110px, 1fr) auto !important;
+    align-items: end;
+  }
+
+  .character-world-featured-grid.character-status-row > label {
+    min-width: 0;
+  }
+
+  .character-world-field {
+    max-width: none;
+  }
+
+  .compact-status-options {
+    gap: .28rem;
+  }
+
+  .compact-status-option,
+  .compact-status-option + .compact-status-option {
+    min-height: 42px;
+    padding: .34rem .44rem;
+  }
+
+  .compact-status-option > span,
+  .character-form .compact-status-option > span,
+  .world-form .compact-status-option > span {
+    font-size: .62rem;
+  }
+
+  .world-title-grid.world-primary-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .world-primary-row .world-status-options {
+    grid-column: auto;
+  }
+}
+
+/* =========================================================
+   Requested fix: world cards match character cards exactly
+   + compact character search
+   ========================================================= */
+
+/* Keep visually hidden labels out of the flex layout.
+   The previous stylesheet only defined .sr-only inside one platform rail,
+   so the search label text itself was being rendered and making the box tall. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* HOME: recommended worlds use the same grid/card/image measurements
+   as recommended characters. */
+#archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid .world-card,
+#archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid .world-card-button {
+  align-self: start;
+  height: auto;
+  min-height: 0;
+}
+
+#archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid .world-card-image {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 4.55;
+}
+
+/* WORLD: world cards use the same columns, gap, card height behavior,
+   and 4:5 thumbnail ratio as the CHARACTER archive. */
+#archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .72rem;
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .world-card,
+#archiveTabWorld:checked ~ .archive-site-shell .world-card-button {
+  align-self: start;
+  height: auto;
+  min-height: 0;
+}
+
+#archiveTabWorld:checked ~ .archive-site-shell .world-card-image {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 5;
+}
+
+@container live-preview (max-width: 900px) {
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container live-preview (max-width: 720px) {
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container live-preview (max-width: 520px) {
+  #archiveTabHome:checked ~ .archive-site-shell #previewWorldGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .4rem;
+  }
+
+  #archiveTabWorld:checked ~ .archive-site-shell .world-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* CHARACTER search: remove the global input minimum height from the
+   borderless inner input and keep the surrounding search shell compact. */
+#archiveTabCharacter:checked ~ .archive-site-shell .controls {
+  padding: .55rem;
+  margin-bottom: .8rem;
+}
+
+#archiveTabCharacter:checked ~ .archive-site-shell .search-box {
+  min-height: 40px;
+  padding: .45rem .7rem;
+  gap: .55rem;
+}
+
+#archiveTabCharacter:checked ~ .archive-site-shell .search-box input {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  line-height: 1.35;
+}
+
+/* When there are no visible filter chips, do not reserve an empty second row. */
+#archiveTabCharacter:checked ~ .archive-site-shell .filter-row:empty,
+#archiveTabCharacter:checked ~ .archive-site-shell .filter-row:not(:has(.filter-chip, .filter-more)) {
+  display: none;
+  margin-top: 0;
+}
+
+/* =========================================================
+   Archive shell bottom protrusion fix
+   The dark strip below the rounded shell was the shell's drop shadow,
+   not overflowing content. Remove it without changing card layout.
+   ========================================================= */
+.archive-site-shell {
+  box-shadow: none;
+}

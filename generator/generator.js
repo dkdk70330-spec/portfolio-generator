@@ -7,6 +7,7 @@
       title: "",
       description: "",
       textColor: "#f4f1ea",
+      textColors: { title: "#f4f1ea", description: "#f4f1ea" },
       themeColor: "#a897ff"
     },
     creator: {
@@ -16,10 +17,12 @@
       name: "",
       handle: "",
       bio: [],
+      textColors: { name: "#f4f1ea", handle: "#f4f1ea", bio: "#f4f1ea" },
       links: []
     },
     worlds: [],
-    characters: []
+    characters: [],
+    plans: []
   };
 
   const ADMIN_FALLBACK = {
@@ -38,9 +41,9 @@
   const STORAGE_KEY = `portfolio-generator:project:v${CURRENT_PROJECT_VERSION}`;
   const AUTOSAVE_DELAY = 450;
   const PREVIEW_WIDTH_STORAGE_KEY = "portfolio-generator:preview-width";
-  const PREVIEW_WIDTH_MIN = 380;
-  const PREVIEW_WIDTH_MAX = 760;
-  const PREVIEW_WIDTH_DEFAULT = 620;
+  const PREVIEW_WIDTH_MIN = 760;
+  const PREVIEW_WIDTH_MAX = 1280;
+  const PREVIEW_WIDTH_DEFAULT = 1100;
   const DEFAULT_TEXT_COLOR = "#f4f1ea";
   const DEFAULT_THEME_COLOR = "#a897ff";
   const FULL_BACKUP_FORMAT = "portfolio-generator-full-backup";
@@ -144,6 +147,7 @@ function normalizeGenreId(value) {
   let worldPreviewExpanded = false;
   let selectedCharacterId = "";
   let characterPreviewExpanded = false;
+  let selectedPlanId = "";
   const EDITOR_COLLECTION_PAGE_SIZE = 24;
   let worldEditorSearchQuery = "";
   let worldEditorVisibleCount = EDITOR_COLLECTION_PAGE_SIZE;
@@ -166,6 +170,9 @@ function normalizeGenreId(value) {
   const characterImageBlobs = new Map();
   const characterImagePreviewUrls = new Map();
   const missingCharacterImageIds = new Set();
+  const planImageBlobs = new Map();
+  const planImagePreviewUrls = new Map();
+  const missingPlanImageIds = new Set();
   const musicBlobs = new Map();
   const musicPreviewUrls = new Map();
   const missingMusicIds = new Set();
@@ -195,14 +202,17 @@ const elements = {
 
     siteTitleInput: document.querySelector("#siteTitleInput"),
     siteDescriptionInput: document.querySelector("#siteDescriptionInput"),
-    siteTextColorInput: document.querySelector("#siteTextColorInput"),
-    siteTextColorValue: document.querySelector("#siteTextColorValue"),
+    siteTitleColorInput: document.querySelector("#siteTitleColorInput"),
+    siteDescriptionColorInput: document.querySelector("#siteDescriptionColorInput"),
     siteThemeColorInput: document.querySelector("#siteThemeColorInput"),
     siteThemeColorValue: document.querySelector("#siteThemeColorValue"),
     creatorNameInput: document.querySelector("#creatorNameInput"),
     creatorHandleInput: document.querySelector("#creatorHandleInput"),
     creatorFallbackInput: document.querySelector("#creatorFallbackInput"),
     creatorBioInput: document.querySelector("#creatorBioInput"),
+    creatorNameColorInput: document.querySelector("#creatorNameColorInput"),
+    creatorHandleColorInput: document.querySelector("#creatorHandleColorInput"),
+    creatorBioColorInput: document.querySelector("#creatorBioColorInput"),
 
     avatarInput: document.querySelector("#avatarInput"),
     avatarEditorPreview: document.querySelector("#avatarEditorPreview"),
@@ -238,8 +248,15 @@ const elements = {
     removeWorldImageButton: document.querySelector("#removeWorldImageButton"),
     worldNameInput: document.querySelector("#worldNameInput"),
     worldSubtitleInput: document.querySelector("#worldSubtitleInput"),
+    worldFeaturedInput: document.querySelector("#worldFeaturedInput"),
+    worldFeaturedCount: document.querySelector("#worldFeaturedCount"),
+    worldNewInput: document.querySelector("#worldNewInput"),
     worldTagsInput: document.querySelector("#worldTagsInput"),
     worldDescriptionInput: document.querySelector("#worldDescriptionInput"),
+    worldNameColorInput: document.querySelector("#worldNameColorInput"),
+    worldSubtitleColorInput: document.querySelector("#worldSubtitleColorInput"),
+    worldTagsColorInput: document.querySelector("#worldTagsColorInput"),
+    worldDescriptionColorInput: document.querySelector("#worldDescriptionColorInput"),
     worldCharacterLinkSearchInput: document.querySelector("#worldCharacterLinkSearchInput"),
     worldCharacterLinkResultSummary: document.querySelector("#worldCharacterLinkResultSummary"),
     worldCharacterLinkMoreButton: document.querySelector("#worldCharacterLinkMoreButton"),
@@ -284,14 +301,40 @@ const elements = {
     characterSubtitleInput: document.querySelector("#characterSubtitleInput"),
     characterWorldSelect: document.querySelector("#characterWorldSelect"),
     characterFeaturedInput: document.querySelector("#characterFeaturedInput"),
+    characterFeaturedCount: document.querySelector("#characterFeaturedCount"),
+    characterNewInput: document.querySelector("#characterNewInput"),
     characterGenreList: document.querySelector("#characterGenreList"),
     characterTagsInput: document.querySelector("#characterTagsInput"),
     characterDescriptionInput: document.querySelector("#characterDescriptionInput"),
+    characterNameColorInput: document.querySelector("#characterNameColorInput"),
+    characterSubtitleColorInput: document.querySelector("#characterSubtitleColorInput"),
+    characterTagsColorInput: document.querySelector("#characterTagsColorInput"),
+    characterDescriptionColorInput: document.querySelector("#characterDescriptionColorInput"),
     addCharacterMusicButton: document.querySelector("#addCharacterMusicButton"),
     characterMusicList: document.querySelector("#characterMusicList"),
     characterPlatformList: document.querySelector("#characterPlatformList"),
     addCharacterContentButton: document.querySelector("#addCharacterContentButton"),
     characterContentList: document.querySelector("#characterContentList"),
+
+    addPlanButton: document.querySelector("#addPlanButton"),
+    planEditorList: document.querySelector("#planEditorList"),
+    planEditorEmpty: document.querySelector("#planEditorEmpty"),
+    planForm: document.querySelector("#planForm"),
+    movePlanUpButton: document.querySelector("#movePlanUpButton"),
+    movePlanDownButton: document.querySelector("#movePlanDownButton"),
+    deletePlanButton: document.querySelector("#deletePlanButton"),
+    planImageInput: document.querySelector("#planImageInput"),
+    planImageEditorPreview: document.querySelector("#planImageEditorPreview"),
+    planImageEditorFallback: document.querySelector("#planImageEditorFallback"),
+    planImageStorageStatus: document.querySelector("#planImageStorageStatus"),
+    removePlanImageButton: document.querySelector("#removePlanImageButton"),
+    planTitleInput: document.querySelector("#planTitleInput"),
+    planStatusInput: document.querySelector("#planStatusInput"),
+    planDescriptionInput: document.querySelector("#planDescriptionInput"),
+    planTitleColorInput: document.querySelector("#planTitleColorInput"),
+    planStatusColorInput: document.querySelector("#planStatusColorInput"),
+    planDescriptionColorInput: document.querySelector("#planDescriptionColorInput"),
+    planPlatformList: document.querySelector("#planPlatformList"),
 
     previewSiteTitle: document.querySelector("#previewSiteTitle"),
     previewSiteDescription: document.querySelector("#previewSiteDescription"),
@@ -308,8 +351,11 @@ const elements = {
     previewWidthInput: document.querySelector("#previewWidthInput"),
     previewWidthOutput: document.querySelector("#previewWidthOutput"),
     previewCanvas: document.querySelector("#previewCanvas"),
+    archiveTabHome: document.querySelector("#archiveTabHome"),
+    archiveTabWorld: document.querySelector("#archiveTabWorld"),
 
     previewWorldSection: document.querySelector("#previewWorldSection"),
+    previewWorldSort: document.querySelector("#previewWorldSort"),
     previewWorldGrid: document.querySelector("#previewWorldGrid"),
     previewWorldToggleWrap: document.querySelector("#previewWorldToggleWrap"),
     previewWorldToggle: document.querySelector("#previewWorldToggle"),
@@ -335,6 +381,7 @@ const elements = {
     previewCharacterToggle: document.querySelector("#previewCharacterToggle"),
     previewCharacterEmpty: document.querySelector("#previewCharacterEmpty"),
     previewCharacterResultSummary: document.querySelector("#previewCharacterResultSummary"),
+    previewCharacterSort: document.querySelector("#previewCharacterSort"),
     previewCharacterSearchInput: document.querySelector("#previewCharacterSearchInput"),
     previewGenreFilters: document.querySelector("#previewGenreFilters"),
     previewTagFilters: document.querySelector("#previewTagFilters"),
@@ -365,6 +412,17 @@ const elements = {
     characterPreviewWorldSummary: document.querySelector("#characterPreviewWorldSummary"),
     characterPreviewContentSection: document.querySelector("#characterPreviewContentSection"),
     characterPreviewContents: document.querySelector("#characterPreviewContents"),
+
+    previewPlanGrid: document.querySelector("#previewPlanGrid"),
+    previewPlanEmpty: document.querySelector("#previewPlanEmpty"),
+    planPreviewModal: document.querySelector("#planPreviewModal"),
+    planPreviewModalClose: document.querySelector("#planPreviewModalClose"),
+    planPreviewModalImage: document.querySelector("#planPreviewModalImage"),
+    planPreviewModalImageFallback: document.querySelector("#planPreviewModalImageFallback"),
+    planPreviewModalPlatforms: document.querySelector("#planPreviewModalPlatforms"),
+    planPreviewModalStatus: document.querySelector("#planPreviewModalStatus"),
+    planPreviewModalTitle: document.querySelector("#planPreviewModalTitle"),
+    planPreviewModalDescription: document.querySelector("#planPreviewModalDescription"),
 
     saveStatus: document.querySelector("#saveStatus"),
     imageDropZones: [...document.querySelectorAll("[data-image-drop-target]")]
@@ -675,7 +733,8 @@ const elements = {
         `worlds[${worldIndex}].sections[${sectionIndex}].title`
       ),
       content,
-      collapsible: section.collapsible === true
+      collapsible: section.collapsible === true,
+      textColors: normalizeTextColorMap(section.textColors, ["title", "content"])
     };
   }
 
@@ -710,6 +769,8 @@ const elements = {
       id,
       name: normalizeString(world.name, `worlds[${index}].name`),
       subtitle: normalizeString(world.subtitle, `worlds[${index}].subtitle`),
+      featured: world.featured === true,
+      newRelease: world.newRelease === true,
       image: normalizeWorldImage(world.image, `worlds[${index}].image`),
       tags: rawTags.map((tag, tagIndex) =>
         normalizeString(tag, `worlds[${index}].tags[${tagIndex}]`).trim()
@@ -725,7 +786,8 @@ const elements = {
       ),
       music: rawMusic.map((track, trackIndex) =>
         normalizeMusicTrack(track, `worlds[${index}]`, trackIndex)
-      )
+      ),
+      textColors: normalizeTextColorMap(world.textColors, ["name", "subtitle", "tags", "description"])
     };
   }
 
@@ -791,7 +853,8 @@ const elements = {
       content,
       spoiler: item.spoiler === true,
       collapsible: item.collapsible === true,
-      warning: normalizeString(item.warning, `characters[${characterIndex}].contents[${contentIndex}].warning`)
+      warning: normalizeString(item.warning, `characters[${characterIndex}].contents[${contentIndex}].warning`),
+      textColors: normalizeTextColorMap(item.textColors, ["type", "title", "content", "warning"])
     };
   }
 
@@ -847,6 +910,7 @@ const elements = {
         normalizeString(tag, `characters[${index}].tags[${tagIndex}]`).trim()
       ).filter(Boolean),
       featured: character.featured === true,
+      newRelease: character.newRelease === true,
       images: rawImages.map((image, imageIndex) =>
         normalizeCharacterImage(image, `characters[${index}].images[${imageIndex}]`)
       ).filter(Boolean),
@@ -872,13 +936,65 @@ const elements = {
       ),
       music: rawMusic.map((track, trackIndex) =>
         normalizeMusicTrack(track, `characters[${index}]`, trackIndex)
-      )
+      ),
+      textColors: normalizeTextColorMap(character.textColors, ["name", "subtitle", "tags", "description"])
+    };
+  }
+
+
+  function normalizePlan(plan, index) {
+    if (!isPlainObject(plan)) {
+      throw new Error(`plans[${index}] 항목의 형식이 올바르지 않습니다.`);
+    }
+
+    const id = normalizeString(plan.id, `plans[${index}].id`).trim();
+    if (!id) throw new Error(`plans[${index}].id가 비어 있습니다.`);
+
+    const rawDescription = plan.description || [];
+    const rawPlatforms = plan.platforms || [];
+    if (!Array.isArray(rawDescription)) {
+      throw new Error(`plans[${index}].description 항목은 배열이어야 합니다.`);
+    }
+    if (!Array.isArray(rawPlatforms)) {
+      throw new Error(`plans[${index}].platforms 항목은 배열이어야 합니다.`);
+    }
+
+    return {
+      ...cloneJson(plan),
+      id,
+      image: normalizeCharacterImage(plan.image, `plans[${index}].image`),
+      title: normalizeString(plan.title, `plans[${index}].title`),
+      status: normalizeString(plan.status, `plans[${index}].status`),
+      description: rawDescription.map((paragraph, paragraphIndex) =>
+        normalizeString(paragraph, `plans[${index}].description[${paragraphIndex}]`).trim()
+      ).filter(Boolean),
+      platforms: [...new Set(rawPlatforms.map((platformId, platformIndex) =>
+        normalizeString(platformId, `plans[${index}].platforms[${platformIndex}]`).trim()
+      ).filter(Boolean))],
+      textColors: normalizeTextColorMap(plan.textColors, ["title", "status", "description"])
     };
   }
 
   function normalizeHexColor(value, fallback) {
     const normalized = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(normalized) ? normalized : fallback;
+  }
+
+
+  function normalizeTextColorMap(value, keys, fallback = DEFAULT_TEXT_COLOR) {
+    const source = isPlainObject(value) ? value : {};
+    return Object.fromEntries(
+      keys.map((key) => [key, normalizeHexColor(source[key], fallback)])
+    );
+  }
+
+  function colorStyle(color) {
+    return `color:${normalizeHexColor(color, DEFAULT_TEXT_COLOR)}`;
+  }
+
+  function applyElementColor(element, color) {
+    if (!element) return;
+    element.style.color = normalizeHexColor(color, DEFAULT_TEXT_COLOR);
   }
 
   function contrastTextColor(hexColor) {
@@ -926,6 +1042,10 @@ const elements = {
       throw new Error("characters 항목은 배열이어야 합니다.");
     }
 
+    if (rawProject.plans !== undefined && !Array.isArray(rawProject.plans)) {
+      throw new Error("plans 항목은 배열이어야 합니다.");
+    }
+
     const base = cloneJson(emptyProject);
     const rawSite = rawProject.site || {};
     const rawCreator = rawProject.creator || {};
@@ -944,6 +1064,7 @@ const elements = {
 
     const worlds = (rawProject.worlds || []).map(normalizeWorld);
     const characters = (rawProject.characters || []).map(normalizeCharacter);
+    const plans = (rawProject.plans || []).map(normalizePlan);
     const worldIds = new Set();
 
     for (const world of worlds) {
@@ -959,6 +1080,14 @@ const elements = {
         throw new Error(`중복된 캐릭터 ID가 있습니다: ${character.id}`);
       }
       characterIds.add(character.id);
+    }
+
+    const planIds = new Set();
+    for (const plan of plans) {
+      if (planIds.has(plan.id)) {
+        throw new Error(`중복된 제작 계획 ID가 있습니다: ${plan.id}`);
+      }
+      planIds.add(plan.id);
     }
 
     const links = (rawCreator.links || []).map((link, index) => {
@@ -996,6 +1125,7 @@ const elements = {
         title: normalizeString(rawSite.title, "site.title"),
         description: normalizeString(rawSite.description, "site.description"),
         textColor: normalizeHexColor(rawSite.textColor, DEFAULT_TEXT_COLOR),
+        textColors: normalizeTextColorMap(rawSite.textColors, ["title", "description"], normalizeHexColor(rawSite.textColor, DEFAULT_TEXT_COLOR)),
         themeColor: normalizeHexColor(rawSite.themeColor, DEFAULT_THEME_COLOR)
       },
       creator: {
@@ -1010,10 +1140,12 @@ const elements = {
         name: normalizeString(rawCreator.name, "creator.name"),
         handle: normalizeString(rawCreator.handle, "creator.handle"),
         bio,
+        textColors: normalizeTextColorMap(rawCreator.textColors, ["name", "handle", "bio"], normalizeHexColor(rawSite.textColor, DEFAULT_TEXT_COLOR)),
         links
       },
       worlds,
-      characters
+      characters,
+      plans
     };
   }
 
@@ -1024,6 +1156,22 @@ const elements = {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function sortArchiveItems(items, mode, fieldName = "name") {
+    const source = [...(items || [])];
+    if (mode !== "name") return source;
+
+    return source.sort((left, right) => {
+      const leftName = String(left?.[fieldName] || "").trim();
+      const rightName = String(right?.[fieldName] || "").trim();
+      if (!leftName && rightName) return 1;
+      if (leftName && !rightName) return -1;
+      return leftName.localeCompare(rightName, "ko", {
+        numeric: true,
+        sensitivity: "base"
+      });
+    });
   }
 
   function bioTextToArray(value) {
@@ -1108,9 +1256,12 @@ const elements = {
       id: createEntityId("world"),
       name: "",
       subtitle: "",
+      featured: false,
+      newRelease: false,
       image: "",
       tags: [],
       description: [],
+      textColors: normalizeTextColorMap({}, ["name", "subtitle", "tags", "description"]),
       sections: [],
       music: []
     };
@@ -1121,7 +1272,8 @@ const elements = {
       id: createEntityId("world-section"),
       title: "",
       content: [],
-      collapsible: false
+      collapsible: false,
+      textColors: normalizeTextColorMap({}, ["title", "content"])
     };
   }
 
@@ -1136,10 +1288,25 @@ const elements = {
       genres: [],
       tags: [],
       featured: false,
+      newRelease: false,
       images: [],
       platforms: [],
       contents: [],
-      music: []
+      music: [],
+      textColors: normalizeTextColorMap({}, ["name", "subtitle", "tags", "description"])
+    };
+  }
+
+
+  function createPlan() {
+    return {
+      id: createEntityId("plan"),
+      image: "",
+      title: "",
+      status: "",
+      description: [],
+      platforms: [],
+      textColors: normalizeTextColorMap({}, ["title", "status", "description"])
     };
   }
 
@@ -2380,7 +2547,8 @@ blocks.forEach(({ block, number }) => {
       content: [],
       spoiler: false,
       collapsible: false,
-      warning: ""
+      warning: "",
+      textColors: normalizeTextColorMap({}, ["type", "title", "content", "warning"])
     };
   }
 
@@ -2651,6 +2819,7 @@ blocks.forEach(({ block, number }) => {
     renderMusicEditor(ownerType);
     renderWorldPreview();
     renderCharacterPreview();
+    renderPlanPreview();
     scheduleAutosave();
 
     requestAnimationFrame(() => {
@@ -2994,6 +3163,10 @@ blocks.forEach(({ block, number }) => {
     return isPlainObject(world?.image) ? world.image : null;
   }
 
+  function getPlanImageMetadata(plan) {
+    return isPlainObject(plan?.image) ? plan.image : null;
+  }
+
   function splitTags(value) {
     const seen = new Set();
 
@@ -3019,6 +3192,12 @@ blocks.forEach(({ block, number }) => {
     const storedUrl = worldImagePreviewUrls.get(world.id);
     if (storedUrl) return storedUrl;
     return typeof world.image === "string" ? legacyImageUrl(world.image) : "";
+  }
+
+  function planImageUrl(plan) {
+    if (!plan?.image) return "";
+    if (typeof plan.image === "string") return legacyImageUrl(plan.image);
+    return planImagePreviewUrls.get(plan.id) || "";
   }
 
   function characterImageEntryUrl(image) {
@@ -3318,21 +3497,25 @@ blocks.forEach(({ block, number }) => {
   function syncProjectFromFields() {
     project.site.title = elements.siteTitleInput.value.trim();
     project.site.description = elements.siteDescriptionInput.value.trim();
-    project.site.textColor = normalizeHexColor(
-      elements.siteTextColorInput.value,
-      DEFAULT_TEXT_COLOR
-    );
+    project.site.textColors = {
+      title: normalizeHexColor(elements.siteTitleColorInput.value, DEFAULT_TEXT_COLOR),
+      description: normalizeHexColor(elements.siteDescriptionColorInput.value, DEFAULT_TEXT_COLOR)
+    };
     project.site.themeColor = normalizeHexColor(
       elements.siteThemeColorInput.value,
       DEFAULT_THEME_COLOR
     );
-    elements.siteTextColorValue.value = project.site.textColor;
     elements.siteThemeColorValue.value = project.site.themeColor;
 
     project.creator.name = elements.creatorNameInput.value.trim();
     project.creator.handle = elements.creatorHandleInput.value.trim();
     project.creator.fallbackText = elements.creatorFallbackInput.value.trim();
     project.creator.bio = bioTextToArray(elements.creatorBioInput.value);
+    project.creator.textColors = {
+      name: normalizeHexColor(elements.creatorNameColorInput.value, DEFAULT_TEXT_COLOR),
+      handle: normalizeHexColor(elements.creatorHandleColorInput.value, DEFAULT_TEXT_COLOR),
+      bio: normalizeHexColor(elements.creatorBioColorInput.value, DEFAULT_TEXT_COLOR)
+    };
 
     markChanged();
   }
@@ -3480,6 +3663,22 @@ blocks.forEach(({ block, number }) => {
     }
     characterImageBlobs.clear();
     missingCharacterImageIds.clear();
+  }
+
+  function releasePlanImageObjectUrl(planId) {
+    const url = planImagePreviewUrls.get(planId);
+    if (url) URL.revokeObjectURL(url);
+    planImagePreviewUrls.delete(planId);
+    planImageBlobs.delete(planId);
+    missingPlanImageIds.delete(planId);
+  }
+
+  function releaseAllPlanImageObjectUrls() {
+    for (const planId of [...planImagePreviewUrls.keys()]) {
+      releasePlanImageObjectUrl(planId);
+    }
+    planImageBlobs.clear();
+    missingPlanImageIds.clear();
   }
 
   function updateWorldImageStorageStatus() {
@@ -3811,15 +4010,15 @@ function renderCharacterGenres() {
           <button type="button" data-delete-character-content>삭제</button>
         </div>
         <label>
-          <span>분류</span>
+          <span class="editable-field-heading"><span>분류</span><input class="field-color-input" type="color" value="${escapeHtml(normalizeHexColor(item.textColors?.type, DEFAULT_TEXT_COLOR))}" data-character-content-color="type" aria-label="추가 콘텐츠 분류 글자색"></span>
           <input type="text" value="${escapeHtml(item.type)}" placeholder="예: 제작 비하인드" data-character-content-field="type">
         </label>
         <label>
-          <span>제목</span>
+          <span class="editable-field-heading"><span>제목</span><input class="field-color-input" type="color" value="${escapeHtml(normalizeHexColor(item.textColors?.title, DEFAULT_TEXT_COLOR))}" data-character-content-color="title" aria-label="추가 콘텐츠 제목 글자색"></span>
           <input type="text" value="${escapeHtml(item.title)}" placeholder="예: 이름과 모티프" data-character-content-field="title">
         </label>
         <label>
-          <span>내용</span>
+          <span class="editable-field-heading"><span>내용</span><input class="field-color-input" type="color" value="${escapeHtml(normalizeHexColor(item.textColors?.content, DEFAULT_TEXT_COLOR))}" data-character-content-color="content" aria-label="추가 콘텐츠 내용 글자색"></span>
           <textarea rows="5" placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요." data-character-content-field="content">${escapeHtml(bioArrayToText(item.content))}</textarea>
         </label>
         <div class="character-content-display-options">
@@ -3833,7 +4032,7 @@ function renderCharacterGenres() {
           </label>
         </div>
         <label data-character-warning-field ${item.spoiler ? "" : "hidden"}>
-          <span>스포일러 경고문</span>
+          <span class="editable-field-heading"><span>스포일러 경고문</span><input class="field-color-input" type="color" value="${escapeHtml(normalizeHexColor(item.textColors?.warning, DEFAULT_TEXT_COLOR))}" data-character-content-color="warning" aria-label="스포일러 경고문 글자색"></span>
           <input type="text" value="${escapeHtml(item.warning)}" placeholder="예: 핵심 반전이 포함되어 있습니다." data-character-content-field="warning">
         </label>
       </article>
@@ -3850,8 +4049,17 @@ function renderCharacterGenres() {
     elements.characterNameInput.value = character.name || "";
     elements.characterSubtitleInput.value = character.subtitle || "";
     elements.characterFeaturedInput.checked = character.featured === true;
+    elements.characterNewInput.checked = character.newRelease === true;
+    if (elements.characterFeaturedCount) {
+      const featuredCount = project.characters.filter((item) => item.featured).length;
+      elements.characterFeaturedCount.textContent = `${featuredCount}/3`;
+    }
     elements.characterTagsInput.value = (character.tags || []).join(", ");
     elements.characterDescriptionInput.value = bioArrayToText(character.description);
+    elements.characterNameColorInput.value = normalizeHexColor(character.textColors?.name, DEFAULT_TEXT_COLOR);
+    elements.characterSubtitleColorInput.value = normalizeHexColor(character.textColors?.subtitle, DEFAULT_TEXT_COLOR);
+    elements.characterTagsColorInput.value = normalizeHexColor(character.textColors?.tags, DEFAULT_TEXT_COLOR);
+    elements.characterDescriptionColorInput.value = normalizeHexColor(character.textColors?.description, DEFAULT_TEXT_COLOR);
 
     const index = project.characters.findIndex((item) => item.id === character.id);
     elements.moveCharacterUpButton.disabled = index <= 0;
@@ -3900,6 +4108,7 @@ const genres = (character.genres || [])
         <button type="button" class="character-preview-card-button" data-preview-character="${escapeHtml(character.id)}" aria-label="${escapeHtml(character.name || "이름 없는 캐릭터")} 상세 보기">
           <div class="character-preview-card-image-wrap">
             ${image}
+            ${character.newRelease ? '<span class="character-new-mark" title="신작">N</span>' : ""}
             <div class="character-preview-card-platforms">${characterPlatformDots(character)}</div>
             ${
               hasPlayableMusic(character)
@@ -3909,8 +4118,8 @@ const genres = (character.genres || [])
           </div>
           <div class="character-preview-card-body">
             <div class="character-preview-card-genres">${genres}</div>
-            <h3>${escapeHtml(character.name || "이름 없는 캐릭터")}</h3>
-            <p>${escapeHtml(character.subtitle || "캐릭터 부제를 입력해 주세요.")}</p>
+            <h3 style="${colorStyle(character.textColors?.name)}">${escapeHtml(character.name || "이름 없는 캐릭터")}</h3>
+            <p style="${colorStyle(character.textColors?.subtitle)}">${escapeHtml(character.subtitle || "캐릭터 부제를 입력해 주세요.")}</p>
             <span class="character-preview-card-more">상세 보기 <b aria-hidden="true">↗</b></span>
           </div>
         </button>
@@ -4499,7 +4708,10 @@ const genres = (character.genres || [])
 
     renderCharacterPreviewFilters();
 
-    const characters = filteredCharacterPreviewCharacters();
+    const characters = sortArchiveItems(
+      filteredCharacterPreviewCharacters(),
+      elements.previewCharacterSort?.value || "latest"
+    );
     const hasCharacters = characters.length > 0;
 
     elements.previewCharacterGrid.innerHTML = hasCharacters
@@ -4527,16 +4739,23 @@ const genres = (character.genres || [])
   function characterContentMarkup(item) {
     const type = item.type || (item.spoiler ? "스포일러" : "추가 정보");
     const title = item.title || "제목 없는 콘텐츠";
-    const body = (item.content || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+    const typeStyle = colorStyle(item.textColors?.type);
+    const titleStyle = colorStyle(item.textColors?.title);
+    const warningStyle = colorStyle(item.textColors?.warning);
+    const body = (item.content || [])
+      .map((paragraph) => `<p style="${colorStyle(item.textColors?.content)}">${escapeHtml(paragraph)}</p>`)
+      .join("");
+    const heading = `<span><small style="${typeStyle}">${escapeHtml(type)}</small><strong style="${titleStyle}">${escapeHtml(title)}</strong></span>`;
+
     if (item.spoiler) {
       return `
         <details class="character-preview-content-box is-spoiler">
           <summary>
             <span class="character-preview-content-icon">⚠</span>
             <span>
-              <small>${escapeHtml(type)}</small>
-              <strong>${escapeHtml(title)}</strong>
-              <em>${escapeHtml(item.warning || "스포일러가 포함되어 있습니다.")}</em>
+              <small style="${typeStyle}">${escapeHtml(type)}</small>
+              <strong style="${titleStyle}">${escapeHtml(title)}</strong>
+              <em style="${warningStyle}">${escapeHtml(item.warning || "스포일러가 포함되어 있습니다.")}</em>
             </span>
             <b aria-hidden="true">⌄</b>
           </summary>
@@ -4549,7 +4768,7 @@ const genres = (character.genres || [])
         <details class="character-preview-content-box is-public is-collapsible">
           <summary>
             <span class="character-preview-content-icon">✦</span>
-            <span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong></span>
+            ${heading}
             <b aria-hidden="true">⌄</b>
           </summary>
           <div class="character-preview-content-body">${body}</div>
@@ -4560,7 +4779,7 @@ const genres = (character.genres || [])
       <article class="character-preview-content-box is-public">
         <header>
           <span class="character-preview-content-icon">✦</span>
-          <span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong></span>
+          ${heading}
         </header>
         <div class="character-preview-content-body">${body}</div>
       </article>
@@ -4579,6 +4798,8 @@ const genres = (character.genres || [])
 
     elements.characterPreviewModalTitle.textContent = character.name || "이름 없는 캐릭터";
     elements.characterPreviewModalSummary.textContent = character.subtitle || "";
+    applyElementColor(elements.characterPreviewModalTitle, character.textColors?.name);
+    applyElementColor(elements.characterPreviewModalSummary, character.textColors?.subtitle);
     elements.characterPreviewModalSummary.hidden = !character.subtitle;
     elements.characterPreviewMainImage.hidden = !mainUrl;
     elements.characterPreviewMainImageFallback.hidden = Boolean(mainUrl);
@@ -4609,13 +4830,13 @@ elements.characterPreviewModalTags.innerHTML = [
   ...genreLabels,
   ...(character.tags || [])
 ]
-  .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+  .map((tag) => `<span style="${colorStyle(character.textColors?.tags)}">${escapeHtml(tag)}</span>`)
   .join("");
     elements.characterPreviewModalTags.hidden = !(character.genres || []).length && !(character.tags || []).length;
     renderSoundtrack(elements.characterPreviewSoundtrack, character);
 
     elements.characterPreviewModalDescription.innerHTML = (character.description || [])
-      .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+      .map((paragraph) => `<p style="${colorStyle(character.textColors?.description)}">${escapeHtml(paragraph)}</p>`).join("");
     elements.characterPreviewModalDescription.hidden = !(character.description || []).length;
 
     elements.characterPreviewPlatforms.innerHTML = (character.platforms || []).map((link) => {
@@ -4636,6 +4857,8 @@ elements.characterPreviewModalTags.innerHTML = [
       elements.characterPreviewWorldButton.dataset.previewWorld = world.id;
       elements.characterPreviewWorldName.textContent = world.name || "이름 없는 세계관";
       elements.characterPreviewWorldSummary.textContent = world.subtitle || "";
+      applyElementColor(elements.characterPreviewWorldName, world.textColors?.name);
+      applyElementColor(elements.characterPreviewWorldSummary, world.textColors?.subtitle);
     } else {
       delete elements.characterPreviewWorldButton.dataset.previewWorld;
       elements.characterPreviewWorldName.textContent = "";
@@ -4673,12 +4896,22 @@ elements.characterPreviewModalTags.innerHTML = [
       character.featured = requestedFeatured;
     }
 
+    character.newRelease = elements.characterNewInput.checked;
     character.name = elements.characterNameInput.value.trim();
     character.subtitle = elements.characterSubtitleInput.value.trim();
     character.worldId = elements.characterWorldSelect.value;
     character.tags = splitTags(elements.characterTagsInput.value);
     character.description = bioTextToArray(elements.characterDescriptionInput.value);
+    character.textColors = {
+      name: normalizeHexColor(elements.characterNameColorInput.value, DEFAULT_TEXT_COLOR),
+      subtitle: normalizeHexColor(elements.characterSubtitleColorInput.value, DEFAULT_TEXT_COLOR),
+      tags: normalizeHexColor(elements.characterTagsColorInput.value, DEFAULT_TEXT_COLOR),
+      description: normalizeHexColor(elements.characterDescriptionColorInput.value, DEFAULT_TEXT_COLOR)
+    };
 
+    if (elements.characterFeaturedCount) {
+      elements.characterFeaturedCount.textContent = `${project.characters.filter((item) => item.featured).length}/3`;
+    }
     renderCharacterList();
     renderWorldCharacterLinks();
     renderCharacterPreview();
@@ -4799,6 +5032,15 @@ elements.characterPreviewModalTags.innerHTML = [
     if (!character || !itemElement) return;
     const item = character.contents.find((entry) => entry.id === itemElement.dataset.characterContentId);
     if (!item) return;
+
+    const colorField = target.dataset.characterContentColor;
+    if (colorField) {
+      item.textColors = item.textColors || normalizeTextColorMap({}, ["type", "title", "content", "warning"]);
+      item.textColors[colorField] = normalizeHexColor(target.value, DEFAULT_TEXT_COLOR);
+      renderCharacterPreview();
+      scheduleAutosave();
+      return;
+    }
 
     const field = target.dataset.characterContentField;
     if (field === "content") item.content = bioTextToArray(target.value);
@@ -5025,7 +5267,7 @@ elements.characterPreviewModalTags.innerHTML = [
           <button type="button" data-delete-world-section>삭제</button>
         </div>
         <label>
-          <span>제목</span>
+          <span class="editable-field-heading"><span>제목</span><input class="field-color-input" type="color" value="${escapeHtml(normalizeHexColor(section.textColors?.title, DEFAULT_TEXT_COLOR))}" data-world-section-color="title" aria-label="추가 정보 제목 글자색"></span>
           <input
             type="text"
             value="${escapeHtml(section.title)}"
@@ -5034,7 +5276,7 @@ elements.characterPreviewModalTags.innerHTML = [
           >
         </label>
         <label>
-          <span>내용</span>
+          <span class="editable-field-heading"><span>내용</span><input class="field-color-input" type="color" value="${escapeHtml(normalizeHexColor(section.textColors?.content, DEFAULT_TEXT_COLOR))}" data-world-section-color="content" aria-label="추가 정보 내용 글자색"></span>
           <textarea
             rows="5"
             placeholder="문단을 나누려면 빈 줄을 하나 넣어주세요."
@@ -5174,8 +5416,18 @@ elements.characterPreviewModalTags.innerHTML = [
 
     elements.worldNameInput.value = world.name || "";
     elements.worldSubtitleInput.value = world.subtitle || "";
+    elements.worldFeaturedInput.checked = world.featured === true;
+    elements.worldNewInput.checked = world.newRelease === true;
+    if (elements.worldFeaturedCount) {
+      const featuredCount = project.worlds.filter((item) => item.featured).length;
+      elements.worldFeaturedCount.textContent = `${featuredCount}/3`;
+    }
     elements.worldTagsInput.value = (world.tags || []).join(", ");
     elements.worldDescriptionInput.value = bioArrayToText(world.description);
+    elements.worldNameColorInput.value = normalizeHexColor(world.textColors?.name, DEFAULT_TEXT_COLOR);
+    elements.worldSubtitleColorInput.value = normalizeHexColor(world.textColors?.subtitle, DEFAULT_TEXT_COLOR);
+    elements.worldTagsColorInput.value = normalizeHexColor(world.textColors?.tags, DEFAULT_TEXT_COLOR);
+    elements.worldDescriptionColorInput.value = normalizeHexColor(world.textColors?.description, DEFAULT_TEXT_COLOR);
 
     const index = project.worlds.findIndex((item) => item.id === world.id);
     elements.moveWorldUpButton.disabled = index <= 0;
@@ -5207,7 +5459,7 @@ elements.characterPreviewModalTags.innerHTML = [
   function worldCardMarkup(world) {
     const related = charactersInWorld(world.id);
     const tags = (world.tags || []).slice(0, 3)
-      .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+      .map((tag) => `<span style="${colorStyle(world.textColors?.tags)}">${escapeHtml(tag)}</span>`)
       .join("");
     const faces = related.slice(0, 4).map((character) => `
       <span class="world-face" title="${escapeHtml(character.name || "캐릭터")}">
@@ -5229,6 +5481,7 @@ elements.characterPreviewModalTags.innerHTML = [
         >
           <div class="world-card-image">
             ${cover}
+            ${world.newRelease ? '<span class="character-new-mark world-new-mark" title="신작">N</span>' : ""}
             <div class="world-face-stack" aria-label="연결된 캐릭터">${faces}</div>
             ${
               hasPlayableMusic(world)
@@ -5238,9 +5491,9 @@ elements.characterPreviewModalTags.innerHTML = [
           </div>
           <div class="world-card-body">
             <div class="world-card-meta"><span>${related.length} Characters</span><b aria-hidden="true">↗</b></div>
-            <h3>${escapeHtml(world.name || "이름 없는 세계관")}</h3>
-            <p>${escapeHtml(world.subtitle || "세계관 부제를 입력해 주세요.")}</p>
-            <div class="world-card-tags">${tags}</div>
+            <h3 style="${colorStyle(world.textColors?.name)}">${escapeHtml(world.name || "이름 없는 세계관")}</h3>
+            <p style="${colorStyle(world.textColors?.subtitle)}">${escapeHtml(world.subtitle || "세계관 부제를 입력해 주세요.")}</p>
+            <div class="world-card-tags" style="${colorStyle(world.textColors?.tags)}">${tags}</div>
           </div>
         </button>
       </article>
@@ -5279,11 +5532,24 @@ elements.characterPreviewModalTags.innerHTML = [
   function renderWorldPreview() {
     renderArchiveCounts();
     const hasWorlds = project.worlds.length > 0;
+    const isWorldArchive = elements.archiveTabWorld?.checked === true;
+    const homeWorlds = [
+      ...project.worlds.filter((world) => world.featured),
+      ...project.worlds.filter((world) => !world.featured)
+    ].filter((world, index, list) =>
+      list.findIndex((item) => item.id === world.id) === index
+    ).slice(0, 3);
+    const worlds = isWorldArchive
+      ? sortArchiveItems(
+          project.worlds,
+          elements.previewWorldSort?.value || "latest"
+        )
+      : homeWorlds;
     elements.previewWorldSection.hidden = !hasWorlds;
     elements.previewWorldGrid.hidden = !hasWorlds;
     elements.previewWorldEmpty.hidden = hasWorlds;
     elements.previewWorldGrid.innerHTML = hasWorlds
-      ? project.worlds.map(worldCardMarkup).join("")
+      ? worlds.map(worldCardMarkup).join("")
       : "";
 
     if (!hasWorlds) worldPreviewExpanded = false;
@@ -5293,14 +5559,15 @@ elements.characterPreviewModalTags.innerHTML = [
 
   function worldInfoSectionMarkup(section) {
     const title = escapeHtml(section.title || "세계관 정보");
+    const titleStyle = colorStyle(section.textColors?.title);
     const content = (section.content || []).map((paragraph) =>
-      `<p>${escapeHtml(paragraph)}</p>`
+      `<p style="${colorStyle(section.textColors?.content)}">${escapeHtml(paragraph)}</p>`
     ).join("");
 
     if (section.collapsible) {
       return `
         <details class="world-info-block world-info-block-collapsible">
-          <summary>${title}</summary>
+          <summary style="${titleStyle}">${title}</summary>
           <div class="world-info-block-content">${content}</div>
         </details>
       `;
@@ -5308,7 +5575,7 @@ elements.characterPreviewModalTags.innerHTML = [
 
     return `
       <article class="world-info-block">
-        <h3>${title}</h3>
+        <h3 style="${titleStyle}">${title}</h3>
         <div>${content}</div>
       </article>
     `;
@@ -5331,15 +5598,17 @@ elements.characterPreviewModalTags.innerHTML = [
 
     elements.worldPreviewModalTitle.textContent = world.name || "이름 없는 세계관";
     elements.worldPreviewModalSummary.textContent = world.subtitle || "";
+    applyElementColor(elements.worldPreviewModalTitle, world.textColors?.name);
+    applyElementColor(elements.worldPreviewModalSummary, world.textColors?.subtitle);
     elements.worldPreviewModalSummary.hidden = !world.subtitle;
     elements.worldPreviewModalTags.innerHTML = (world.tags || [])
-      .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+      .map((tag) => `<span style="${colorStyle(world.textColors?.tags)}">${escapeHtml(tag)}</span>`)
       .join("");
     elements.worldPreviewModalTags.hidden = !(world.tags || []).length;
     renderSoundtrack(elements.worldPreviewSoundtrack, world);
 
     elements.worldPreviewModalDescription.innerHTML = (world.description || [])
-      .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+      .map((paragraph) => `<p style="${colorStyle(world.textColors?.description)}">${escapeHtml(paragraph)}</p>`)
       .join("");
     elements.worldPreviewModalDescription.hidden = !(world.description || []).length;
     elements.worldPreviewModalSections.innerHTML = (world.sections || [])
@@ -5359,8 +5628,8 @@ elements.characterPreviewModalTags.innerHTML = [
         <button class="world-character-button" type="button" data-preview-character="${escapeHtml(character.id)}">
           ${face}
           <span>
-            <strong>${escapeHtml(character.name || "이름 없는 캐릭터")}</strong>
-            <small>${escapeHtml(character.subtitle || "")}</small>
+            <strong style="${colorStyle(character.textColors?.name)}">${escapeHtml(character.name || "이름 없는 캐릭터")}</strong>
+            <small style="${colorStyle(character.textColors?.subtitle)}">${escapeHtml(character.subtitle || "")}</small>
           </span>
         </button>
       `;
@@ -5384,9 +5653,33 @@ elements.characterPreviewModalTags.innerHTML = [
 
     world.name = elements.worldNameInput.value.trim();
     world.subtitle = elements.worldSubtitleInput.value.trim();
+
+    const requestedFeatured = elements.worldFeaturedInput.checked;
+    if (requestedFeatured && !world.featured) {
+      const featuredCount = project.worlds.filter((item) => item.featured).length;
+      if (featuredCount >= 3) {
+        elements.worldFeaturedInput.checked = false;
+        window.alert("추천 세계관은 최대 3개까지 지정할 수 있습니다.");
+      } else {
+        world.featured = true;
+      }
+    } else {
+      world.featured = requestedFeatured;
+    }
+    world.newRelease = elements.worldNewInput.checked;
+
     world.tags = splitTags(elements.worldTagsInput.value);
     world.description = bioTextToArray(elements.worldDescriptionInput.value);
+    world.textColors = {
+      name: normalizeHexColor(elements.worldNameColorInput.value, DEFAULT_TEXT_COLOR),
+      subtitle: normalizeHexColor(elements.worldSubtitleColorInput.value, DEFAULT_TEXT_COLOR),
+      tags: normalizeHexColor(elements.worldTagsColorInput.value, DEFAULT_TEXT_COLOR),
+      description: normalizeHexColor(elements.worldDescriptionColorInput.value, DEFAULT_TEXT_COLOR)
+    };
 
+    if (elements.worldFeaturedCount) {
+      elements.worldFeaturedCount.textContent = `${project.worlds.filter((item) => item.featured).length}/3`;
+    }
     renderWorldList();
     renderCharacterWorldOptions();
     renderCharacterPreview();
@@ -5498,6 +5791,15 @@ elements.characterPreviewModalTags.innerHTML = [
       (entry) => entry.id === item.dataset.worldSectionId
     );
     if (!section) return;
+
+    const colorField = target.dataset.worldSectionColor;
+    if (colorField) {
+      section.textColors = section.textColors || normalizeTextColorMap({}, ["title", "content"]);
+      section.textColors[colorField] = normalizeHexColor(target.value, DEFAULT_TEXT_COLOR);
+      renderWorldPreview();
+      scheduleAutosave();
+      return;
+    }
 
     if (target.dataset.worldSectionField === "title") {
       section.title = target.value.trim();
@@ -5745,10 +6047,6 @@ elements.characterPreviewModalTags.innerHTML = [
   }
 
   function applyPreviewTheme() {
-    const textColor = normalizeHexColor(
-      project.site.textColor,
-      DEFAULT_TEXT_COLOR
-    );
     const themeColor = normalizeHexColor(
       project.site.themeColor,
       DEFAULT_THEME_COLOR
@@ -5758,17 +6056,15 @@ elements.characterPreviewModalTags.innerHTML = [
       elements.previewCanvas,
       elements.worldPreviewModal,
       elements.characterPreviewModal,
+      elements.planPreviewModal,
       elements.previewCharacterFilterPicker
     ];
 
     targets.forEach((target) => {
       if (!target) return;
 
-      target.style.setProperty("--text", textColor);
-      target.style.setProperty(
-        "--muted",
-        `color-mix(in srgb, ${themeColor} 28%, #aaa8b4)`
-      );
+      target.style.setProperty("--text", DEFAULT_TEXT_COLOR);
+      target.style.setProperty("--muted", "#aaa8b4");
 
       target.style.setProperty("--theme", themeColor);
       target.style.setProperty("--violet", themeColor);
@@ -5857,6 +6153,265 @@ elements.characterPreviewModalTags.innerHTML = [
     applyPreviewWidth(stored, false);
   }
 
+
+  function getSelectedPlan() {
+    return project.plans.find((plan) => plan.id === selectedPlanId) || null;
+  }
+
+  function planPlatformDots(plan, modal = false) {
+    return (plan.platforms || []).map((platformId) => {
+      const platform = platformCatalog.get(platformId) || {
+        id: platformId,
+        name: platformId,
+        icon: ""
+      };
+      const className = modal
+        ? "plan-preview-modal-platform-dot"
+        : "archive-plan-platform-dot";
+      return platform.icon
+        ? `<span class="${className}" title="${escapeHtml(platform.name || platformId)}"><img src="${escapeHtml(platformIconUrl(platform))}" alt=""></span>`
+        : `<span class="${className}" title="${escapeHtml(platform.name || platformId)}">${escapeHtml(String(platform.name || platformId).slice(0, 1))}</span>`;
+    }).join("");
+  }
+
+  function updatePlanImageStorageStatus() {
+    const plan = getSelectedPlan();
+    if (!plan || !elements.planImageStorageStatus) return;
+    const metadata = getPlanImageMetadata(plan);
+    if (missingPlanImageIds.has(plan.id)) {
+      elements.planImageStorageStatus.textContent =
+        "저장된 PNG 파일을 찾을 수 없습니다. 이미지를 다시 선택해 주세요.";
+      return;
+    }
+    if (planImageBlobs.has(plan.id) && metadata) {
+      elements.planImageStorageStatus.textContent =
+        `브라우저에 저장됨: ${metadata.name} · ${formatBytes(metadata.size)}`;
+      return;
+    }
+    if (metadata) {
+      elements.planImageStorageStatus.textContent = "저장된 PNG를 확인하는 중입니다.";
+      return;
+    }
+    if (typeof plan.image === "string" && plan.image) {
+      elements.planImageStorageStatus.textContent =
+        "프로젝트의 기존 이미지 경로를 사용 중입니다. 새 이미지로 교체할 수 있습니다.";
+      return;
+    }
+    elements.planImageStorageStatus.textContent =
+      "PNG는 이 브라우저에 저장되어 새로고침 후에도 유지됩니다. 최대 10MB.";
+  }
+
+  function renderPlanImageEditorPreview() {
+    const plan = getSelectedPlan();
+    if (!plan) return;
+    const url = planImageUrl(plan);
+    elements.planImageEditorPreview.hidden = !url;
+    elements.planImageEditorFallback.hidden = Boolean(url);
+    elements.removePlanImageButton.hidden = !plan.image;
+    if (url) elements.planImageEditorPreview.src = url;
+    else elements.planImageEditorPreview.removeAttribute("src");
+    updatePlanImageStorageStatus();
+  }
+
+  function renderPlanList() {
+    if (project.plans.length === 0) {
+      elements.planEditorList.innerHTML =
+        '<p class="empty-message">등록된 제작 계획이 없습니다.</p>';
+      return;
+    }
+    elements.planEditorList.innerHTML = project.plans.map((plan, index) => {
+      const imageUrl = planImageUrl(plan);
+      const thumb = imageUrl
+        ? `<img src="${escapeHtml(imageUrl)}" alt="">`
+        : "POSTER";
+      return `
+        <button
+          type="button"
+          class="plan-editor-list-item ${plan.id === selectedPlanId ? "is-active" : ""}"
+          data-select-plan="${escapeHtml(plan.id)}"
+        >
+          <span class="plan-editor-list-thumb">${thumb}</span>
+          <span class="plan-editor-list-copy">
+            <strong>${escapeHtml(plan.title || `새 계획 ${index + 1}`)}</strong>
+            <small>${escapeHtml(plan.status || "제작 현황 미입력")}</small>
+          </span>
+        </button>
+      `;
+    }).join("");
+  }
+
+  function renderPlanPlatforms() {
+    const plan = getSelectedPlan();
+    if (!plan) return;
+    elements.planPlatformList.innerHTML = platformOptions.map((platform) => {
+      const checked = (plan.platforms || []).includes(platform.id);
+      const icon = platform.icon
+        ? `<img src="${escapeHtml(platformIconUrl(platform))}" alt="">`
+        : escapeHtml(String(platform.name || platform.id).slice(0, 1));
+      return `
+        <label class="plan-platform-option">
+          <input type="checkbox" value="${escapeHtml(platform.id)}" data-plan-platform ${checked ? "checked" : ""}>
+          <span class="plan-platform-icon">${icon}</span>
+          <span>${escapeHtml(platform.name || platform.id)}</span>
+        </label>
+      `;
+    }).join("");
+  }
+
+  function populatePlanFields() {
+    const plan = getSelectedPlan();
+    const hasPlan = Boolean(plan);
+    elements.planForm.hidden = !hasPlan;
+    elements.planEditorEmpty.hidden = hasPlan;
+    if (!plan) return;
+    elements.planTitleInput.value = plan.title || "";
+    elements.planStatusInput.value = plan.status || "";
+    elements.planDescriptionInput.value = bioArrayToText(plan.description);
+    elements.planTitleColorInput.value = normalizeHexColor(plan.textColors?.title, DEFAULT_TEXT_COLOR);
+    elements.planStatusColorInput.value = normalizeHexColor(plan.textColors?.status, DEFAULT_TEXT_COLOR);
+    elements.planDescriptionColorInput.value = normalizeHexColor(plan.textColors?.description, DEFAULT_TEXT_COLOR);
+    const index = project.plans.findIndex((item) => item.id === plan.id);
+    elements.movePlanUpButton.disabled = index <= 0;
+    elements.movePlanDownButton.disabled = index < 0 || index >= project.plans.length - 1;
+    renderPlanImageEditorPreview();
+    renderPlanPlatforms();
+  }
+
+  function renderPlanEditor() {
+    if (!project.plans.some((plan) => plan.id === selectedPlanId)) {
+      selectedPlanId = project.plans[0]?.id || "";
+    }
+    renderPlanList();
+    populatePlanFields();
+  }
+
+  function syncPlanFromFields() {
+    const plan = getSelectedPlan();
+    if (!plan) return;
+    plan.title = elements.planTitleInput.value.trim();
+    plan.status = elements.planStatusInput.value.trim();
+    plan.description = bioTextToArray(elements.planDescriptionInput.value);
+    plan.textColors = {
+      title: normalizeHexColor(elements.planTitleColorInput.value, DEFAULT_TEXT_COLOR),
+      status: normalizeHexColor(elements.planStatusColorInput.value, DEFAULT_TEXT_COLOR),
+      description: normalizeHexColor(elements.planDescriptionColorInput.value, DEFAULT_TEXT_COLOR)
+    };
+    renderPlanList();
+    renderPlanPreview();
+    scheduleAutosave();
+  }
+
+  function updatePlanPlatform(input) {
+    const plan = getSelectedPlan();
+    if (!plan) return;
+    const ids = new Set(plan.platforms || []);
+    if (input.checked) ids.add(input.value);
+    else ids.delete(input.value);
+    plan.platforms = [...ids];
+    renderPlanPreview();
+    scheduleAutosave();
+  }
+
+  function addPlan() {
+    const plan = createPlan();
+    project.plans.push(plan);
+    selectedPlanId = plan.id;
+    renderPlanEditor();
+    renderPlanPreview();
+    scheduleAutosave();
+    elements.planTitleInput.focus();
+  }
+
+  function moveSelectedPlan(direction) {
+    const index = project.plans.findIndex((plan) => plan.id === selectedPlanId);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= project.plans.length) return;
+    const [plan] = project.plans.splice(index, 1);
+    project.plans.splice(nextIndex, 0, plan);
+    renderPlanEditor();
+    renderPlanPreview();
+    scheduleAutosave();
+  }
+
+  async function deleteSelectedPlan() {
+    const plan = getSelectedPlan();
+    if (!plan) return;
+    if (!window.confirm(`“${plan.title || "제목 없는 계획"}”을 삭제할까요?`)) return;
+    const index = project.plans.findIndex((item) => item.id === plan.id);
+    const metadata = getPlanImageMetadata(plan);
+    releasePlanImageObjectUrl(plan.id);
+    project.plans.splice(index, 1);
+    selectedPlanId = project.plans[index]?.id || project.plans[index - 1]?.id || "";
+    renderPlanEditor();
+    renderPlanPreview();
+    scheduleAutosave();
+    if (metadata?.id) {
+      try { await deleteImageRecord(metadata.id); }
+      catch (error) { console.error(error); }
+    }
+  }
+
+  function planCardMarkup(plan) {
+    const imageUrl = planImageUrl(plan);
+    const image = imageUrl
+      ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(plan.title || "제작 계획")} 썸네일" loading="lazy">`
+      : '<span class="archive-plan-card-image-fallback">COMING SOON</span>';
+    const description = (plan.description || []).join(" ");
+    return `
+      <article class="archive-plan-card">
+        <button class="archive-plan-card-button" type="button" data-preview-plan="${escapeHtml(plan.id)}">
+          <div class="archive-plan-card-image">
+            ${image}
+            ${plan.status ? `<span class="archive-plan-status" style="${colorStyle(plan.textColors?.status)}">${escapeHtml(plan.status)}</span>` : ""}
+            <div class="archive-plan-platforms">${planPlatformDots(plan)}</div>
+          </div>
+          <div class="archive-plan-card-body">
+            <h3 style="${colorStyle(plan.textColors?.title)}">${escapeHtml(plan.title || "제목 없는 계획")}</h3>
+            <p style="${colorStyle(plan.textColors?.description)}">${escapeHtml(description || "소개글을 입력해 주세요.")}</p>
+          </div>
+        </button>
+      </article>
+    `;
+  }
+
+  function renderPlanPreview() {
+    const plans = project.plans || [];
+    elements.previewPlanGrid.innerHTML = plans.map(planCardMarkup).join("");
+    elements.previewPlanGrid.hidden = plans.length === 0;
+    elements.previewPlanEmpty.hidden = plans.length > 0;
+  }
+
+  function openPlanPreview(plan) {
+    if (!plan) return;
+    const imageUrl = planImageUrl(plan);
+    elements.planPreviewModalImage.hidden = !imageUrl;
+    elements.planPreviewModalImageFallback.hidden = Boolean(imageUrl);
+    if (imageUrl) {
+      elements.planPreviewModalImage.src = imageUrl;
+      elements.planPreviewModalImage.alt = `${plan.title || "제작 계획"} 썸네일`;
+    } else {
+      elements.planPreviewModalImage.removeAttribute("src");
+    }
+    elements.planPreviewModalPlatforms.innerHTML = planPlatformDots(plan, true);
+    elements.planPreviewModalPlatforms.hidden = !(plan.platforms || []).length;
+    elements.planPreviewModalStatus.textContent = plan.status || "";
+    elements.planPreviewModalStatus.hidden = !plan.status;
+    elements.planPreviewModalTitle.textContent = plan.title || "제목 없는 계획";
+    applyElementColor(elements.planPreviewModalStatus, plan.textColors?.status);
+    applyElementColor(elements.planPreviewModalTitle, plan.textColors?.title);
+    elements.planPreviewModalDescription.innerHTML = (plan.description || [])
+      .map((paragraph) => `<p style="${colorStyle(plan.textColors?.description)}">${escapeHtml(paragraph)}</p>`)
+      .join("");
+    elements.planPreviewModalDescription.hidden = !(plan.description || []).length;
+    elements.planPreviewModal.showModal();
+    document.body.classList.add("plan-preview-modal-open");
+  }
+
+  function closePlanPreview() {
+    if (elements.planPreviewModal.open) elements.planPreviewModal.close();
+    document.body.classList.remove("plan-preview-modal-open");
+  }
+
   function renderPreview() {
     applyPreviewTheme();
     renderArchiveCounts();
@@ -5867,14 +6422,18 @@ elements.characterPreviewModalTags.innerHTML = [
     elements.previewSiteDescription.textContent =
       project.site.description || "";
     elements.previewSiteDescription.hidden = !project.site.description;
+    applyElementColor(elements.previewSiteTitle, project.site.textColors?.title);
+    applyElementColor(elements.previewSiteDescription, project.site.textColors?.description);
 
     elements.previewCreatorName.textContent = creatorName;
     elements.previewCreatorHandle.textContent =
       project.creator.handle || "";
     elements.previewCreatorHandle.hidden = !project.creator.handle;
+    applyElementColor(elements.previewCreatorName, project.creator.textColors?.name);
+    applyElementColor(elements.previewCreatorHandle, project.creator.textColors?.handle);
 
     elements.previewCreatorBio.innerHTML = project.creator.bio
-      .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+      .map((paragraph) => `<p style="${colorStyle(project.creator.textColors?.bio)}">${escapeHtml(paragraph)}</p>`)
       .join("");
     elements.previewCreatorBio.hidden = project.creator.bio.length === 0;
 
@@ -5919,15 +6478,12 @@ elements.characterPreviewModalTags.innerHTML = [
   function populateFieldsFromProject() {
     elements.siteTitleInput.value = project.site.title || "";
     elements.siteDescriptionInput.value = project.site.description || "";
-    elements.siteTextColorInput.value = normalizeHexColor(
-      project.site.textColor,
-      DEFAULT_TEXT_COLOR
-    );
+    elements.siteTitleColorInput.value = normalizeHexColor(project.site.textColors?.title, DEFAULT_TEXT_COLOR);
+    elements.siteDescriptionColorInput.value = normalizeHexColor(project.site.textColors?.description, DEFAULT_TEXT_COLOR);
     elements.siteThemeColorInput.value = normalizeHexColor(
       project.site.themeColor,
       DEFAULT_THEME_COLOR
     );
-    elements.siteTextColorValue.value = elements.siteTextColorInput.value;
     elements.siteThemeColorValue.value = elements.siteThemeColorInput.value;
     elements.creatorNameInput.value = project.creator.name || "";
     elements.creatorHandleInput.value = project.creator.handle || "";
@@ -5935,6 +6491,9 @@ elements.characterPreviewModalTags.innerHTML = [
       project.creator.fallbackText || "";
     elements.creatorBioInput.value =
       bioArrayToText(project.creator.bio);
+    elements.creatorNameColorInput.value = normalizeHexColor(project.creator.textColors?.name, DEFAULT_TEXT_COLOR);
+    elements.creatorHandleColorInput.value = normalizeHexColor(project.creator.textColors?.handle, DEFAULT_TEXT_COLOR);
+    elements.creatorBioColorInput.value = normalizeHexColor(project.creator.textColors?.bio, DEFAULT_TEXT_COLOR);
   }
 
   function releaseCreatorBackgroundObjectUrl() {
@@ -6489,6 +7048,109 @@ elements.characterPreviewModalTags.innerHTML = [
     );
   }
 
+
+  async function storePlanImageFile(file) {
+    const plan = getSelectedPlan();
+    if (!file || !plan) return;
+    elements.planImageInput.disabled = true;
+    setSaveStatus("PLAN 썸네일 변환·저장 중…");
+    try {
+      const previousMetadata = getPlanImageMetadata(plan);
+      const sanitized = await sanitizeImageToPng(file, "PLAN 썸네일");
+      const id = createImageId();
+      const updatedAt = new Date().toISOString();
+      const record = {
+        id,
+        role: "plan-image",
+        ownerId: plan.id,
+        name: outputPngName(file, "plan-poster.png"),
+        type: "image/png",
+        size: sanitized.blob.size,
+        width: sanitized.width,
+        height: sanitized.height,
+        updatedAt,
+        blob: sanitized.blob
+      };
+      await putImageRecord(record);
+      plan.image = {
+        id,
+        name: record.name,
+        type: record.type,
+        size: record.size,
+        width: record.width,
+        height: record.height,
+        updatedAt
+      };
+      releasePlanImageObjectUrl(plan.id);
+      planImageBlobs.set(plan.id, sanitized.blob);
+      planImagePreviewUrls.set(plan.id, URL.createObjectURL(sanitized.blob));
+      missingPlanImageIds.delete(plan.id);
+      if (previousMetadata?.id && previousMetadata.id !== id) {
+        try { await deleteImageRecord(previousMetadata.id); }
+        catch (cleanupError) { console.error(cleanupError); }
+      }
+      renderPlanEditor();
+      renderPlanPreview();
+      saveProjectToStorage();
+      setSaveStatus("PLAN 썸네일이 새 PNG로 저장됨");
+    } catch (error) {
+      console.error(error);
+      window.alert(error.message || "PLAN 썸네일을 처리하지 못했습니다.");
+      setSaveStatus("PLAN 썸네일 저장 실패");
+    } finally {
+      elements.planImageInput.disabled = false;
+      elements.planImageInput.value = "";
+    }
+  }
+
+  async function handlePlanImageSelection() {
+    const file = elements.planImageInput.files?.[0] || null;
+    elements.planImageInput.value = "";
+    await storePlanImageFile(file);
+  }
+
+  async function removePlanImage() {
+    const plan = getSelectedPlan();
+    if (!plan) return;
+    const metadata = getPlanImageMetadata(plan);
+    releasePlanImageObjectUrl(plan.id);
+    plan.image = "";
+    renderPlanEditor();
+    renderPlanPreview();
+    saveProjectToStorage();
+    if (metadata?.id) {
+      try { await deleteImageRecord(metadata.id); }
+      catch (error) { console.error(error); }
+    }
+    setSaveStatus("PLAN 썸네일이 제거됨");
+  }
+
+  async function restorePlanImagesFromDatabase() {
+    releaseAllPlanImageObjectUrls();
+    let missingCount = 0;
+    for (const plan of project.plans || []) {
+      const metadata = getPlanImageMetadata(plan);
+      if (!metadata?.id) continue;
+      try {
+        const record = await getImageRecord(metadata.id);
+        if (!record?.blob || record.blob.type !== "image/png") {
+          missingPlanImageIds.add(plan.id);
+          missingCount += 1;
+          continue;
+        }
+        planImageBlobs.set(plan.id, record.blob);
+        planImagePreviewUrls.set(plan.id, URL.createObjectURL(record.blob));
+      } catch (error) {
+        console.error(error);
+        missingPlanImageIds.add(plan.id);
+        missingCount += 1;
+      }
+    }
+    renderPlanEditor();
+    renderPlanPreview();
+    return missingCount;
+  }
+
   async function routeImageFiles(target, files) {
     const candidates = [...(files || [])].filter(Boolean);
     if (candidates.length === 0) {
@@ -6518,7 +7180,79 @@ elements.characterPreviewModalTags.innerHTML = [
         return;
       }
       await addCharacterImageFiles(candidates);
+      return;
     }
+    if (target === "plan") {
+      if (!getSelectedPlan()) {
+        window.alert("먼저 제작 계획을 선택해 주세요.");
+        return;
+      }
+      await storePlanImageFile(candidates[0]);
+    }
+  }
+
+  const IMAGE_TARGET_FILE_INPUT_IDS = {
+    avatar: "avatarInput",
+    "profile-background": "profileBackgroundInput",
+    world: "worldImageInput",
+    character: "characterImageInput",
+    plan: "planImageInput"
+  };
+
+  function fileInputForImageZone(zone) {
+    const inputId = IMAGE_TARGET_FILE_INPUT_IDS[
+      zone?.dataset?.imageDropTarget || ""
+    ];
+    const input = inputId ? document.getElementById(inputId) : null;
+    return input instanceof HTMLInputElement && input.type === "file"
+      ? input
+      : null;
+  }
+
+  function openFilePicker(input) {
+    if (!(input instanceof HTMLInputElement) || input.type !== "file") return;
+    if (input.disabled) return;
+
+    // 같은 파일을 다시 선택해도 change 이벤트가 발생하도록 먼저 비웁니다.
+    input.value = "";
+    input.click();
+  }
+
+  function initializeMobileFilePickers() {
+    // iOS Safari를 포함한 모바일 브라우저에서 label-for 연결이 간헐적으로
+    // 무시되는 경우를 피하기 위해 사용자 클릭 안에서 파일 입력을 직접 엽니다.
+    document.addEventListener("click", (event) => {
+      const label = event.target.closest("label[for]");
+      if (!label) return;
+
+      const input = document.getElementById(label.htmlFor);
+      if (!(input instanceof HTMLInputElement) || input.type !== "file") return;
+
+      event.preventDefault();
+      setActiveImageDropTarget(label.closest("[data-image-drop-target]"));
+      openFilePicker(input);
+    });
+
+    elements.imageDropZones.forEach((zone) => {
+      zone.addEventListener("click", (event) => {
+        const mobileLike =
+          window.matchMedia("(pointer: coarse)").matches ||
+          window.matchMedia("(max-width: 900px)").matches;
+
+        if (!mobileLike || event.defaultPrevented) return;
+        if (
+          event.target.closest(
+            "button, a, input, select, textarea, label, summary, [role='button']"
+          )
+        ) return;
+
+        const input = fileInputForImageZone(zone);
+        if (!input) return;
+
+        setActiveImageDropTarget(zone);
+        openFilePicker(input);
+      });
+    });
   }
 
   function initializeImageDropZones() {
@@ -6574,17 +7308,20 @@ elements.characterPreviewModalTags.innerHTML = [
     releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
+    releaseAllPlanImageObjectUrls();
     releaseAllMusicObjectUrls();
     avatarRestoreMissing = false;
     creatorBackgroundRestoreMissing = false;
     selectedWorldId = project.worlds[0]?.id || "";
     selectedCharacterId = project.characters[0]?.id || "";
+    selectedPlanId = project.plans[0]?.id || "";
     worldPreviewExpanded = false;
     characterPreviewExpanded = false;
     populateFieldsFromProject();
     renderSocialLinks();
     renderWorldEditor();
     renderCharacterEditor();
+    renderPlanEditor();
     renderPreview();
 
     if (!restoreImages) return false;
@@ -6592,6 +7329,7 @@ elements.characterPreviewModalTags.innerHTML = [
     await restoreCreatorBackgroundFromDatabase();
     await restoreWorldImagesFromDatabase();
     await restoreCharacterImagesFromDatabase();
+    await restorePlanImagesFromDatabase();
     await restoreMusicFromDatabase();
     return avatarRestored;
   }
@@ -6886,10 +7624,6 @@ elements.characterPreviewModalTags.innerHTML = [
   }
 
   function deployThemeStyleText() {
-    const textColor = normalizeHexColor(
-      project.site.textColor,
-      DEFAULT_TEXT_COLOR
-    );
     const themeColor = normalizeHexColor(
       project.site.themeColor,
       DEFAULT_THEME_COLOR
@@ -6897,8 +7631,8 @@ elements.characterPreviewModalTags.innerHTML = [
     const themeInk = contrastTextColor(themeColor);
 
     return [
-      `--text:${textColor}`,
-      `--muted:color-mix(in srgb, ${themeColor} 28%, #aaa8b4)`,
+      `--text:${DEFAULT_TEXT_COLOR}`,
+      `--muted:#aaa8b4`,
       `--theme:${themeColor}`,
       `--violet:${themeColor}`,
       `--accent:${themeColor}`,
@@ -6941,12 +7675,14 @@ elements.characterPreviewModalTags.innerHTML = [
     );
     const characterModal = cloneDeployNode(elements.characterPreviewModal);
     const worldModal = cloneDeployNode(elements.worldPreviewModal);
+    const planModal = cloneDeployNode(elements.planPreviewModal);
 
     preview.classList.add("exported-preview-canvas");
     preview.style.cssText = deployThemeStyleText();
     filterPicker.style.cssText = deployThemeStyleText();
     characterModal.style.cssText = deployThemeStyleText();
     worldModal.style.cssText = deployThemeStyleText();
+    planModal.style.cssText = deployThemeStyleText();
 
     const title = escapeHtml(
       project.site.title || project.creator.name || "Character Portfolio"
@@ -6971,6 +7707,7 @@ elements.characterPreviewModalTags.innerHTML = [
   ${filterPicker.outerHTML}
   ${characterModal.outerHTML}
   ${worldModal.outerHTML}
+  ${planModal.outerHTML}
 
   <script src="./assets/site-main.js"></script>
   <script src="./assets/site-worlds.js"></script>
@@ -6988,7 +7725,8 @@ elements.characterPreviewModalTags.innerHTML = [
       site: {},
       creator: { bio: [], links: [] },
       worlds: [],
-      characters: []
+      characters: [],
+      plans: []
     };
     const catalog = window.PORTFOLIO_CATALOG || {
       profileLinkServices: [],
@@ -7006,6 +7744,22 @@ elements.characterPreviewModalTags.innerHTML = [
       (catalog.genres || []).map((item) => [item.id, item])
     );
 
+    function sortArchiveItems(items, mode, fieldName = "name") {
+      const source = [...(items || [])];
+      if (mode !== "name") return source;
+
+      return source.sort((left, right) => {
+        const leftName = String(left?.[fieldName] || "").trim();
+        const rightName = String(right?.[fieldName] || "").trim();
+        if (!leftName && rightName) return 1;
+        if (leftName && !rightName) return -1;
+        return leftName.localeCompare(rightName, "ko", {
+          numeric: true,
+          sensitivity: "base"
+        });
+      });
+    }
+
     const filterState = {
       query: "",
       genre: new Set(),
@@ -7021,6 +7775,8 @@ elements.characterPreviewModalTags.innerHTML = [
 
     const elements = {
       previewCanvas: document.querySelector("#previewCanvas"),
+      archiveTabHome: document.querySelector("#archiveTabHome"),
+      archiveTabWorld: document.querySelector("#archiveTabWorld"),
       previewSiteTitle: document.querySelector("#previewSiteTitle"),
       previewSiteDescription: document.querySelector("#previewSiteDescription"),
       previewCreatorName: document.querySelector("#previewCreatorName"),
@@ -7033,9 +7789,20 @@ elements.characterPreviewModalTags.innerHTML = [
       previewCharacterCount: document.querySelector("#previewCharacterCount"),
       previewWorldCount: document.querySelector("#previewWorldCount"),
       previewGenreCount: document.querySelector("#previewGenreCount"),
+      previewPlanGrid: document.querySelector("#previewPlanGrid"),
+      previewPlanEmpty: document.querySelector("#previewPlanEmpty"),
+      planModal: document.querySelector("#planPreviewModal"),
+      planModalClose: document.querySelector("#planPreviewModalClose"),
+      planModalImage: document.querySelector("#planPreviewModalImage"),
+      planModalImageFallback: document.querySelector("#planPreviewModalImageFallback"),
+      planModalPlatforms: document.querySelector("#planPreviewModalPlatforms"),
+      planModalStatus: document.querySelector("#planPreviewModalStatus"),
+      planModalTitle: document.querySelector("#planPreviewModalTitle"),
+      planModalDescription: document.querySelector("#planPreviewModalDescription"),
       previewFeaturedSection: document.querySelector("#previewFeaturedSection"),
       previewFeaturedGrid: document.querySelector("#previewFeaturedGrid"),
       previewWorldSection: document.querySelector("#previewWorldSection"),
+      previewWorldSort: document.querySelector("#previewWorldSort"),
       previewWorldGrid: document.querySelector("#previewWorldGrid"),
       previewWorldEmpty: document.querySelector("#previewWorldEmpty"),
       previewWorldToggleWrap: document.querySelector("#previewWorldToggleWrap"),
@@ -7044,6 +7811,7 @@ elements.characterPreviewModalTags.innerHTML = [
       previewCharacterGrid: document.querySelector("#previewCharacterGrid"),
       previewCharacterEmpty: document.querySelector("#previewCharacterEmpty"),
       previewCharacterResultSummary: document.querySelector("#previewCharacterResultSummary"),
+      previewCharacterSort: document.querySelector("#previewCharacterSort"),
       previewCharacterToggleWrap: document.querySelector("#previewCharacterToggleWrap"),
       previewCharacterToggle: document.querySelector("#previewCharacterToggle"),
       previewCharacterSearchInput: document.querySelector("#previewCharacterSearchInput"),
@@ -7097,6 +7865,20 @@ elements.characterPreviewModalTags.innerHTML = [
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+
+    function normalizeHexColor(value, fallback = "#f4f1ea") {
+      const normalized = String(value || "").trim().toLowerCase();
+      return /^#[0-9a-f]{6}$/.test(normalized) ? normalized : fallback;
+    }
+
+    function colorStyle(color) {
+      return `color:${normalizeHexColor(color)}`;
+    }
+
+    function applyElementColor(element, color) {
+      if (element) element.style.color = normalizeHexColor(color);
     }
 
     function normalizeUrl(value) {
@@ -7259,7 +8041,6 @@ elements.characterPreviewModalTags.innerHTML = [
 
     function applyTheme() {
       const theme = String(project.site?.themeColor || "#a897ff");
-      const text = String(project.site?.textColor || "#f4f1ea");
       const hex = theme.replace("#", "");
       const red = Number.parseInt(hex.slice(0, 2), 16) || 0;
       const green = Number.parseInt(hex.slice(2, 4), 16) || 0;
@@ -7272,12 +8053,13 @@ elements.characterPreviewModalTags.innerHTML = [
         elements.previewCanvas,
         elements.filterPicker,
         elements.characterModal,
-        elements.worldModal
+        elements.worldModal,
+        elements.planModal
       ];
       targets.forEach((target) => {
         if (!target) return;
-        target.style.setProperty("--text", text);
-        target.style.setProperty("--muted", `color-mix(in srgb, ${theme} 28%, #aaa8b4)`);
+        target.style.setProperty("--text", "#f4f1ea");
+        target.style.setProperty("--muted", "#aaa8b4");
         target.style.setProperty("--theme", theme);
         target.style.setProperty("--violet", theme);
         target.style.setProperty("--accent", theme);
@@ -7296,10 +8078,17 @@ elements.characterPreviewModalTags.innerHTML = [
       const creator = project.creator || {};
       elements.previewSiteTitle.textContent = project.site?.title || "사이트 제목";
       elements.previewSiteDescription.textContent = project.site?.description || "";
+      elements.previewSiteDescription.hidden = !project.site?.description;
+      applyElementColor(elements.previewSiteTitle, project.site?.textColors?.title);
+      applyElementColor(elements.previewSiteDescription, project.site?.textColors?.description);
+
       elements.previewCreatorName.textContent = creator.name || "제작자 이름";
       elements.previewCreatorHandle.textContent = creator.handle || "";
+      elements.previewCreatorHandle.hidden = !creator.handle;
+      applyElementColor(elements.previewCreatorName, creator.textColors?.name);
+      applyElementColor(elements.previewCreatorHandle, creator.textColors?.handle);
       elements.previewCreatorBio.innerHTML = (creator.bio || [])
-        .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+        .map((paragraph) => `<p style="${colorStyle(creator.textColors?.bio)}">${escapeHtml(paragraph)}</p>`)
         .join("");
 
       const avatar = String(creator.avatar || "");
@@ -7366,13 +8155,14 @@ elements.characterPreviewModalTags.innerHTML = [
           <button type="button" class="character-preview-card-button" data-preview-character="${escapeHtml(character.id)}">
             <div class="character-preview-card-image-wrap">
               ${image}
+              ${character.newRelease ? '<span class="character-new-mark" title="신작">N</span>' : ""}
               <div class="character-preview-card-platforms">${platformDots(character)}</div>
               ${hasPlayableMusic(character) ? '<span class="archive-music-mark" title="음악 있음" aria-hidden="true">♫</span>' : ""}
             </div>
             <div class="character-preview-card-body">
               <div class="character-preview-card-genres">${genres}</div>
-              <h3>${escapeHtml(character.name || "이름 없는 캐릭터")}</h3>
-              <p>${escapeHtml(character.subtitle || "")}</p>
+              <h3 style="${colorStyle(character.textColors?.name)}">${escapeHtml(character.name || "이름 없는 캐릭터")}</h3>
+              <p style="${colorStyle(character.textColors?.subtitle)}">${escapeHtml(character.subtitle || "")}</p>
               <span class="character-preview-card-more">상세 보기 <b aria-hidden="true">↗</b></span>
             </div>
           </button>
@@ -7383,7 +8173,7 @@ elements.characterPreviewModalTags.innerHTML = [
     function worldCardMarkup(world) {
       const related = charactersInWorld(world.id);
       const tags = (world.tags || []).slice(0, 3)
-        .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+        .map((tag) => `<span style="${colorStyle(world.textColors?.tags)}">${escapeHtml(tag)}</span>`)
         .join("");
       const faces = related.slice(0, 4).map((character) => {
         const image = characterImageUrl(character);
@@ -7400,18 +8190,100 @@ elements.characterPreviewModalTags.innerHTML = [
           <button class="world-card-button" type="button" data-preview-world="${escapeHtml(world.id)}">
             <div class="world-card-image">
               ${cover}
+              ${world.newRelease ? '<span class="character-new-mark world-new-mark" title="신작">N</span>' : ""}
               <div class="world-face-stack" aria-label="연결된 캐릭터">${faces}</div>
               ${hasPlayableMusic(world) ? '<span class="archive-music-mark" title="음악 있음" aria-hidden="true">♫</span>' : ""}
             </div>
             <div class="world-card-body">
               <div class="world-card-meta"><span>${related.length} Characters</span><b aria-hidden="true">↗</b></div>
-              <h3>${escapeHtml(world.name || "이름 없는 세계관")}</h3>
-              <p>${escapeHtml(world.subtitle || "")}</p>
-              <div class="world-card-tags">${tags}</div>
+              <h3 style="${colorStyle(world.textColors?.name)}">${escapeHtml(world.name || "이름 없는 세계관")}</h3>
+              <p style="${colorStyle(world.textColors?.subtitle)}">${escapeHtml(world.subtitle || "")}</p>
+              <div class="world-card-tags" style="${colorStyle(world.textColors?.tags)}">${tags}</div>
             </div>
           </button>
         </article>
       `;
+    }
+
+
+    function planImageUrl(plan) {
+      return typeof plan?.image === "string" ? plan.image : "";
+    }
+
+    function planPlatformDots(plan, modal = false) {
+      return (plan.platforms || []).map((platformId) => {
+        const platform = platformCatalog.get(platformId) || {
+          id: platformId,
+          name: platformId,
+          icon: ""
+        };
+        const className = modal
+          ? "plan-preview-modal-platform-dot"
+          : "archive-plan-platform-dot";
+        return platform.icon
+          ? `<span class="${className}" title="${escapeHtml(platform.name || platformId)}"><img src="${escapeHtml(platform.icon)}" alt=""></span>`
+          : `<span class="${className}" title="${escapeHtml(platform.name || platformId)}">${escapeHtml(String(platform.name || platformId).slice(0, 1))}</span>`;
+      }).join("");
+    }
+
+    function planCardMarkup(plan) {
+      const imageUrl = planImageUrl(plan);
+      const image = imageUrl
+        ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(plan.title || "제작 계획")} 썸네일" loading="lazy">`
+        : '<span class="archive-plan-card-image-fallback">COMING SOON</span>';
+      return `
+        <article class="archive-plan-card">
+          <button class="archive-plan-card-button" type="button" data-preview-plan="${escapeHtml(plan.id)}">
+            <div class="archive-plan-card-image">
+              ${image}
+              ${plan.status ? `<span class="archive-plan-status" style="${colorStyle(plan.textColors?.status)}">${escapeHtml(plan.status)}</span>` : ""}
+              <div class="archive-plan-platforms">${planPlatformDots(plan)}</div>
+            </div>
+            <div class="archive-plan-card-body">
+              <h3 style="${colorStyle(plan.textColors?.title)}">${escapeHtml(plan.title || "제목 없는 계획")}</h3>
+              <p style="${colorStyle(plan.textColors?.description)}">${escapeHtml((plan.description || []).join(" ") || "소개글을 입력해 주세요.")}</p>
+            </div>
+          </button>
+        </article>
+      `;
+    }
+
+    function renderPlans() {
+      const plans = project.plans || [];
+      elements.previewPlanGrid.innerHTML = plans.map(planCardMarkup).join("");
+      elements.previewPlanGrid.hidden = plans.length === 0;
+      elements.previewPlanEmpty.hidden = plans.length > 0;
+    }
+
+    function openPlan(plan) {
+      if (!plan) return;
+      const imageUrl = planImageUrl(plan);
+      elements.planModalImage.hidden = !imageUrl;
+      elements.planModalImageFallback.hidden = Boolean(imageUrl);
+      if (imageUrl) {
+        elements.planModalImage.src = imageUrl;
+        elements.planModalImage.alt = `${plan.title || "제작 계획"} 썸네일`;
+      } else {
+        elements.planModalImage.removeAttribute("src");
+      }
+      elements.planModalPlatforms.innerHTML = planPlatformDots(plan, true);
+      elements.planModalPlatforms.hidden = !(plan.platforms || []).length;
+      elements.planModalStatus.textContent = plan.status || "";
+      elements.planModalStatus.hidden = !plan.status;
+      elements.planModalTitle.textContent = plan.title || "제목 없는 계획";
+      applyElementColor(elements.planModalStatus, plan.textColors?.status);
+      applyElementColor(elements.planModalTitle, plan.textColors?.title);
+      elements.planModalDescription.innerHTML = (plan.description || [])
+        .map((paragraph) => `<p style="${colorStyle(plan.textColors?.description)}">${escapeHtml(paragraph)}</p>`)
+        .join("");
+      elements.planModalDescription.hidden = !(plan.description || []).length;
+      elements.planModal.showModal();
+      document.body.classList.add("plan-preview-modal-open");
+    }
+
+    function closePlanModal() {
+      if (elements.planModal.open) elements.planModal.close();
+      document.body.classList.remove("plan-preview-modal-open");
     }
 
     function renderFeatured() {
@@ -7454,12 +8326,25 @@ elements.characterPreviewModalTags.innerHTML = [
     }
 
     function renderWorlds() {
-      const worlds = project.worlds || [];
-      elements.previewWorldSection.hidden = worlds.length === 0;
-      elements.previewWorldGrid.hidden = worlds.length === 0;
-      elements.previewWorldEmpty.hidden = worlds.length > 0;
+      const sourceWorlds = project.worlds || [];
+      const isWorldArchive = elements.archiveTabWorld?.checked === true;
+      const homeWorlds = [
+        ...sourceWorlds.filter((world) => world.featured),
+        ...sourceWorlds.filter((world) => !world.featured)
+      ].filter((world, index, list) =>
+        list.findIndex((item) => item.id === world.id) === index
+      ).slice(0, 3);
+      const worlds = isWorldArchive
+        ? sortArchiveItems(
+            sourceWorlds,
+            elements.previewWorldSort?.value || "latest"
+          )
+        : homeWorlds;
+      elements.previewWorldSection.hidden = sourceWorlds.length === 0;
+      elements.previewWorldGrid.hidden = sourceWorlds.length === 0;
+      elements.previewWorldEmpty.hidden = sourceWorlds.length > 0;
       elements.previewWorldGrid.innerHTML = worlds.map(worldCardMarkup).join("");
-      if (worlds.length === 0) worldExpanded = false;
+      if (sourceWorlds.length === 0) worldExpanded = false;
       updateWorldLimit();
     }
 
@@ -7711,7 +8596,10 @@ elements.characterPreviewModalTags.innerHTML = [
 
 function renderCharacters() {
   const allCharacters = project.characters || [];
-  const characters = filteredCharacters();
+  const characters = sortArchiveItems(
+    filteredCharacters(),
+    elements.previewCharacterSort?.value || "latest"
+  );
   const hasCharacters = characters.length > 0;
 
   elements.previewCharacterSection.hidden =
@@ -7771,15 +8659,17 @@ function renderCharacters() {
     function characterContentMarkup(item) {
       const type = item.type || (item.spoiler ? "스포일러" : "추가 정보");
       const title = item.title || "제목 없는 콘텐츠";
+      const typeStyle = colorStyle(item.textColors?.type);
+      const titleStyle = colorStyle(item.textColors?.title);
       const body = (item.content || []).map(
-        (paragraph) => `<p>${escapeHtml(paragraph)}</p>`
+        (paragraph) => `<p style="${colorStyle(item.textColors?.content)}">${escapeHtml(paragraph)}</p>`
       ).join("");
       if (item.spoiler) {
         return `
           <details class="character-preview-content-box is-spoiler">
             <summary>
               <span class="character-preview-content-icon">⚠</span>
-              <span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong><em>${escapeHtml(item.warning || "스포일러가 포함되어 있습니다.")}</em></span>
+              <span><small style="${typeStyle}">${escapeHtml(type)}</small><strong style="${titleStyle}">${escapeHtml(title)}</strong><em style="${colorStyle(item.textColors?.warning)}">${escapeHtml(item.warning || "스포일러가 포함되어 있습니다.")}</em></span>
               <b aria-hidden="true">⌄</b>
             </summary>
             <div class="character-preview-content-body">${body}</div>
@@ -7789,14 +8679,14 @@ function renderCharacters() {
       if (item.collapsible) {
         return `
           <details class="character-preview-content-box is-public is-collapsible">
-            <summary><span class="character-preview-content-icon">✦</span><span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong></span><b aria-hidden="true">⌄</b></summary>
+            <summary><span class="character-preview-content-icon">✦</span><span><small style="${typeStyle}">${escapeHtml(type)}</small><strong style="${titleStyle}">${escapeHtml(title)}</strong></span><b aria-hidden="true">⌄</b></summary>
             <div class="character-preview-content-body">${body}</div>
           </details>
         `;
       }
       return `
         <article class="character-preview-content-box is-public">
-          <header><span class="character-preview-content-icon">✦</span><span><small>${escapeHtml(type)}</small><strong>${escapeHtml(title)}</strong></span></header>
+          <header><span class="character-preview-content-icon">✦</span><span><small style="${typeStyle}">${escapeHtml(type)}</small><strong style="${titleStyle}">${escapeHtml(title)}</strong></span></header>
           <div class="character-preview-content-body">${body}</div>
         </article>
       `;
@@ -7815,6 +8705,8 @@ function renderCharacters() {
       const main = images[0] || "";
       elements.characterModalTitle.textContent = character.name || "이름 없는 캐릭터";
       elements.characterModalSummary.textContent = character.subtitle || "";
+      applyElementColor(elements.characterModalTitle, character.textColors?.name);
+      applyElementColor(elements.characterModalSummary, character.textColors?.subtitle);
       elements.characterModalSummary.hidden = !character.subtitle;
       elements.characterMainImage.hidden = !main;
       elements.characterMainImageFallback.hidden = Boolean(main);
@@ -7835,12 +8727,12 @@ function renderCharacters() {
       const genres = (character.genres || []).map(genreLabel);
       elements.characterKicker.textContent = genres.join(" · ") || "CHARACTER";
       elements.characterTags.innerHTML = [...genres, ...(character.tags || [])]
-        .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+        .map((tag) => `<span style="${colorStyle(character.textColors?.tags)}">${escapeHtml(tag)}</span>`)
         .join("");
       elements.characterTags.hidden = !genres.length && !(character.tags || []).length;
       renderSoundtrack(elements.characterSoundtrack, character);
       elements.characterDescription.innerHTML = (character.description || [])
-        .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+        .map((paragraph) => `<p style="${colorStyle(character.textColors?.description)}">${escapeHtml(paragraph)}</p>`)
         .join("");
       elements.characterDescription.hidden = !(character.description || []).length;
       elements.characterPlatforms.innerHTML = (character.platforms || []).map((link) => {
@@ -7864,6 +8756,8 @@ function renderCharacters() {
         elements.characterWorldButton.dataset.previewWorld = world.id;
         elements.characterWorldName.textContent = world.name || "이름 없는 세계관";
         elements.characterWorldSummary.textContent = world.subtitle || "";
+        applyElementColor(elements.characterWorldName, world.textColors?.name);
+        applyElementColor(elements.characterWorldSummary, world.textColors?.subtitle);
       } else {
         delete elements.characterWorldButton.dataset.previewWorld;
       }
@@ -7877,12 +8771,13 @@ function renderCharacters() {
 
     function worldInfoMarkup(section) {
       const title = escapeHtml(section.title || "세계관 정보");
+      const titleStyle = colorStyle(section.textColors?.title);
       const content = (section.content || []).map(
-        (paragraph) => `<p>${escapeHtml(paragraph)}</p>`
+        (paragraph) => `<p style="${colorStyle(section.textColors?.content)}">${escapeHtml(paragraph)}</p>`
       ).join("");
       return section.collapsible
-        ? `<details class="world-info-block world-info-block-collapsible"><summary>${title}</summary><div class="world-info-block-content">${content}</div></details>`
-        : `<article class="world-info-block"><h3>${title}</h3><div>${content}</div></article>`;
+        ? `<details class="world-info-block world-info-block-collapsible"><summary style="${titleStyle}">${title}</summary><div class="world-info-block-content">${content}</div></details>`
+        : `<article class="world-info-block"><h3 style="${titleStyle}">${title}</h3><div>${content}</div></article>`;
     }
 
     function closeWorldModal() {
@@ -7905,14 +8800,16 @@ function renderCharacters() {
       }
       elements.worldModalTitle.textContent = world.name || "이름 없는 세계관";
       elements.worldModalSummary.textContent = world.subtitle || "";
+      applyElementColor(elements.worldModalTitle, world.textColors?.name);
+      applyElementColor(elements.worldModalSummary, world.textColors?.subtitle);
       elements.worldModalSummary.hidden = !world.subtitle;
       elements.worldModalTags.innerHTML = (world.tags || [])
-        .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+        .map((tag) => `<span style="${colorStyle(world.textColors?.tags)}">${escapeHtml(tag)}</span>`)
         .join("");
       elements.worldModalTags.hidden = !(world.tags || []).length;
       renderSoundtrack(elements.worldSoundtrack, world);
       elements.worldModalDescription.innerHTML = (world.description || [])
-        .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+        .map((paragraph) => `<p style="${colorStyle(world.textColors?.description)}">${escapeHtml(paragraph)}</p>`)
         .join("");
       elements.worldModalDescription.hidden = !(world.description || []).length;
       elements.worldModalSections.innerHTML = (world.sections || [])
@@ -7926,7 +8823,7 @@ function renderCharacters() {
         const face = image
           ? `<img src="${escapeHtml(image)}" alt="">`
           : `<span class="world-character-face-fallback">${escapeHtml(String(character.name || "?").slice(0, 1))}</span>`;
-        return `<button class="world-character-button" type="button" data-preview-character="${escapeHtml(character.id)}">${face}<span><strong>${escapeHtml(character.name || "이름 없는 캐릭터")}</strong><small>${escapeHtml(character.subtitle || "")}</small></span></button>`;
+        return `<button class="world-character-button" type="button" data-preview-character="${escapeHtml(character.id)}">${face}<span><strong style="${colorStyle(character.textColors?.name)}">${escapeHtml(character.name || "이름 없는 캐릭터")}</strong><small style="${colorStyle(character.textColors?.subtitle)}">${escapeHtml(character.subtitle || "")}</small></span></button>`;
       }).join("");
       elements.worldModal.showModal();
       document.body.classList.add("world-preview-modal-open");
@@ -7951,6 +8848,14 @@ function renderCharacters() {
             (item) => item.id === characterButton.dataset.previewCharacter
           );
           openCharacter(character);
+          return;
+        }
+        const planButton = event.target.closest("[data-preview-plan]");
+        if (planButton) {
+          const plan = (project.plans || []).find(
+            (item) => item.id === planButton.dataset.previewPlan
+          );
+          openPlan(plan);
           return;
         }
         const worldButton = event.target.closest("[data-preview-world]");
@@ -7981,6 +8886,15 @@ function renderCharacters() {
         if (more) openFilterPicker(more.dataset.characterFilterMore);
       });
 
+      elements.previewWorldSort?.addEventListener("change", renderWorlds);
+      elements.previewCharacterSort?.addEventListener("change", renderCharacters);
+      elements.archiveTabHome?.addEventListener("change", () => {
+        if (elements.archiveTabHome.checked) renderWorlds();
+      });
+      elements.archiveTabWorld?.addEventListener("change", () => {
+        if (elements.archiveTabWorld.checked) renderWorlds();
+      });
+
       elements.previewCharacterSearchInput.addEventListener("input", (event) => {
         filterState.query = event.target.value;
         renderCharacters();
@@ -8001,6 +8915,10 @@ function renderCharacters() {
       });
       elements.characterModalClose.addEventListener("click", closeCharacterModal);
       elements.worldModalClose.addEventListener("click", closeWorldModal);
+      elements.planModalClose.addEventListener("click", closePlanModal);
+      elements.planModal.addEventListener("click", (event) => {
+        if (event.target === elements.planModal) closePlanModal();
+      });
       elements.characterSoundtrack.addEventListener("change", (event) => {
         const select = event.target.closest("[data-soundtrack-select]");
         if (!select) return;
@@ -8037,6 +8955,9 @@ function renderCharacters() {
         stopSoundtrack(elements.worldSoundtrack);
         document.body.classList.remove("world-preview-modal-open");
       });
+      elements.planModal.addEventListener("close", () => {
+        document.body.classList.remove("plan-preview-modal-open");
+      });
       window.addEventListener("resize", () => {
         updateWorldLimit();
         updateCharacterLimit();
@@ -8058,6 +8979,7 @@ function renderCharacters() {
       renderProfile();
       renderFeatured();
       renderWorlds();
+      renderPlans();
       renderFilters();
       renderCharacters();
       bindEvents();
@@ -8278,6 +9200,30 @@ function renderCharacters() {
       }
     }
 
+
+    for (let planIndex = 0; planIndex < (normalizedProject.plans || []).length; planIndex += 1) {
+      const originalPlan = normalizedProject.plans[planIndex];
+      const deployPlan = deployProject.plans[planIndex];
+      if (!originalPlan.image) continue;
+      const metadata = isPlainObject(originalPlan.image) ? originalPlan.image : null;
+      const planKey = safeDeployAssetSegment(originalPlan.id, `plan-${planIndex + 1}`);
+      const blob = await resolveDeployBlob({
+        preferredBlob: planImageBlobs.get(originalPlan.id),
+        storedBlob: metadata?.id ? records.get(metadata.id)?.blob : null,
+        previewUrl: planImagePreviewUrls.get(originalPlan.id) || "",
+        legacyUrl: typeof originalPlan.image === "string"
+          ? legacyImageUrl(originalPlan.image)
+          : "",
+        label: `제작 계획 “${originalPlan.title || planIndex + 1}” PNG`
+      });
+      deployPlan.image = await addPng(
+        mainEntries,
+        `assets/images/plan-${planKey}.png`,
+        blob,
+        `제작 계획 “${originalPlan.title || planIndex + 1}” PNG`
+      );
+    }
+
     if (missing.length > 0) {
       throw new Error(
         `배포 ZIP에 넣을 실제 파일 ${missing.length}개를 읽지 못했습니다. 편집 화면에서 해당 파일을 다시 선택해 주세요.\n\n${missing.join("\n")}`
@@ -8335,11 +9281,11 @@ function renderCharacters() {
       `window.PORTFOLIO_CATALOG = ${JSON.stringify(deployCatalog, null, 2)};`
     ].join("\n\n");
     const worldDataSource = [
-      `window.PORTFOLIO_PROJECT = window.PORTFOLIO_PROJECT || { site: {}, creator: { bio: [], links: [] }, worlds: [], characters: [] };`,
+      `window.PORTFOLIO_PROJECT = window.PORTFOLIO_PROJECT || { site: {}, creator: { bio: [], links: [] }, worlds: [], characters: [], plans: [] };`,
       `window.PORTFOLIO_PROJECT.worlds = ${JSON.stringify(deployProject.worlds, null, 2)};`
     ].join("\n");
     const characterDataSource = [
-      `window.PORTFOLIO_PROJECT = window.PORTFOLIO_PROJECT || { site: {}, creator: { bio: [], links: [] }, worlds: [], characters: [] };`,
+      `window.PORTFOLIO_PROJECT = window.PORTFOLIO_PROJECT || { site: {}, creator: { bio: [], links: [] }, worlds: [], characters: [], plans: [] };`,
       `window.PORTFOLIO_PROJECT.characters = ${JSON.stringify(deployProject.characters, null, 2)};`
     ].join("\n");
     const runtimeSource = `(${netlifyPortfolioRuntime.toString()})();\n`;
@@ -8406,6 +9352,11 @@ function renderCharacters() {
         const metadata = getCharacterImageMetadata(image);
         if (metadata) items.push({ ...metadata, role: "character-image", ownerId: character.id });
       });
+    });
+
+    project.plans.forEach((plan) => {
+      const image = getPlanImageMetadata(plan);
+      if (image) items.push({ ...image, role: "plan-image", ownerId: plan.id });
     });
     return items;
   }
@@ -8476,6 +9427,13 @@ function renderCharacters() {
     } else if (image.role === "character-image") {
       preferredBlob = characterImageBlobs.get(image.id) || null;
       previewUrl = characterImagePreviewUrls.get(image.id) || "";
+    } else if (image.role === "plan-image") {
+      const plan = project.plans.find((item) => item.id === image.ownerId);
+      preferredBlob = planImageBlobs.get(image.ownerId) || null;
+      previewUrl = planImagePreviewUrls.get(image.ownerId) || "";
+      if (plan && typeof plan.image === "string") {
+        legacyUrl = legacyImageUrl(plan.image);
+      }
     }
 
     const blob = await resolveDeployBlob({
@@ -8636,7 +9594,8 @@ function renderCharacters() {
       main: JSON.stringify({
         version: normalizedProject.version,
         site: normalizedProject.site,
-        creator: normalizedProject.creator
+        creator: normalizedProject.creator,
+        plans: normalizedProject.plans
       }),
       worlds: JSON.stringify(normalizedProject.worlds),
       characters: JSON.stringify(normalizedProject.characters)
@@ -8719,6 +9678,7 @@ function renderCharacters() {
 1. 메인.zip
 - index.html, 사이트 CSS·실행 파일
 - 포트폴리오, 제작자 프로필, 소셜 링크
+- PLAN 데이터와 포스터 이미지
 - 프로필 이미지와 배경 이미지
 - 모든 소셜 아이콘과 플랫폼 아이콘
 - 파일 수: ${mainCount}개
@@ -8925,6 +9885,7 @@ ZIP 파일 자체를 저장소에 올리지 말고, 각 ZIP의 압축을 푼 내
       creatorBackgroundRestoreMissing ||
       missingWorldCount > 0 ||
       missingCharacterCount > 0 ||
+      missingPlanCount > 0 ||
       missingMusicCount > 0
     ) {
       const missingImages = [];
@@ -9019,6 +9980,7 @@ ZIP 파일 자체를 저장소에 올리지 말고, 각 ZIP의 압축을 푼 내
     releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
+    releaseAllPlanImageObjectUrls();
     releaseAllMusicObjectUrls();
     await replaceCurrentProject(nextProject, true);
     saveProjectToStorage();
@@ -9048,7 +10010,7 @@ ZIP 파일 자체를 저장소에 올리지 말고, 각 ZIP의 압축을 푼 내
 
   async function resetProject() {
     const confirmed = window.confirm(
-      "현재 입력한 제작자 프로필과 세계관, 캐릭터, 자동 저장 데이터와 저장된 PNG·MP3를 모두 초기화할까요?"
+      "현재 입력한 제작자 프로필과 세계관, 캐릭터, 제작 계획, 자동 저장 데이터와 저장된 PNG·MP3를 모두 초기화할까요?"
     );
 
     if (!confirmed) return;
@@ -9058,6 +10020,7 @@ ZIP 파일 자체를 저장소에 올리지 말고, 각 ZIP의 압축을 푼 내
     releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
+    releaseAllPlanImageObjectUrls();
     releaseAllMusicObjectUrls();
     avatarRestoreMissing = false;
     creatorBackgroundRestoreMissing = false;
@@ -9139,7 +10102,7 @@ ZIP 파일 자체를 저장소에 올리지 말고, 각 ZIP의 압축을 푼 내
       updateCharacterPlatform(target);
       return;
     }
-    if (target.matches("[data-character-content-field]")) {
+    if (target.matches("[data-character-content-field], [data-character-content-color]")) {
       updateCharacterContentFromInput(target);
       return;
     }
@@ -9256,6 +10219,15 @@ ZIP 파일 자체를 저장소에 올리지 말고, 각 ZIP의 압축을 푼 내
       renderCharacterPreviewFilterPicker();
     }
   );
+
+  elements.previewWorldSort?.addEventListener("change", renderWorldPreview);
+  elements.previewCharacterSort?.addEventListener("change", renderCharacterPreview);
+  elements.archiveTabHome?.addEventListener("change", () => {
+    if (elements.archiveTabHome.checked) renderWorldPreview();
+  });
+  elements.archiveTabWorld?.addEventListener("change", () => {
+    if (elements.archiveTabWorld.checked) renderWorldPreview();
+  });
 
   elements.previewCharacterSearchInput.addEventListener(
     "input",
@@ -9398,6 +10370,41 @@ elements.worldPreviewSoundtrack.addEventListener(
   elements.characterPreviewPlatforms.addEventListener("pointerup", stopPlatformRailDrag);
   elements.characterPreviewPlatforms.addEventListener("pointercancel", stopPlatformRailDrag);
 
+
+  elements.addPlanButton.addEventListener("click", addPlan);
+  elements.planEditorList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-select-plan]");
+    if (!button) return;
+    selectedPlanId = button.dataset.selectPlan;
+    renderPlanEditor();
+  });
+  elements.planForm.addEventListener("input", (event) => {
+    if (event.target === elements.planImageInput) return;
+    const platformInput = event.target.closest("[data-plan-platform]");
+    if (platformInput) {
+      updatePlanPlatform(platformInput);
+      return;
+    }
+    syncPlanFromFields();
+  });
+  elements.planImageInput.addEventListener("change", handlePlanImageSelection);
+  elements.removePlanImageButton.addEventListener("click", removePlanImage);
+  elements.movePlanUpButton.addEventListener("click", () => moveSelectedPlan(-1));
+  elements.movePlanDownButton.addEventListener("click", () => moveSelectedPlan(1));
+  elements.deletePlanButton.addEventListener("click", deleteSelectedPlan);
+  elements.previewPlanGrid.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-preview-plan]");
+    if (!button) return;
+    openPlanPreview(project.plans.find((plan) => plan.id === button.dataset.previewPlan));
+  });
+  elements.planPreviewModalClose.addEventListener("click", closePlanPreview);
+  elements.planPreviewModal.addEventListener("click", (event) => {
+    if (event.target === elements.planPreviewModal) closePlanPreview();
+  });
+  elements.planPreviewModal.addEventListener("close", () => {
+    document.body.classList.remove("plan-preview-modal-open");
+  });
+
   elements.addWorldButton.addEventListener("click", addWorld);
 
   elements.worldEditorSearchInput.addEventListener("input", (event) => {
@@ -9423,7 +10430,7 @@ elements.worldPreviewSoundtrack.addEventListener(
 
   elements.worldForm.addEventListener("input", (event) => {
     if (event.target === elements.worldImageInput) return;
-    if (event.target.matches("[data-world-section-field]")) {
+    if (event.target.matches("[data-world-section-field], [data-world-section-color]")) {
       updateWorldSectionFromInput(event.target);
       return;
     }
@@ -9637,20 +10644,24 @@ elements.netlifyGuideDialog.addEventListener(
     releaseCreatorBackgroundObjectUrl();
     releaseAllWorldImageObjectUrls();
     releaseAllCharacterImageObjectUrls();
+    releaseAllPlanImageObjectUrls();
     releaseAllMusicObjectUrls();
   });
 
   async function initialize() {
     restorePreviewWidth();
     initializeImageDropZones();
+    initializeMobileFilePickers();
     loadProjectFromStorage();
     renderServiceOptions();
     selectedWorldId = project.worlds[0]?.id || "";
     selectedCharacterId = project.characters[0]?.id || "";
+    selectedPlanId = project.plans[0]?.id || "";
     populateFieldsFromProject();
     renderSocialLinks();
     renderWorldEditor();
     renderCharacterEditor();
+    renderPlanEditor();
     renderPreview();
 
     const avatarMetadata = getAvatarMetadata();
@@ -9663,6 +10674,7 @@ elements.netlifyGuideDialog.addEventListener(
       : false;
     const missingWorldCount = await restoreWorldImagesFromDatabase();
     const missingCharacterCount = await restoreCharacterImagesFromDatabase();
+    const missingPlanCount = await restorePlanImagesFromDatabase();
     const missingMusicCount = await restoreMusicFromDatabase();
 
     if (autosaveRestoreError) {
@@ -9678,6 +10690,7 @@ elements.netlifyGuideDialog.addEventListener(
       (creatorBackgroundMetadata && !restoredCreatorBackground) ||
       missingWorldCount > 0 ||
       missingCharacterCount > 0 ||
+      missingPlanCount > 0 ||
       missingMusicCount > 0
     ) {
       const messages = [];
@@ -9687,6 +10700,7 @@ elements.netlifyGuideDialog.addEventListener(
       }
       if (missingWorldCount > 0) messages.push(`세계관 PNG ${missingWorldCount}개`);
       if (missingCharacterCount > 0) messages.push(`캐릭터 이미지 ${missingCharacterCount}개`);
+      if (missingPlanCount > 0) messages.push(`PLAN 이미지 ${missingPlanCount}개`);
       if (missingMusicCount > 0) messages.push(`MP3 ${missingMusicCount}개`);
       setSaveStatus(
         `${restoredAutosave ? "이전 자동 저장 복구됨 · " : ""}${messages.join(" · ")}를 다시 선택해 주세요`
